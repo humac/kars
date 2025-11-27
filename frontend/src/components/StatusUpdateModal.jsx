@@ -41,6 +41,7 @@ const StatusUpdateModal = ({ asset, onClose, onUpdate }) => {
 
         <div style={{ marginBottom: '20px', padding: '15px', background: '#f7fafc', borderRadius: '6px' }}>
           <p><strong>Employee:</strong> {asset.employee_name}</p>
+          {asset.employee_email && <p><strong>Employee Email:</strong> {asset.employee_email}</p>}
           <p><strong>Serial Number:</strong> {asset.laptop_serial_number}</p>
           <p><strong>Asset Tag:</strong> {asset.laptop_asset_tag}</p>
         </div>

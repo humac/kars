@@ -63,13 +63,13 @@ app.get('/api/assets/search', (req, res) => {
 // Create new asset
 app.post('/api/assets', (req, res) => {
   try {
-    const { employee_name, manager_name, client_name, laptop_serial_number, laptop_asset_tag, notes } = req.body;
+    const { employee_name, employee_email, manager_name, manager_email, client_name, laptop_serial_number, laptop_asset_tag, notes } = req.body;
 
     // Validation
-    if (!employee_name || !manager_name || !client_name || !laptop_serial_number || !laptop_asset_tag) {
+    if (!employee_name || !employee_email || !manager_name || !manager_email || !client_name || !laptop_serial_number || !laptop_asset_tag) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['employee_name', 'manager_name', 'client_name', 'laptop_serial_number', 'laptop_asset_tag']
+        required: ['employee_name', 'employee_email', 'manager_name', 'manager_email', 'client_name', 'laptop_serial_number', 'laptop_asset_tag']
       });
     }
 
@@ -136,12 +136,12 @@ app.put('/api/assets/:id', (req, res) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
-    const { employee_name, manager_name, client_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
+    const { employee_name, employee_email, manager_name, manager_email, client_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
 
-    if (!employee_name || !manager_name || !client_name || !laptop_serial_number || !laptop_asset_tag) {
+    if (!employee_name || !employee_email || !manager_name || !manager_email || !client_name || !laptop_serial_number || !laptop_asset_tag) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['employee_name', 'manager_name', 'client_name', 'laptop_serial_number', 'laptop_asset_tag']
+        required: ['employee_name', 'employee_email', 'manager_name', 'manager_email', 'client_name', 'laptop_serial_number', 'laptop_asset_tag']
       });
     }
 

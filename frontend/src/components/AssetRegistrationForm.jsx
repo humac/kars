@@ -3,7 +3,9 @@ import { useState } from 'react';
 const AssetRegistrationForm = ({ onAssetRegistered }) => {
   const [formData, setFormData] = useState({
     employee_name: '',
+    employee_email: '',
     manager_name: '',
+    manager_email: '',
     client_name: '',
     laptop_serial_number: '',
     laptop_asset_tag: '',
@@ -45,7 +47,9 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
       setSuccess(true);
       setFormData({
         employee_name: '',
+        employee_email: '',
         manager_name: '',
+        manager_email: '',
         client_name: '',
         laptop_serial_number: '',
         laptop_asset_tag: '',
@@ -95,6 +99,19 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
         </div>
 
         <div className="form-group">
+          <label htmlFor="employee_email">Employee Email *</label>
+          <input
+            type="email"
+            id="employee_email"
+            name="employee_email"
+            value={formData.employee_email}
+            onChange={handleChange}
+            required
+            placeholder="john.doe@company.com"
+          />
+        </div>
+
+        <div className="form-group">
           <label htmlFor="manager_name">Manager Name *</label>
           <input
             type="text"
@@ -104,6 +121,19 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
             onChange={handleChange}
             required
             placeholder="Jane Smith"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="manager_email">Manager Email *</label>
+          <input
+            type="email"
+            id="manager_email"
+            name="manager_email"
+            value={formData.manager_email}
+            onChange={handleChange}
+            required
+            placeholder="jane.smith@company.com"
           />
         </div>
 

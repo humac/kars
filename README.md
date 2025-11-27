@@ -29,7 +29,9 @@ A comprehensive web application for tracking and managing client laptops assigne
 
 When registering a client asset, consultants must provide:
 - Employee Name
+- Employee Email
 - Manager Name
+- Manager Email
 - Client Name
 - Laptop Serial Number (must be unique)
 - Laptop Asset Tag (must be unique)
@@ -144,7 +146,9 @@ The SQLite database contains a single `assets` table:
 CREATE TABLE assets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   employee_name TEXT NOT NULL,
+  employee_email TEXT NOT NULL,
   manager_name TEXT NOT NULL,
+  manager_email TEXT NOT NULL,
   client_name TEXT NOT NULL,
   laptop_serial_number TEXT NOT NULL UNIQUE,
   laptop_asset_tag TEXT NOT NULL UNIQUE,

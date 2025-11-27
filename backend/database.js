@@ -13,7 +13,9 @@ const initDb = () => {
     CREATE TABLE IF NOT EXISTS assets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       employee_name TEXT NOT NULL,
+      employee_email TEXT NOT NULL,
       manager_name TEXT NOT NULL,
+      manager_email TEXT NOT NULL,
       client_name TEXT NOT NULL,
       laptop_serial_number TEXT NOT NULL UNIQUE,
       laptop_asset_tag TEXT NOT NULL UNIQUE,
@@ -25,6 +27,19 @@ const initDb = () => {
   `;
 
   db.exec(createTableQuery);
+
+  // Migration: Add email columns if they don't exist (for existing databases)
+  try {
+    db.exec('ALTER TABLE assets ADD COLUMN employee_email TEXT');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE assets ADD COLUMN manager_email TEXT');
+  } catch (e) {
+    // Column already exists
+  }
 
   // Create indexes for faster searching
   db.exec('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
@@ -44,16 +59,18 @@ export const assetDb = {
   create: (asset) => {
     const stmt = db.prepare(`
       INSERT INTO assets (
-        employee_name, manager_name, client_name,
-        laptop_serial_number, laptop_asset_tag,
+        employee_name, employee_email, manager_name, manager_email,
+        client_name, laptop_serial_number, laptop_asset_tag,
         status, registration_date, last_updated, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const now = new Date().toISOString();
     return stmt.run(
       asset.employee_name,
+      asset.employee_email,
       asset.manager_name,
+      asset.manager_email,
       asset.client_name,
       asset.laptop_serial_number,
       asset.laptop_asset_tag,
@@ -123,8 +140,8 @@ export const assetDb = {
   update: (id, asset) => {
     const stmt = db.prepare(`
       UPDATE assets
-      SET employee_name = ?, manager_name = ?, client_name = ?,
-          laptop_serial_number = ?, laptop_asset_tag = ?,
+      SET employee_name = ?, employee_email = ?, manager_name = ?, manager_email = ?,
+          client_name = ?, laptop_serial_number = ?, laptop_asset_tag = ?,
           status = ?, last_updated = ?, notes = ?
       WHERE id = ?
     `);
@@ -132,7 +149,9 @@ export const assetDb = {
     const now = new Date().toISOString();
     return stmt.run(
       asset.employee_name,
+      asset.employee_email,
       asset.manager_name,
+      asset.manager_email,
       asset.client_name,
       asset.laptop_serial_number,
       asset.laptop_asset_tag,

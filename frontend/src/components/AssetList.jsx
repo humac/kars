@@ -48,13 +48,15 @@ const AssetList = ({ refresh }) => {
 
     if (filters.employee) {
       filtered = filtered.filter(asset =>
-        asset.employee_name.toLowerCase().includes(filters.employee.toLowerCase())
+        asset.employee_name.toLowerCase().includes(filters.employee.toLowerCase()) ||
+        (asset.employee_email && asset.employee_email.toLowerCase().includes(filters.employee.toLowerCase()))
       );
     }
 
     if (filters.manager) {
       filtered = filtered.filter(asset =>
-        asset.manager_name.toLowerCase().includes(filters.manager.toLowerCase())
+        asset.manager_name.toLowerCase().includes(filters.manager.toLowerCase()) ||
+        (asset.manager_email && asset.manager_email.toLowerCase().includes(filters.manager.toLowerCase()))
       );
     }
 
@@ -192,7 +194,9 @@ const AssetList = ({ refresh }) => {
             <thead>
               <tr>
                 <th>Employee</th>
+                <th>Employee Email</th>
                 <th>Manager</th>
+                <th>Manager Email</th>
                 <th>Client</th>
                 <th>Serial Number</th>
                 <th>Asset Tag</th>
@@ -206,7 +210,9 @@ const AssetList = ({ refresh }) => {
               {filteredAssets.map((asset) => (
                 <tr key={asset.id}>
                   <td>{asset.employee_name}</td>
+                  <td>{asset.employee_email || '-'}</td>
                   <td>{asset.manager_name}</td>
+                  <td>{asset.manager_email || '-'}</td>
                   <td>{asset.client_name}</td>
                   <td>{asset.laptop_serial_number}</td>
                   <td>{asset.laptop_asset_tag}</td>
