@@ -63,7 +63,92 @@ When registering a client asset, consultants must provide:
    npm install
    ```
 
-## Running the Application
+## Running with Docker (Recommended)
+
+The easiest way to run the application is using Docker and Docker Compose.
+
+### Prerequisites
+- Docker (v20.10 or higher)
+- Docker Compose (v2.0 or higher)
+
+### Quick Start with Docker
+
+1. **Build and start the containers**
+   ```bash
+   docker-compose up -d
+   ```
+
+   This will:
+   - Build the backend and frontend Docker images
+   - Start both services
+   - The frontend will be available at `http://localhost`
+   - The backend API will be available at `http://localhost:3001`
+
+2. **View logs**
+   ```bash
+   docker-compose logs -f
+   ```
+
+3. **Stop the application**
+   ```bash
+   docker-compose down
+   ```
+
+4. **Rebuild after code changes**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+### Development Mode with Docker
+
+For development with hot-reloading:
+
+```bash
+docker-compose -f docker-compose.dev.yml up
+```
+
+This will:
+- Mount your local code as volumes
+- Enable hot-reloading for both frontend and backend
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:3001`
+
+### Data Persistence
+
+The database is stored in a Docker volume and will persist between container restarts. To reset the database:
+
+```bash
+docker-compose down -v  # Remove volumes
+docker-compose up -d     # Recreate containers
+```
+
+### Docker Commands Reference
+
+```bash
+# Start services
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f [service_name]
+
+# Rebuild images
+docker-compose build
+
+# Remove all containers, volumes, and images
+docker-compose down -v --rmi all
+
+# Check service status
+docker-compose ps
+
+# Execute commands in running container
+docker-compose exec backend sh
+docker-compose exec frontend sh
+```
+
+## Running the Application (Without Docker)
 
 You need to run both the backend and frontend servers.
 
@@ -178,7 +263,75 @@ This system helps meet SOC2 compliance requirements by:
 
 ## Production Deployment
 
-For production deployment:
+### Docker Deployment (Recommended)
+
+The application includes production-ready Docker configurations:
+
+1. **Using Docker Compose** (simplest):
+   ```bash
+   # On your production server
+   git clone <repository-url>
+   cd claude_app_poc
+   docker-compose up -d
+   ```
+
+   The application will be available at:
+   - Frontend: `http://your-server` (port 80)
+   - Backend API: `http://your-server:3001`
+
+2. **With Reverse Proxy** (for HTTPS):
+   - Use nginx or Traefik as a reverse proxy
+   - Configure SSL certificates (Let's Encrypt recommended)
+   - Point to the frontend container on port 80
+
+3. **Environment Configuration**:
+   ```bash
+   # Create .env file
+   cp .env.example .env
+   # Edit as needed
+   ```
+
+4. **Database Backups**:
+   ```bash
+   # Backup database
+   docker-compose exec backend tar -czf /tmp/backup.tar.gz /app/data
+   docker cp asset-backend:/tmp/backup.tar.gz ./backup-$(date +%Y%m%d).tar.gz
+
+   # Restore database
+   docker cp backup.tar.gz asset-backend:/tmp/
+   docker-compose exec backend tar -xzf /tmp/backup.tar.gz -C /
+   docker-compose restart backend
+   ```
+
+5. **Monitoring**:
+   ```bash
+   # Check service health
+   docker-compose ps
+
+   # View logs
+   docker-compose logs -f
+
+   # Resource usage
+   docker stats
+   ```
+
+### Docker Architecture
+
+The application uses a multi-container architecture:
+
+- **Backend Container**: Node.js/Express API server
+  - Image: Custom (built from `backend/Dockerfile`)
+  - Port: 3001
+  - Volume: `./data` for database persistence
+
+- **Frontend Container**: nginx serving built React app
+  - Image: Custom multi-stage build (built from `frontend/Dockerfile`)
+  - Port: 80
+  - Proxies API requests to backend
+
+### Traditional Deployment (Without Docker)
+
+For non-containerized deployment:
 
 1. **Backend**:
    - Set environment variables for production
