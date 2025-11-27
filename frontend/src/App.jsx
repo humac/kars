@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import AssetRegistrationForm from './components/AssetRegistrationForm';
 import AssetList from './components/AssetList';
 import CompanyManagement from './components/CompanyManagement';
 import AuditReporting from './components/AuditReporting';
@@ -41,10 +40,7 @@ function App() {
       </div>
 
       {activeTab === 'assets' && (
-        <div className="main-content">
-          <AssetRegistrationForm onAssetRegistered={handleAssetRegistered} />
-          <AssetList refresh={refreshKey} />
-        </div>
+        <AssetList refresh={refreshKey} onAssetRegistered={handleAssetRegistered} />
       )}
 
       {activeTab === 'companies' && <CompanyManagement />}

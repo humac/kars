@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import StatusUpdateModal from './StatusUpdateModal';
+import AssetRegistrationForm from './AssetRegistrationForm';
 
-const AssetList = ({ refresh }) => {
+const AssetList = ({ refresh, onAssetRegistered }) => {
   const [assets, setAssets] = useState([]);
   const [filteredAssets, setFilteredAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedAsset, setSelectedAsset] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   const [filters, setFilters] = useState({
     employee: '',
@@ -93,17 +95,33 @@ const AssetList = ({ refresh }) => {
 
   const handleStatusUpdate = (asset) => {
     setSelectedAsset(asset);
-    setShowModal(true);
+    setShowStatusModal(true);
   };
 
-  const handleModalClose = () => {
-    setShowModal(false);
+  const handleStatusModalClose = () => {
+    setShowStatusModal(false);
     setSelectedAsset(null);
   };
 
   const handleStatusUpdated = () => {
     fetchAssets();
-    handleModalClose();
+    handleStatusModalClose();
+  };
+
+  const handleNewAssetClick = () => {
+    setShowRegistrationModal(true);
+  };
+
+  const handleRegistrationModalClose = () => {
+    setShowRegistrationModal(false);
+  };
+
+  const handleAssetRegistered = (asset) => {
+    setShowRegistrationModal(false);
+    fetchAssets();
+    if (onAssetRegistered) {
+      onAssetRegistered(asset);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -138,7 +156,16 @@ const AssetList = ({ refresh }) => {
 
   return (
     <div className="card">
-      <h2>Asset Inventory ({filteredAssets.length} assets)</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>Asset Inventory ({filteredAssets.length} assets)</h2>
+        <button
+          onClick={handleNewAssetClick}
+          className="btn btn-primary"
+          style={{ width: 'auto', padding: '10px 20px' }}
+        >
+          + New Asset
+        </button>
+      </div>
 
       <div className="search-bar">
         <input
@@ -240,12 +267,27 @@ const AssetList = ({ refresh }) => {
         </div>
       )}
 
-      {showModal && selectedAsset && (
+      {showStatusModal && selectedAsset && (
         <StatusUpdateModal
           asset={selectedAsset}
-          onClose={handleModalClose}
+          onClose={handleStatusModalClose}
           onUpdate={handleStatusUpdated}
         />
+      )}
+
+      {showRegistrationModal && (
+        <div className="modal-overlay" onClick={handleRegistrationModalClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <AssetRegistrationForm onAssetRegistered={handleAssetRegistered} />
+            <button
+              onClick={handleRegistrationModalClose}
+              className="btn btn-secondary"
+              style={{ marginTop: '20px' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
