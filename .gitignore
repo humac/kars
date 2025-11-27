@@ -7,6 +7,8 @@ yarn.lock
 *.db
 *.sqlite
 *.sqlite3
+data/
+backend/data/
 
 # Build outputs
 dist/

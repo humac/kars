@@ -1,11 +1,20 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { mkdirSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const db = new Database(join(__dirname, 'assets.db'));
+// Use data directory for database (for Docker volume mounting)
+const dataDir = process.env.DATA_DIR || join(__dirname, 'data');
+try {
+  mkdirSync(dataDir, { recursive: true });
+} catch (err) {
+  // Directory already exists
+}
+
+const db = new Database(join(dataDir, 'assets.db'));
 
 // Initialize database schema
 const initDb = () => {
