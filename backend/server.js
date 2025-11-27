@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb } from './database.js';
+import { assetDb, companyDb, auditDb } from './database.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -76,6 +76,22 @@ app.post('/api/assets', (req, res) => {
     const result = assetDb.create(req.body);
     const newAsset = assetDb.getById(result.lastInsertRowid);
 
+    // Log audit
+    auditDb.log(
+      'CREATE',
+      'asset',
+      newAsset.id,
+      `${laptop_serial_number} - ${employee_name}`,
+      {
+        employee_name,
+        employee_email,
+        client_name,
+        laptop_serial_number,
+        laptop_asset_tag
+      },
+      employee_email
+    );
+
     res.status(201).json({
       message: 'Asset registered successfully',
       asset: newAsset
@@ -115,8 +131,23 @@ app.patch('/api/assets/:id/status', (req, res) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
+    const oldStatus = asset.status;
     assetDb.updateStatus(req.params.id, status, notes);
     const updatedAsset = assetDb.getById(req.params.id);
+
+    // Log audit
+    auditDb.log(
+      'STATUS_CHANGE',
+      'asset',
+      asset.id,
+      `${asset.laptop_serial_number} - ${asset.employee_name}`,
+      {
+        old_status: oldStatus,
+        new_status: status,
+        notes: notes || ''
+      },
+      asset.employee_email
+    );
 
     res.json({
       message: 'Asset status updated successfully',
@@ -312,6 +343,134 @@ app.delete('/api/companies/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting company:', error);
     res.status(500).json({ error: 'Failed to delete company' });
+  }
+});
+
+// ===== Audit & Reporting Endpoints =====
+
+// Get all audit logs
+app.get('/api/audit/logs', (req, res) => {
+  try {
+    const options = {
+      entityType: req.query.entityType,
+      entityId: req.query.entityId,
+      action: req.query.action,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      userEmail: req.query.userEmail,
+      limit: req.query.limit ? parseInt(req.query.limit) : undefined
+    };
+
+    const logs = auditDb.getAll(options);
+    res.json(logs);
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
+});
+
+// Get audit logs for specific entity
+app.get('/api/audit/entity/:type/:id', (req, res) => {
+  try {
+    const logs = auditDb.getByEntity(req.params.type, req.params.id);
+    res.json(logs);
+  } catch (error) {
+    console.error('Error fetching entity audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch entity audit logs' });
+  }
+});
+
+// Get recent audit logs
+app.get('/api/audit/recent', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 100;
+    const logs = auditDb.getRecent(limit);
+    res.json(logs);
+  } catch (error) {
+    console.error('Error fetching recent audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch recent audit logs' });
+  }
+});
+
+// Get audit statistics
+app.get('/api/audit/stats', (req, res) => {
+  try {
+    const stats = auditDb.getStats(req.query.startDate, req.query.endDate);
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching audit stats:', error);
+    res.status(500).json({ error: 'Failed to fetch audit stats' });
+  }
+});
+
+// Generate report (CSV export)
+app.get('/api/audit/export', (req, res) => {
+  try {
+    const options = {
+      entityType: req.query.entityType,
+      action: req.query.action,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      userEmail: req.query.userEmail
+    };
+
+    const logs = auditDb.getAll(options);
+
+    // Generate CSV
+    const headers = ['ID', 'Timestamp', 'Action', 'Entity Type', 'Entity Name', 'Details', 'User Email'];
+    const csvRows = [headers.join(',')];
+
+    logs.forEach(log => {
+      const row = [
+        log.id,
+        log.timestamp,
+        log.action,
+        log.entity_type,
+        `"${log.entity_name || ''}"`,
+        `"${log.details || ''}"`,
+        log.user_email || ''
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csv = csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=audit-logs-${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting audit logs:', error);
+    res.status(500).json({ error: 'Failed to export audit logs' });
+  }
+});
+
+// Asset summary report
+app.get('/api/reports/summary', (req, res) => {
+  try {
+    const allAssets = assetDb.getAll();
+
+    const summary = {
+      total: allAssets.length,
+      by_status: {},
+      by_company: {},
+      by_manager: {}
+    };
+
+    allAssets.forEach(asset => {
+      // Status breakdown
+      summary.by_status[asset.status] = (summary.by_status[asset.status] || 0) + 1;
+
+      // Company breakdown
+      summary.by_company[asset.client_name] = (summary.by_company[asset.client_name] || 0) + 1;
+
+      // Manager breakdown
+      summary.by_manager[asset.manager_name] = (summary.by_manager[asset.manager_name] || 0) + 1;
+    });
+
+    res.json(summary);
+  } catch (error) {
+    console.error('Error generating summary report:', error);
+    res.status(500).json({ error: 'Failed to generate summary report' });
   }
 });
 

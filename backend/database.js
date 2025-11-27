@@ -62,12 +62,30 @@ const initDb = () => {
 
   db.exec(createCompaniesTableQuery);
 
+  // Create audit logs table
+  const createAuditLogsTableQuery = `
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER,
+      entity_name TEXT,
+      details TEXT,
+      timestamp TEXT NOT NULL,
+      user_email TEXT
+    )
+  `;
+
+  db.exec(createAuditLogsTableQuery);
+
   // Create indexes for faster searching
   db.exec('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_manager_name ON assets(manager_name)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_client_name ON assets(client_name)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_status ON assets(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_company_name ON companies(name)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id)');
 
   console.log('Database initialized successfully');
 };
@@ -252,6 +270,112 @@ export const companyDb = {
     const stmt = db.prepare('SELECT COUNT(*) as count FROM assets WHERE client_name = ?');
     const result = stmt.get(companyName);
     return result.count > 0;
+  }
+};
+
+// Audit Log operations
+export const auditDb = {
+  // Log an action
+  log: (action, entityType, entityId, entityName, details, userEmail = null) => {
+    const stmt = db.prepare(`
+      INSERT INTO audit_logs (action, entity_type, entity_id, entity_name, details, timestamp, user_email)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const now = new Date().toISOString();
+    const detailsJson = typeof details === 'string' ? details : JSON.stringify(details);
+
+    return stmt.run(action, entityType, entityId, entityName, detailsJson, now, userEmail);
+  },
+
+  // Get all audit logs
+  getAll: (options = {}) => {
+    let query = 'SELECT * FROM audit_logs WHERE 1=1';
+    const params = [];
+
+    if (options.entityType) {
+      query += ' AND entity_type = ?';
+      params.push(options.entityType);
+    }
+
+    if (options.entityId) {
+      query += ' AND entity_id = ?';
+      params.push(options.entityId);
+    }
+
+    if (options.action) {
+      query += ' AND action = ?';
+      params.push(options.action);
+    }
+
+    if (options.startDate) {
+      query += ' AND timestamp >= ?';
+      params.push(options.startDate);
+    }
+
+    if (options.endDate) {
+      query += ' AND timestamp <= ?';
+      params.push(options.endDate);
+    }
+
+    if (options.userEmail) {
+      query += ' AND user_email = ?';
+      params.push(options.userEmail);
+    }
+
+    query += ' ORDER BY timestamp DESC';
+
+    if (options.limit) {
+      query += ' LIMIT ?';
+      params.push(options.limit);
+    }
+
+    const stmt = db.prepare(query);
+    return stmt.all(...params);
+  },
+
+  // Get logs for specific entity
+  getByEntity: (entityType, entityId) => {
+    const stmt = db.prepare(`
+      SELECT * FROM audit_logs
+      WHERE entity_type = ? AND entity_id = ?
+      ORDER BY timestamp DESC
+    `);
+    return stmt.all(entityType, entityId);
+  },
+
+  // Get recent logs
+  getRecent: (limit = 100) => {
+    const stmt = db.prepare('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT ?');
+    return stmt.all(limit);
+  },
+
+  // Get statistics
+  getStats: (startDate = null, endDate = null) => {
+    let query = `
+      SELECT
+        action,
+        entity_type,
+        COUNT(*) as count
+      FROM audit_logs
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (startDate) {
+      query += ' AND timestamp >= ?';
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      query += ' AND timestamp <= ?';
+      params.push(endDate);
+    }
+
+    query += ' GROUP BY action, entity_type';
+
+    const stmt = db.prepare(query);
+    return stmt.all(...params);
   }
 };
 

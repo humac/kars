@@ -2,6 +2,7 @@ import { useState } from 'react';
 import AssetRegistrationForm from './components/AssetRegistrationForm';
 import AssetList from './components/AssetList';
 import CompanyManagement from './components/CompanyManagement';
+import AuditReporting from './components/AuditReporting';
 
 function App() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -31,16 +32,24 @@ function App() {
         >
           Company Management
         </button>
+        <button
+          className={`tab ${activeTab === 'audit' ? 'active' : ''}`}
+          onClick={() => setActiveTab('audit')}
+        >
+          Audit & Reporting
+        </button>
       </div>
 
-      {activeTab === 'assets' ? (
+      {activeTab === 'assets' && (
         <div className="main-content">
           <AssetRegistrationForm onAssetRegistered={handleAssetRegistered} />
           <AssetList refresh={refreshKey} />
         </div>
-      ) : (
-        <CompanyManagement />
       )}
+
+      {activeTab === 'companies' && <CompanyManagement />}
+
+      {activeTab === 'audit' && <AuditReporting />}
     </div>
   );
 }
