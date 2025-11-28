@@ -201,11 +201,101 @@ app.get('/api/auth/users', authenticate, authorize('admin'), (req, res) => {
   }
 });
 
-// Get all assets
+// Update user role (admin only)
+app.put('/api/auth/users/:id/role', authenticate, authorize('admin'), (req, res) => {
+  try {
+    const { role } = req.body;
+    const userId = parseInt(req.params.id);
+
+    // Validation
+    if (!role || !['admin', 'manager', 'employee'].includes(role)) {
+      return res.status(400).json({
+        error: 'Invalid role. Must be one of: admin, manager, employee'
+      });
+    }
+
+    const user = userDb.getById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent admin from demoting themselves
+    if (userId === req.user.id && role !== 'admin') {
+      return res.status(403).json({
+        error: 'Cannot change your own admin role'
+      });
+    }
+
+    userDb.updateRole(userId, role);
+    const updatedUser = userDb.getById(userId);
+
+    res.json({
+      message: 'User role updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name
+      }
+    });
+  } catch (error) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
+// Delete user (admin only)
+app.delete('/api/auth/users/:id', authenticate, authorize('admin'), (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    // Prevent admin from deleting themselves
+    if (userId === req.user.id) {
+      return res.status(403).json({
+        error: 'Cannot delete your own account'
+      });
+    }
+
+    const user = userDb.getById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    userDb.delete(userId);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Get all assets (with role-based filtering)
 app.get('/api/assets', authenticate, (req, res) => {
   try {
-    const assets = assetDb.getAll();
-    res.json(assets);
+    const allAssets = assetDb.getAll();
+    const user = userDb.getById(req.user.id);
+
+    // Role-based filtering
+    let filteredAssets;
+    if (user.role === 'admin') {
+      // Admin sees all assets
+      filteredAssets = allAssets;
+    } else if (user.role === 'manager') {
+      // Manager sees their own assets + their employees' assets
+      filteredAssets = allAssets.filter(asset =>
+        asset.employee_email === user.email ||
+        asset.manager_email === user.email
+      );
+    } else {
+      // Employee sees only their own assets
+      filteredAssets = allAssets.filter(asset =>
+        asset.employee_email === user.email
+      );
+    }
+
+    res.json(filteredAssets);
   } catch (error) {
     console.error('Error fetching assets:', error);
     res.status(500).json({ error: 'Failed to fetch assets' });
@@ -532,9 +622,11 @@ app.delete('/api/companies/:id', (req, res) => {
 
 // ===== Audit & Reporting Endpoints =====
 
-// Get all audit logs
+// Get all audit logs (with role-based filtering)
 app.get('/api/audit/logs', authenticate, (req, res) => {
   try {
+    const user = userDb.getById(req.user.id);
+
     const options = {
       entityType: req.query.entityType,
       entityId: req.query.entityId,
@@ -545,7 +637,31 @@ app.get('/api/audit/logs', authenticate, (req, res) => {
       limit: req.query.limit ? parseInt(req.query.limit) : undefined
     };
 
-    const logs = auditDb.getAll(options);
+    let logs = auditDb.getAll(options);
+
+    // Role-based filtering
+    if (user.role === 'employee') {
+      // Employees only see their own audit logs
+      logs = logs.filter(log => log.user_email === user.email);
+    } else if (user.role === 'manager') {
+      // Managers see their own logs + their employees' logs
+      // Get all assets where user is manager to find their employees
+      const allAssets = assetDb.getAll();
+      const employeeEmails = new Set();
+      employeeEmails.add(user.email); // Add manager's own email
+
+      allAssets.forEach(asset => {
+        if (asset.manager_email === user.email) {
+          employeeEmails.add(asset.employee_email);
+        }
+      });
+
+      logs = logs.filter(log =>
+        !log.user_email || employeeEmails.has(log.user_email)
+      );
+    }
+    // Admin sees all logs (no filtering)
+
     res.json(logs);
   } catch (error) {
     console.error('Error fetching audit logs:', error);
@@ -628,19 +744,35 @@ app.get('/api/audit/export', (req, res) => {
   }
 });
 
-// Asset summary report
-app.get('/api/reports/summary', (req, res) => {
+// Asset summary report (with role-based filtering)
+app.get('/api/reports/summary', authenticate, (req, res) => {
   try {
+    const user = userDb.getById(req.user.id);
     const allAssets = assetDb.getAll();
 
+    // Filter assets based on role
+    let assets;
+    if (user.role === 'admin') {
+      assets = allAssets;
+    } else if (user.role === 'manager') {
+      assets = allAssets.filter(asset =>
+        asset.employee_email === user.email ||
+        asset.manager_email === user.email
+      );
+    } else {
+      assets = allAssets.filter(asset =>
+        asset.employee_email === user.email
+      );
+    }
+
     const summary = {
-      total: allAssets.length,
+      total: assets.length,
       by_status: {},
       by_company: {},
       by_manager: {}
     };
 
-    allAssets.forEach(asset => {
+    assets.forEach(asset => {
       // Status breakdown
       summary.by_status[asset.status] = (summary.by_status[asset.status] || 0) + 1;
 

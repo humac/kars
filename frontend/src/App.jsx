@@ -4,6 +4,7 @@ import AssetList from './components/AssetList';
 import CompanyManagement from './components/CompanyManagement';
 import AuditReporting from './components/AuditReporting';
 import Profile from './components/Profile';
+import AdminSettings from './components/AdminSettings';
 import AuthPage from './components/AuthPage';
 
 function App() {
@@ -70,6 +71,15 @@ function App() {
         >
           Profile
         </button>
+        {user?.role === 'admin' && (
+          <button
+            className={`tab ${activeTab === 'admin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('admin')}
+            style={{ background: '#667eea', color: 'white' }}
+          >
+            Admin Settings
+          </button>
+        )}
       </div>
 
       {activeTab === 'assets' && (
@@ -81,6 +91,8 @@ function App() {
       {activeTab === 'audit' && <AuditReporting />}
 
       {activeTab === 'profile' && <Profile />}
+
+      {activeTab === 'admin' && user?.role === 'admin' && <AdminSettings />}
     </div>
   );
 }

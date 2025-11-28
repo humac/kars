@@ -69,7 +69,22 @@ const Profile = () => {
 
       <div style={{ marginBottom: '30px', padding: '15px', background: '#f7fafc', borderRadius: '6px' }}>
         <p><strong>Email:</strong> {user?.email}</p>
-        <p><strong>Role:</strong> <span style={{ textTransform: 'capitalize' }}>{user?.role}</span></p>
+        <p>
+          <strong>Role:</strong>{' '}
+          <span
+            style={{
+              textTransform: 'capitalize',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              background: user?.role === 'admin' ? '#667eea' : user?.role === 'manager' ? '#48bb78' : '#4299e1',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '0.9rem'
+            }}
+          >
+            {user?.role}
+          </span>
+        </p>
         <p><strong>Current Name:</strong> {user?.name || 'Not set'}</p>
       </div>
 
