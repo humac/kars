@@ -130,10 +130,10 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
       )}
 
       <Box component="form" onSubmit={handleSubmit}>
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           {/* Employee Information */}
           <Grid item xs={12}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600, mb: -1 }}>
               Employee Information
             </Typography>
           </Grid>
@@ -162,8 +162,8 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           </Grid>
 
           {/* Manager Information */}
-          <Grid item xs={12} sx={{ mt: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600, mb: -1 }}>
               Manager Information
             </Typography>
           </Grid>
@@ -192,15 +192,16 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           </Grid>
 
           {/* Client Information */}
-          <Grid item xs={12} sx={{ mt: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600, mb: -1 }}>
               Client Information
             </Typography>
           </Grid>
           <Grid item xs={12}>
             <FormControl fullWidth required error={companies.length === 0}>
-              <InputLabel>Client Company</InputLabel>
+              <InputLabel id="client-company-label">Client Company</InputLabel>
               <Select
+                labelId="client-company-label"
                 name="client_name"
                 value={formData.client_name}
                 onChange={handleChange}
@@ -225,8 +226,8 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           </Grid>
 
           {/* Asset Information */}
-          <Grid item xs={12} sx={{ mt: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600, mb: -1 }}>
               Asset Information
             </Typography>
           </Grid>
@@ -276,7 +277,7 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           </Grid>
 
           {/* Notes */}
-          <Grid item xs={12} sx={{ mt: 1 }}>
+          <Grid item xs={12} sx={{ mt: 2 }}>
             <TextField
               fullWidth
               multiline
