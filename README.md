@@ -6,7 +6,7 @@
 
 A comprehensive SOC2-compliant web application for tracking and managing client assets assigned to consultants, with full authentication, role-based access control, and automated deployment.
 
-🌐 **Live Demo:** [https://assets.jvhlabs.com](https://assets.jvhlabs.com)
+🌐 **Live Demo:** [https://ars.jvhlabs.com](https://ars.jvhlabs.com)
 
 📖 **Documentation:** [View Wiki](../../wiki)
 
@@ -77,7 +77,7 @@ Docker images are automatically built for both platforms during CI/CD.
 
 ```bash
 # 1. Access the application
-https://assets.jvhlabs.com
+https://ars.jvhlabs.com
 
 # 2. Register (first user becomes admin!)
 Click "Register" → Fill form → Auto-login
