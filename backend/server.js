@@ -204,6 +204,65 @@ app.put('/api/auth/profile', authenticate, (req, res) => {
   }
 });
 
+// Change password
+app.put('/api/auth/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        error: 'Current password, new password, and confirmation are required'
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        error: 'New password and confirmation do not match'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        error: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Get current user
+    const user = userDb.getById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isValidPassword = await comparePassword(currentPassword, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Update password in database
+    userDb.updatePassword(req.user.id, newPasswordHash);
+
+    // Log the password change
+    auditDb.create({
+      action: 'change_password',
+      entity_type: 'user',
+      entity_id: user.id,
+      entity_name: user.email,
+      details: 'Password changed successfully',
+      user_email: user.email
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 // Get all users (admin only)
 app.get('/api/auth/users', authenticate, authorize('admin'), (req, res) => {
   try {

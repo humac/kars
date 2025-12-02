@@ -480,6 +480,12 @@ export const userDb = {
     return stmt.run(fullName, profile.first_name, profile.last_name, id);
   },
 
+  // Update user password
+  updatePassword: (id, passwordHash) => {
+    const stmt = db.prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+    return stmt.run(passwordHash, id);
+  },
+
   // Delete user
   delete: (id) => {
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
