@@ -1,4 +1,17 @@
 import { useState } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  Link,
+  CircularProgress,
+  Grid,
+} from '@mui/material';
+import { PersonAdd } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register = ({ onSwitchToLogin }) => {
@@ -49,113 +62,154 @@ const Register = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <h1>ARS - Asset Registration System</h1>
-          <p>Create an account to get started</p>
-        </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        p: 2,
+      }}
+    >
+      <Card sx={{ maxWidth: 550, width: '100%' }}>
+        <Box
+          sx={{
+            bgcolor: 'secondary.main',
+            color: 'white',
+            p: 3,
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="h5" fontWeight={600} gutterBottom>
+            ARS - Asset Registration System
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9 }}>
+            Create an account to get started
+          </Typography>
+        </Box>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <h2>Register</h2>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1 }}>
+            <PersonAdd color="primary" />
+            <Typography variant="h6" fontWeight={600}>
+              Register
+            </Typography>
+          </Box>
 
           {error && (
-            <div className="alert alert-error">
+            <Alert severity="error" sx={{ mb: 3 }}>
               {error}
-            </div>
+            </Alert>
           )}
 
-          <div className="form-group">
-            <label htmlFor="first_name">First Name</label>
-            <input
-              type="text"
-              id="first_name"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              required
-              placeholder="John"
-              autoComplete="given-name"
-            />
-          </div>
+          <Box component="form" onSubmit={handleSubmit}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleChange}
+                  required
+                  autoComplete="given-name"
+                  placeholder="John"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleChange}
+                  required
+                  autoComplete="family-name"
+                  placeholder="Doe"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  autoComplete="new-password"
+                  placeholder="At least 6 characters"
+                  inputProps={{ minLength: 6 }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  autoComplete="new-password"
+                  placeholder="Re-enter your password"
+                  inputProps={{ minLength: 6 }}
+                />
+              </Grid>
+            </Grid>
 
-          <div className="form-group">
-            <label htmlFor="last_name">Last Name</label>
-            <input
-              type="text"
-              id="last_name"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              required
-              placeholder="Doe"
-              autoComplete="family-name"
-            />
-          </div>
+            <Button
+              fullWidth
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : <PersonAdd />}
+              sx={{ mt: 3 }}
+            >
+              {loading ? 'Creating account...' : 'Create Account'}
+            </Button>
 
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="you@company.com"
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="At least 6 characters"
-              autoComplete="new-password"
-              minLength="6"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Re-enter your password"
-              autoComplete="new-password"
-              minLength="6"
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
-
-          <div className="auth-footer">
-            <p>
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToLogin}
-                className="link-button"
-              >
-                Sign in here
-              </button>
-            </p>
-          </div>
-        </form>
-      </div>
-    </div>
+            <Box
+              sx={{
+                mt: 3,
+                pt: 2,
+                borderTop: 1,
+                borderColor: 'divider',
+                textAlign: 'center',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Already have an account?{' '}
+                <Link
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  onClick={onSwitchToLogin}
+                  sx={{ cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Sign in here
+                </Link>
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

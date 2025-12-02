@@ -1,4 +1,19 @@
 import { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Grid,
+  CircularProgress,
+  FormHelperText,
+} from '@mui/material';
+import { Save } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const AssetRegistrationForm = ({ onAssetRegistered }) => {
@@ -93,139 +108,146 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
   };
 
   return (
-    <div className="card">
-      <h2>Register New Asset</h2>
+    <Box>
+      <Typography variant="h5" fontWeight={600} gutterBottom>
+        Register New Asset
+      </Typography>
 
       {success && (
-        <div className="alert alert-success">
+        <Alert severity="success" sx={{ mb: 2 }}>
           Asset registered successfully!
-        </div>
+        </Alert>
       )}
 
       {error && (
-        <div className="alert alert-error">
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </div>
+        </Alert>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="employee_name">Employee Name *</label>
-          <input
-            type="text"
-            id="employee_name"
-            name="employee_name"
-            value={formData.employee_name}
-            onChange={handleChange}
-            required
-            placeholder="John Doe"
-          />
-        </div>
+      <Box component="form" onSubmit={handleSubmit}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Employee Name"
+              name="employee_name"
+              value={formData.employee_name}
+              onChange={handleChange}
+              required
+              placeholder="John Doe"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              type="email"
+              label="Employee Email"
+              name="employee_email"
+              value={formData.employee_email}
+              onChange={handleChange}
+              required
+              placeholder="john.doe@company.com"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Manager Name"
+              name="manager_name"
+              value={formData.manager_name}
+              onChange={handleChange}
+              required
+              placeholder="Jane Smith"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              type="email"
+              label="Manager Email"
+              name="manager_email"
+              value={formData.manager_email}
+              onChange={handleChange}
+              required
+              placeholder="jane.smith@company.com"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <FormControl fullWidth required error={companies.length === 0}>
+              <InputLabel>Client Company</InputLabel>
+              <Select
+                name="client_name"
+                value={formData.client_name}
+                onChange={handleChange}
+                label="Client Company"
+                required
+              >
+                <MenuItem value="">
+                  <em>Select a company...</em>
+                </MenuItem>
+                {companies.map((company) => (
+                  <MenuItem key={company.id} value={company.name}>
+                    {company.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              {companies.length === 0 && (
+                <FormHelperText>
+                  No companies available. Please add companies first in the Company Management section.
+                </FormHelperText>
+              )}
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Laptop Serial Number"
+              name="laptop_serial_number"
+              value={formData.laptop_serial_number}
+              onChange={handleChange}
+              required
+              placeholder="SN123456789"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Laptop Asset Tag"
+              name="laptop_asset_tag"
+              value={formData.laptop_asset_tag}
+              onChange={handleChange}
+              required
+              placeholder="ASSET-001"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Notes (Optional)"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              placeholder="Additional information..."
+            />
+          </Grid>
+        </Grid>
 
-        <div className="form-group">
-          <label htmlFor="employee_email">Employee Email *</label>
-          <input
-            type="email"
-            id="employee_email"
-            name="employee_email"
-            value={formData.employee_email}
-            onChange={handleChange}
-            required
-            placeholder="john.doe@company.com"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="manager_name">Manager Name *</label>
-          <input
-            type="text"
-            id="manager_name"
-            name="manager_name"
-            value={formData.manager_name}
-            onChange={handleChange}
-            required
-            placeholder="Jane Smith"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="manager_email">Manager Email *</label>
-          <input
-            type="email"
-            id="manager_email"
-            name="manager_email"
-            value={formData.manager_email}
-            onChange={handleChange}
-            required
-            placeholder="jane.smith@company.com"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="client_name">Client Company *</label>
-          <select
-            id="client_name"
-            name="client_name"
-            value={formData.client_name}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select a company...</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.name}>
-                {company.name}
-              </option>
-            ))}
-          </select>
-          {companies.length === 0 && (
-            <small style={{ color: '#e53e3e', marginTop: '5px', display: 'block' }}>
-              No companies available. Please add companies first in the Company Management section.
-            </small>
-          )}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="laptop_serial_number">Laptop Serial Number *</label>
-          <input
-            type="text"
-            id="laptop_serial_number"
-            name="laptop_serial_number"
-            value={formData.laptop_serial_number}
-            onChange={handleChange}
-            required
-            placeholder="SN123456789"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="laptop_asset_tag">Laptop Asset Tag *</label>
-          <input
-            type="text"
-            id="laptop_asset_tag"
-            name="laptop_asset_tag"
-            value={formData.laptop_asset_tag}
-            onChange={handleChange}
-            required
-            placeholder="ASSET-001"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="notes">Notes (Optional)</label>
-          <textarea
-            id="notes"
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Additional information..."
-          />
-        </div>
-
-        <button type="submit" className="btn btn-primary" disabled={loading}>
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          fullWidth
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+          sx={{ mt: 3 }}
+        >
           {loading ? 'Registering...' : 'Register Asset'}
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Box>
+    </Box>
   );
 };
 

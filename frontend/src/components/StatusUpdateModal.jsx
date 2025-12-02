@@ -1,4 +1,21 @@
 import { useState } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Alert,
+  Box,
+  Typography,
+  Paper,
+  CircularProgress,
+} from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 
 const StatusUpdateModal = ({ asset, onClose, onUpdate }) => {
@@ -38,70 +55,74 @@ const StatusUpdateModal = ({ asset, onClose, onUpdate }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Update Asset Status</h3>
-
-        <div style={{ marginBottom: '20px', padding: '15px', background: '#f7fafc', borderRadius: '6px' }}>
-          <p><strong>Employee:</strong> {asset.employee_name}</p>
-          {asset.employee_email && <p><strong>Employee Email:</strong> {asset.employee_email}</p>}
-          <p><strong>Serial Number:</strong> {asset.laptop_serial_number}</p>
-          <p><strong>Asset Tag:</strong> {asset.laptop_asset_tag}</p>
-        </div>
+    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Update Asset Status</DialogTitle>
+      <DialogContent>
+        <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+          <Typography variant="body2" gutterBottom>
+            <strong>Employee:</strong> {asset.employee_name}
+          </Typography>
+          {asset.employee_email && (
+            <Typography variant="body2" gutterBottom>
+              <strong>Employee Email:</strong> {asset.employee_email}
+            </Typography>
+          )}
+          <Typography variant="body2" gutterBottom>
+            <strong>Serial Number:</strong> {asset.laptop_serial_number}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Asset Tag:</strong> {asset.laptop_asset_tag}
+          </Typography>
+        </Paper>
 
         {error && (
-          <div className="alert alert-error">
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
-          </div>
+          </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="status">New Status *</label>
-            <select
-              id="status"
+        <Box component="form" onSubmit={handleSubmit}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>New Status *</InputLabel>
+            <Select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
+              label="New Status *"
               required
             >
-              <option value="active">Active</option>
-              <option value="returned">Returned</option>
-              <option value="lost">Lost</option>
-              <option value="damaged">Damaged</option>
-              <option value="retired">Retired</option>
-            </select>
-          </div>
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="returned">Returned</MenuItem>
+              <MenuItem value="lost">Lost</MenuItem>
+              <MenuItem value="damaged">Damaged</MenuItem>
+              <MenuItem value="retired">Retired</MenuItem>
+            </Select>
+          </FormControl>
 
-          <div className="form-group">
-            <label htmlFor="notes">Notes</label>
-            <textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes about this status change..."
-            />
-          </div>
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? 'Updating...' : 'Update Status'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add notes about this status change..."
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          startIcon={loading && <CircularProgress size={20} />}
+        >
+          {loading ? 'Updating...' : 'Update Status'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
