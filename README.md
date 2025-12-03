@@ -16,11 +16,20 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 
 ### 🔐 Authentication & Security
 - **JWT Authentication** - Secure token-based auth with 7-day expiration
+- **Multi-Factor Authentication (MFA/2FA)** - TOTP-based authentication with backup codes
+  - QR code enrollment with authenticator apps (Google, Microsoft, Authy)
+  - 10 backup codes for account recovery
+  - User-controlled enable/disable from profile
+- **OIDC/SSO Authentication** - External identity provider integration
+  - Support for Auth0, Google Workspace, Azure AD, Okta
+  - Just-In-Time (JIT) user provisioning
+  - Role mapping from OIDC claims
+  - Database-backed configuration (admin UI)
 - **Password Security** - bcrypt hashing (10 rounds)
 - **Password Management** - Change password from profile settings
 - **Role-Based Access Control** - Three roles: Employee, Manager, Admin
 - **First Admin Setup** - Automatic admin promotion for first user
-- **Profile Management** - Update first/last name and password
+- **Profile Management** - Update first/last name, password, and MFA settings
 
 ### 📦 Asset Management
 - **Self-Service Registration** - Consultants register client laptops
@@ -48,6 +57,7 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **User Management** - View, edit roles, delete users
 - **System Overview** - User statistics and system info
 - **Application Settings** - Configuration and best practices
+- **OIDC/SSO Configuration** - Database-backed SSO settings with admin UI
 - **Audit Access** - View all system activity
 
 ### 🚀 Deployment & DevOps
@@ -57,7 +67,7 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **Cloudflare Tunnel** - Secure external access with SSL
 - **Health Checks** - Automated container monitoring
 - **Auto-Restart** - Self-healing containers
-- **Modern UI** - KeyData Cyber branded interface
+- **Modern Material-UI Interface** - Professional design with responsive layout
 
 ---
 
@@ -189,9 +199,10 @@ npm run dev
 
 **Frontend:**
 - React 18 + Vite
+- Material-UI (MUI) v5 - Component library
 - Context API (state management)
+- React Router v6
 - Fetch API (HTTP client)
-- Modern CSS (responsive design)
 
 **Backend:**
 - Node.js 18+
@@ -199,6 +210,9 @@ npm run dev
 - SQLite3 (better-sqlite3)
 - JWT (jsonwebtoken)
 - bcrypt (password hashing)
+- speakeasy (TOTP for MFA)
+- qrcode (QR code generation)
+- openid-client (OIDC/SSO integration)
 
 **DevOps:**
 - Docker & Docker Compose (ARM64 + AMD64)
@@ -270,6 +284,9 @@ ADMIN_EMAIL=admin@yourdomain.com  # Auto-promote this email to admin
 PORT=3001                          # Server port
 DATA_DIR=/app/data                 # Database directory
 NODE_ENV=production                # Environment mode
+
+# OIDC/SSO (configured via Admin UI - no env vars needed)
+# MFA/2FA (no configuration needed - user-controlled)
 ```
 
 ### Portainer Stack
@@ -296,7 +313,11 @@ CREATE TABLE users (
   first_name TEXT,
   last_name TEXT,
   created_at TEXT NOT NULL,
-  last_login TEXT
+  last_login TEXT,
+  oidc_sub TEXT,              -- OIDC subject identifier
+  mfa_enabled INTEGER DEFAULT 0,
+  mfa_secret TEXT,            -- TOTP secret
+  mfa_backup_codes TEXT       -- JSON array of backup codes
 );
 ```
 
@@ -318,6 +339,23 @@ CREATE TABLE assets (
 );
 ```
 
+### OIDC Settings Table
+```sql
+CREATE TABLE oidc_settings (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  enabled INTEGER NOT NULL DEFAULT 0,
+  issuer_url TEXT,
+  client_id TEXT,
+  client_secret TEXT,
+  redirect_uri TEXT,
+  scope TEXT DEFAULT 'openid email profile',
+  role_claim_path TEXT DEFAULT 'roles',
+  default_role TEXT DEFAULT 'employee',
+  updated_at TEXT NOT NULL,
+  updated_by TEXT
+);
+```
+
 ### Companies & Audit Logs Tables
 - See [Database Schema](../../wiki/Database-Schema) for complete schema
 
@@ -327,12 +365,16 @@ CREATE TABLE assets (
 
 ✅ **Password Security** - bcrypt hashing (10 rounds)
 ✅ **JWT Tokens** - Secure authentication with 7-day expiration
+✅ **Multi-Factor Authentication** - TOTP-based 2FA with backup codes
+✅ **OIDC/SSO Integration** - Enterprise identity provider support
 ✅ **Role-Based Access** - Granular permission control
-✅ **Audit Trails** - Complete activity logging
-✅ **HTTPS** - Cloudflare SSL/TLS
+✅ **Audit Trails** - Complete activity logging for compliance
+✅ **HTTPS** - Cloudflare SSL/TLS encryption
 ✅ **Input Validation** - Backend validation on all endpoints
 ✅ **XSS Protection** - React sanitization
 ✅ **SQL Injection** - Parameterized queries
+✅ **CSRF Protection** - State tokens for OAuth flows
+✅ **Session Security** - Automatic cleanup of expired sessions
 
 ---
 
@@ -340,11 +382,29 @@ CREATE TABLE assets (
 
 ### Authentication
 ```
-POST   /api/auth/register        Register new user
-POST   /api/auth/login           Login and get token
-GET    /api/auth/me              Get current user info
-PUT    /api/auth/profile         Update user profile (name)
-PUT    /api/auth/change-password Change user password
+POST   /api/auth/register             Register new user
+POST   /api/auth/login                Login (returns token or MFA challenge)
+GET    /api/auth/me                   Get current user info
+PUT    /api/auth/profile              Update user profile (name)
+PUT    /api/auth/change-password      Change user password
+```
+
+### Multi-Factor Authentication (MFA)
+```
+GET    /api/auth/mfa/status           Get MFA enrollment status
+POST   /api/auth/mfa/enroll           Start MFA enrollment (get QR code)
+POST   /api/auth/mfa/verify-enrollment Complete MFA enrollment
+POST   /api/auth/mfa/disable          Disable MFA (requires password)
+POST   /api/auth/mfa/verify-login     Verify MFA code during login
+```
+
+### OIDC/SSO Authentication
+```
+GET    /api/auth/oidc/config          Check if OIDC is enabled
+GET    /api/auth/oidc/login           Initiate OIDC login
+GET    /api/auth/oidc/callback        OIDC callback handler
+GET    /api/admin/oidc-settings       Get OIDC settings (admin)
+PUT    /api/admin/oidc-settings       Update OIDC settings (admin)
 ```
 
 ### Assets (Authenticated)
@@ -549,14 +609,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Automated Deployment
 - [x] Multi-Platform Support (ARM64 + AMD64)
 - [x] Portainer Webhook Auto-Pull
-- [x] Modern UI with KeyData Cyber Branding
+- [x] Modern Material-UI Interface
 - [x] Cloudflare Tunnel Support
-- [ ] Multi-factor Authentication
+- [x] Multi-Factor Authentication (MFA/2FA)
+- [x] OIDC/SSO Integration
+- [x] Database-Backed SSO Configuration
 - [ ] Email Notifications
 - [ ] Advanced Reporting Dashboard
 - [ ] Mobile App
 - [ ] API Rate Limiting
-- [ ] Database Encryption
+- [ ] Database Encryption at Rest
+- [ ] WebAuthn/Passkey Support
 
 ---
 

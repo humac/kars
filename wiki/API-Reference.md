@@ -83,7 +83,7 @@ POST /api/auth/login
 }
 ```
 
-**Response:** `200 OK`
+**Response (without MFA):** `200 OK`
 ```json
 {
   "message": "Login successful",
@@ -98,6 +98,17 @@ POST /api/auth/login
   }
 }
 ```
+
+**Response (with MFA enabled):** `200 OK`
+```json
+{
+  "mfaRequired": true,
+  "mfaSessionId": "abc123...",
+  "message": "MFA verification required"
+}
+```
+
+**Next Step:** Use `/api/auth/mfa/verify-login` with the `mfaSessionId` and verification code.
 
 **Errors:**
 - `400` - Missing email or password
@@ -176,6 +187,336 @@ Content-Type: application/json
 **Errors:**
 - `400` - Missing first_name or last_name
 - `401` - Not authenticated
+
+---
+
+### Change Password
+
+Change user's password with current password verification.
+
+```http
+PUT /api/auth/change-password
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newPassword456",
+  "confirmPassword": "newPassword456"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Password changed successfully"
+}
+```
+
+**Errors:**
+- `400` - Missing fields or passwords don't match
+- `401` - Current password is incorrect
+- `400` - New password too short (min 6 characters)
+
+---
+
+## Multi-Factor Authentication (MFA)
+
+### Get MFA Status
+
+Get current user's MFA enrollment status.
+
+```http
+GET /api/auth/mfa/status
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "enabled": true,
+  "hasBackupCodes": true
+}
+```
+
+---
+
+### Start MFA Enrollment
+
+Generate TOTP secret and QR code for MFA enrollment.
+
+```http
+POST /api/auth/mfa/enroll
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "qrCode": "data:image/png;base64,iVBORw0KGgoAAAANS...",
+  "secret": "JBSWY3DPEHPK3PXP",
+  "message": "Scan QR code with your authenticator app"
+}
+```
+
+**Errors:**
+- `400` - MFA is already enabled
+
+---
+
+### Verify MFA Enrollment
+
+Complete MFA enrollment by verifying first TOTP code.
+
+```http
+POST /api/auth/mfa/verify-enrollment
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "token": "123456"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "MFA enabled successfully",
+  "backupCodes": [
+    "A1B2-C3D4",
+    "E5F6-G7H8",
+    "I9J0-K1L2",
+    "..."
+  ]
+}
+```
+
+**Errors:**
+- `400` - No pending enrollment or invalid code
+
+---
+
+### Disable MFA
+
+Disable MFA for current user (requires password).
+
+```http
+POST /api/auth/mfa/disable
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "password": "userPassword123"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "MFA disabled successfully"
+}
+```
+
+**Errors:**
+- `400` - Missing password
+- `401` - Invalid password
+
+---
+
+### Verify MFA During Login
+
+Verify TOTP code or backup code during login flow.
+
+```http
+POST /api/auth/mfa/verify-login
+```
+
+**Request Body:**
+```json
+{
+  "mfaSessionId": "abc123...",
+  "token": "123456",
+  "useBackupCode": false
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "employee"
+  }
+}
+```
+
+**Errors:**
+- `400` - Invalid or expired session
+- `401` - Invalid verification code
+
+---
+
+## OIDC/SSO Authentication
+
+### Check OIDC Configuration
+
+Check if OIDC/SSO is enabled.
+
+```http
+GET /api/auth/oidc/config
+```
+
+**Response:** `200 OK`
+```json
+{
+  "enabled": true
+}
+```
+
+---
+
+### Initiate OIDC Login
+
+Start OIDC login flow.
+
+```http
+GET /api/auth/oidc/login
+```
+
+**Response:** `200 OK`
+```json
+{
+  "authUrl": "https://identity-provider.com/oauth/authorize?client_id=...",
+  "state": "random-state-token"
+}
+```
+
+**Usage:** Redirect user to `authUrl`
+
+---
+
+### OIDC Callback Handler
+
+Handle OIDC provider callback (automatic redirect).
+
+```http
+GET /api/auth/oidc/callback?code=...&state=...
+```
+
+**Query Parameters:**
+- `code` - Authorization code from provider
+- `state` - State token for CSRF protection
+
+**Response:** Redirects to frontend with token
+
+---
+
+### Get OIDC Settings (Admin)
+
+Get current OIDC configuration.
+
+```http
+GET /api/admin/oidc-settings
+```
+
+**Permissions:** Admin only
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "enabled": 1,
+  "issuer_url": "https://identity-provider.com",
+  "client_id": "your-client-id",
+  "has_client_secret": true,
+  "redirect_uri": "https://your-app.com/auth/callback",
+  "scope": "openid email profile",
+  "role_claim_path": "roles",
+  "default_role": "employee"
+}
+```
+
+**Note:** `client_secret` is never returned, only `has_client_secret` boolean
+
+---
+
+### Update OIDC Settings (Admin)
+
+Configure OIDC/SSO settings.
+
+```http
+PUT /api/admin/oidc-settings
+```
+
+**Permissions:** Admin only
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "enabled": true,
+  "issuer_url": "https://identity-provider.com",
+  "client_id": "your-client-id",
+  "client_secret": "your-client-secret",
+  "redirect_uri": "https://your-app.com/auth/callback",
+  "scope": "openid email profile",
+  "role_claim_path": "roles",
+  "default_role": "employee"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "OIDC settings updated successfully"
+}
+```
+
+**Errors:**
+- `400` - Missing required fields when enabled
+- `403` - Not an admin
 
 ---
 

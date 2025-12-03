@@ -43,12 +43,54 @@ Complete feature overview of the Asset Registration System.
 - Secure password hashing (bcrypt, 10 rounds)
 - 7-day token expiration
 
+**Multi-Factor Authentication (MFA/2FA)**
+- TOTP-based two-factor authentication
+- QR code enrollment with authenticator apps:
+  - Google Authenticator
+  - Microsoft Authenticator
+  - Authy
+  - Any TOTP-compatible app
+- Manual secret key entry option
+- 6-digit verification codes with clock drift tolerance
+- 10 backup codes for account recovery
+- One-time use backup codes (consumed after use)
+- User-controlled enrollment from profile
+- Password confirmation required to disable MFA
+- Audit logging of MFA enable/disable actions
+- Modal-based setup wizard with 3 steps:
+  1. QR code scanning
+  2. Code verification
+  3. Backup code storage
+
+**OIDC/SSO Authentication**
+- External identity provider integration:
+  - Auth0
+  - Google Workspace
+  - Azure AD
+  - Okta
+  - Any OIDC-compliant provider
+- Just-In-Time (JIT) user provisioning
+- Role mapping from OIDC claims/scopes
+- Configurable role claim path
+- Default role assignment for new users
+- Database-backed configuration (no env vars)
+- Admin UI for SSO settings management
+- PKCE flow for enhanced security
+- State token CSRF protection
+- Automatic account linking by email
+- Seamless "Sign In with SSO" button
+- Optional SSO (can be disabled)
+
 **Profile Management**
 - Update first name and last name
 - View current role and email
+- Change password with current password verification
 - Color-coded role badge display
+- MFA enrollment status display
+- Enable/disable two-factor authentication
 - Real-time profile updates (no page reload)
 - Profile data validation
+- Three-card layout: Profile Info, Password Change, MFA Settings
 
 ### Role-Based Access Control (RBAC)
 
@@ -79,11 +121,12 @@ Complete feature overview of the Asset Registration System.
 ### Company Management
 
 **Admin-Only Features:**
-- Add new client companies
+- Add new client companies via modal dialog
 - Edit company details (name, description)
 - Delete companies (with protection if assets exist)
 - View company list with creation dates
-- Inline editing interface
+- Modal-based interface for focused data entry
+- Clean card-based layout
 - Automatic dropdown population for asset registration
 
 **All User Access:**
@@ -168,15 +211,36 @@ Complete feature overview of the Asset Registration System.
   - Audit log monitoring
   - System update reminders
 
+**OIDC/SSO Configuration**
+- Enable/disable SSO authentication
+- Configure identity provider settings:
+  - Issuer URL
+  - Client ID
+  - Client Secret (masked in UI)
+  - Redirect URI
+  - OAuth scopes
+- Role mapping configuration:
+  - Custom claim path for roles
+  - Default role for new users
+- Live configuration without server restart
+- Database-backed settings (no env vars)
+- Test SSO login from login page
+- Track configuration changes in audit logs
+
 ## 🔐 Security Features
 
 **Authentication Security**
 - JWT token authentication
-- Secure password hashing (bcrypt)
+- Multi-factor authentication (TOTP-based)
+- OIDC/SSO integration with PKCE flow
+- Secure password hashing (bcrypt, 10 rounds)
 - Token expiration (7 days)
 - Token verification on every request
 - Automatic logout on invalid token
 - Protected routes (backend middleware)
+- MFA session timeout (5 minutes)
+- State token CSRF protection for OAuth
+- Backup code one-time consumption
 
 **Authorization**
 - Role-based access control
@@ -203,38 +267,74 @@ Complete feature overview of the Asset Registration System.
 
 ## 🎨 User Interface Features
 
+**Material-UI Design System**
+- Professional Material Design components
+- Consistent design language across application
+- Pre-built, accessible components
+- Responsive grid system
+- Theme customization support
+- Icon library integration
+
 **Responsive Design**
 - Mobile-friendly interface
 - Tablet optimization
 - Desktop layouts
 - Adaptive navigation
+- Fluid typography
+- Flexible component sizing
 
 **Visual Feedback**
-- Color-coded status badges
+- Color-coded status badges with chips
 - Role badges with distinct colors:
-  - Admin: Purple
-  - Manager: Green
-  - Employee: Blue
-- Success/error messages
-- Loading states
+  - Admin: Error (Red)
+  - Manager: Warning (Orange)
+  - Employee: Info (Blue)
+- Success/error alert messages
+- Loading states with spinners
 - Form validation feedback
+- Snackbar notifications
+- Progress indicators
 
 **Navigation**
 - Tabbed interface for main sections
 - Conditional tab visibility based on role
 - Active tab highlighting
-- User menu in header
+- App bar with user menu
+- Drawer navigation support
+- Breadcrumb trails
 - Logout functionality
 
+**Modal Dialogs**
+- MFA enrollment wizard (3-step stepper)
+- MFA verification during login
+- Company add/edit forms
+- MFA disable confirmation
+- Password confirmation dialogs
+- Focused user interactions
+- Backdrop blur effects
+- Escape key handling
+
 **Forms**
-- Inline validation
+- Material-UI TextField components
+- Inline validation with helper text
 - Required field indicators
 - Helpful placeholder text
-- Error message display
-- Success confirmations
-- Modal overlays for focused tasks
+- Error message display below fields
+- Success confirmations with alerts
+- Auto-focus on first field
+- Disabled state during submission
+
+**Cards & Layouts**
+- Card-based information display
+- Consistent spacing with Grid system
+- Paper elevation for depth
+- Divider components for sections
+- Box components for layouts
+- Flexbox utilities
+- Equal-height card layouts
 
 **Tables**
+- Material-UI DataGrid ready
 - Sortable columns
 - Search functionality
 - Filter controls
@@ -242,6 +342,7 @@ Complete feature overview of the Asset Registration System.
 - Pagination support
 - Empty state messages
 - Action buttons per row
+- Hover effects
 
 ## 🚀 Deployment Features
 
@@ -330,17 +431,20 @@ Complete feature overview of the Asset Registration System.
 ## 📈 Future Enhancement Possibilities
 
 While not currently implemented, the architecture supports:
-- Multi-factor authentication
-- OAuth integration
-- Advanced reporting dashboards
-- Asset lifecycle management
-- Automated notifications
-- Bulk import/export
-- Custom fields
-- Asset photos/documents
-- Mobile app
-- API rate limiting
+- Advanced reporting dashboards with charts
+- Asset lifecycle management workflows
+- Automated email notifications
+- Bulk import/export capabilities
+- Custom fields configuration
+- Asset photos/document attachments
+- Mobile app (React Native)
+- API rate limiting and throttling
 - WebSocket real-time updates
+- WebAuthn/Passkey support
+- Database encryption at rest
+- Asset barcode scanning
+- Scheduled reports
+- Data retention policies
 
 ---
 
