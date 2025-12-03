@@ -18,6 +18,7 @@ import {
   Alert,
   Grid,
   Chip,
+  TextField,
   Tabs,
   Tab,
   useTheme,
@@ -47,12 +48,23 @@ const AdminSettings = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
+  const [dbSettings, setDbSettings] = useState({
+    engine: 'sqlite',
+    postgresUrl: '',
+    managedByEnv: false,
+    effectiveEngine: 'sqlite',
+    restartRequired: true
+  });
+  const [dbLoading, setDbLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     if (activeView === 'users') {
       fetchUsers();
+    }
+    if (activeView === 'settings') {
+      fetchDatabaseSettings();
     }
   }, [activeView]);
 
@@ -77,6 +89,30 @@ const AdminSettings = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDatabaseSettings = async () => {
+    setDbLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/admin/database', {
+        headers: {
+          ...getAuthHeaders()
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load database settings');
+      }
+
+      const data = await response.json();
+      setDbSettings(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDbLoading(false);
     }
   };
 
@@ -105,6 +141,40 @@ const AdminSettings = () => {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleDatabaseSave = async () => {
+    setError(null);
+    setSuccess(null);
+    setDbLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/database', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          engine: dbSettings.engine,
+          postgresUrl: dbSettings.postgresUrl
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save database settings');
+      }
+
+      setDbSettings(data);
+      setSuccess('Database settings saved. Restart the backend to apply changes.');
+      setTimeout(() => setSuccess(null), 3500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDbLoading(false);
     }
   };
 
@@ -526,26 +596,95 @@ const AdminSettings = () => {
                   <Typography variant="h6" gutterBottom>
                     Data Management
                   </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Choose the database engine that best fits your deployment. SQLite is the built-in default; PostgreSQL
+                    is recommended for production resilience and external backups.
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Chip
+                      label={`Active: ${dbSettings.effectiveEngine.toUpperCase()}`}
+                      color={dbSettings.effectiveEngine === 'postgres' ? 'success' : 'default'}
+                      size="small"
+                    />
+                    {dbSettings.managedByEnv && (
+                      <Chip label="Managed by environment variables" color="warning" size="small" />
+                    )}
+                  </Box>
+                  <FormControl fullWidth sx={{ mb: 2 }} disabled={dbSettings.managedByEnv || dbLoading}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Preferred engine
+                    </Typography>
+                    <Select
+                      value={dbSettings.engine}
+                      onChange={(e) => setDbSettings({ ...dbSettings, engine: e.target.value })}
+                    >
+                      <MenuItem value="sqlite">SQLite (default)</MenuItem>
+                      <MenuItem value="postgres">PostgreSQL</MenuItem>
+                    </Select>
+                  </FormControl>
+                  {dbSettings.engine === 'postgres' && (
+                    <TextField
+                      fullWidth
+                      label="PostgreSQL connection string"
+                      placeholder="postgresql://user:pass@host:5432/database"
+                      value={dbSettings.postgresUrl}
+                      onChange={(e) => setDbSettings({ ...dbSettings, postgresUrl: e.target.value })}
+                      disabled={dbSettings.managedByEnv || dbLoading}
+                      helperText="Requires restart after saving. Validate credentials before applying."
+                      sx={{ mb: 2 }}
+                    />
+                  )}
+                  <Button
+                    variant="contained"
+                    onClick={handleDatabaseSave}
+                    disabled={dbSettings.managedByEnv || dbLoading}
+                  >
+                    {dbLoading ? 'Saving…' : 'Save Database Settings'}
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                    A service restart is required after changing the database engine or connection string.
+                  </Typography>
+                </Card>
+              </Grid>
+
+              {/* PostgreSQL Setup */}
+              <Grid item xs={12} md={6}>
+                <Card sx={{ p: 3, bgcolor: 'background.default', height: '100%' }}>
+                  <Typography variant="h6" gutterBottom>
+                    PostgreSQL Setup
+                  </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    The system uses SQLite for data storage. Database backups are recommended for production deployments.
+                    Configure a PostgreSQL database to replace the default SQLite file. Point the backend to your
+                    PostgreSQL connection string and restart the service to take effect.
                   </Typography>
                   <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
-                    <strong>Recommended Practices:</strong>
+                    <strong>Connection details to collect:</strong>
                   </Typography>
-                  <Box component="ul" sx={{ m: 0, pl: 3 }}>
+                  <Box component="ul" sx={{ m: 0, pl: 3, mb: 2 }}>
                     <Typography component="li" variant="body2" color="text.secondary">
-                      Regular database backups
+                      Host, port, and database name
                     </Typography>
                     <Typography component="li" variant="body2" color="text.secondary">
-                      Periodic audit log reviews
+                      Database user and password (least-privilege)
                     </Typography>
                     <Typography component="li" variant="body2" color="text.secondary">
-                      User access reviews (quarterly)
-                    </Typography>
-                    <Typography component="li" variant="body2" color="text.secondary">
-                      Asset verification (monthly)
+                      TLS requirements and allowed IPs/security groups
                     </Typography>
                   </Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>Migration tip:</strong> After configuring PostgreSQL, migrate existing SQLite data using the
+                    documented export/import workflow to preserve assets, users, companies, and audit logs.
+                  </Typography>
+                  <Button
+                    href="https://github.com/humac/claude_app_poc#postgresql-configuration-and-migration"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="contained"
+                    size="small"
+                    sx={{ mt: 2 }}
+                  >
+                    View PostgreSQL Setup & Migration Guide
+                  </Button>
                 </Card>
               </Grid>
 

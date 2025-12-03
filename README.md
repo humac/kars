@@ -254,6 +254,31 @@ cloudflared:
 
 **See:** [Deployment Guide](../../wiki/Deployment-Guide)
 
+### PostgreSQL Configuration and Migration
+
+SQLite remains the default for quick starts, but production deployments can point the backend at PostgreSQL for managed backups, monitoring, and high availability.
+
+1. **Provision PostgreSQL** – Create a database and least-privilege user (for example `ars_app`) using your managed provider or a Docker service.
+2. **Capture the connection string** – `postgresql://ars_app:<password>@<host>:<port>/ars` and configure the backend to use it before restarting the service.
+3. **Back up SQLite first** – Copy `backend/data/assets.db` (or your mounted `DATA_DIR`) and store it safely.
+4. **Migrate data with pgloader** – Run from the project root (adjust paths for your environment):
+
+   ```bash
+   docker run --rm -v $(pwd)/backend/data:/data dimitri/pgloader:latest \
+     pgloader /data/assets.db postgresql://ars_app:<password>@<host>:<port>/ars
+   ```
+
+   `pgloader` will create matching tables and transfer `assets`, `companies`, `users`, and `audit_logs` while preserving indexes.
+
+5. **Validate and cut over** –
+   - Verify row counts per table in PostgreSQL match SQLite.
+   - Spot-check a few assets/users and audit log entries.
+   - Point the backend to PostgreSQL, restart, and monitor logs for connection or permission errors.
+
+You can store the PostgreSQL connection string from **Admin → Application Settings → Data Management**. If `DB_CLIENT`/`POSTGRES_URL` are provided via environment variables, the admin form will display them as read-only and note that a restart is required after saving changes.
+
+If you prefer a SQL-only path, export SQLite data with `sqlite3 assets.db .dump` and import into PostgreSQL with `psql`, ensuring autoincrement columns are converted to `SERIAL`/`BIGSERIAL` and indexes are recreated.
+
 ---
 
 ## 🔧 Environment Variables
@@ -270,6 +295,9 @@ ADMIN_EMAIL=admin@yourdomain.com  # Auto-promote this email to admin
 PORT=3001                          # Server port
 DATA_DIR=/app/data                 # Database directory
 NODE_ENV=production                # Environment mode
+DB_CLIENT=postgres                 # Override database engine (sqlite or postgres)
+POSTGRES_URL=postgresql://user:pass@host:5432/ars  # Required when DB_CLIENT=postgres
+POSTGRES_SSL=true                  # Set to 'true' to enable SSL when using PostgreSQL
 ```
 
 ### Portainer Stack

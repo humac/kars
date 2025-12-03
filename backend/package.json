@@ -23,6 +23,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "openid-client": "^6.8.1",
+    "pg": "^8.11.3",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0"
   }
