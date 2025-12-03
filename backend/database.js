@@ -121,6 +121,13 @@ const initDb = () => {
     // Column already exists
   }
 
+  // Migration: Add oidc_sub column for OIDC authentication
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN oidc_sub TEXT UNIQUE');
+  } catch (e) {
+    // Column already exists
+  }
+
   // Create indexes for faster searching
   db.exec('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_manager_name ON assets(manager_name)');
@@ -130,6 +137,7 @@ const initDb = () => {
   db.exec('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_user_email ON users(email)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_user_oidc_sub ON users(oidc_sub)');
 
   console.log('Database initialized successfully');
 };
@@ -505,6 +513,45 @@ export const userDb = {
   delete: (id) => {
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
     return stmt.run(id);
+  },
+
+  // Get user by OIDC subject
+  getByOIDCSub: (oidcSub) => {
+    const stmt = db.prepare('SELECT * FROM users WHERE oidc_sub = ?');
+    return stmt.get(oidcSub);
+  },
+
+  // Create user with OIDC (JIT provisioning)
+  createFromOIDC: (userData) => {
+    const stmt = db.prepare(`
+      INSERT INTO users (email, password_hash, name, role, created_at, first_name, last_name, oidc_sub)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const now = new Date().toISOString();
+    const fullName = userData.first_name && userData.last_name
+      ? `${userData.first_name} ${userData.last_name}`
+      : userData.name;
+
+    // Use a placeholder password hash for OIDC users (they won't use password login)
+    const placeholderHash = 'OIDC_USER_NO_PASSWORD';
+
+    return stmt.run(
+      userData.email,
+      placeholderHash,
+      fullName,
+      userData.role || 'employee',
+      now,
+      userData.first_name || null,
+      userData.last_name || null,
+      userData.oidcSub
+    );
+  },
+
+  // Link existing user to OIDC subject
+  linkOIDC: (userId, oidcSub) => {
+    const stmt = db.prepare('UPDATE users SET oidc_sub = ? WHERE id = ?');
+    return stmt.run(oidcSub, userId);
   }
 };
 

@@ -36,6 +36,7 @@ import AuditReporting from './components/AuditReporting';
 import Profile from './components/Profile';
 import AdminSettings from './components/AdminSettings';
 import AuthPage from './components/AuthPage';
+import OIDCCallback from './components/OIDCCallback';
 
 function App() {
   const { user, logout, loading, isAuthenticated } = useAuth();
@@ -82,6 +83,11 @@ function App() {
     const routes = ['/', '/companies', '/audit', '/admin'];
     navigate(routes[newValue]);
   };
+
+  // Handle OIDC callback route (no authentication required)
+  if (location.pathname === '/auth/callback') {
+    return <OIDCCallback />;
+  }
 
   if (loading) {
     return (

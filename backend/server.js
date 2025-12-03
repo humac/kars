@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import { assetDb, companyDb, auditDb, userDb } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
+import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
+import { randomBytes } from 'crypto';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,6 +15,11 @@ app.use(express.json());
 
 // Initialize database
 assetDb.init();
+
+// Initialize OIDC (async)
+initializeOIDC().catch(err => {
+  console.error('OIDC initialization failed:', err.message);
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -341,6 +348,153 @@ app.delete('/api/auth/users/:id', authenticate, authorize('admin'), (req, res) =
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ===== OIDC Authentication Endpoints =====
+
+// Store for state tokens (in production, use Redis or similar)
+const stateStore = new Map();
+
+// Get OIDC configuration (for frontend)
+app.get('/api/auth/oidc/config', (req, res) => {
+  res.json({
+    enabled: isOIDCEnabled()
+  });
+});
+
+// Initiate OIDC login
+app.get('/api/auth/oidc/login', (req, res) => {
+  try {
+    if (!isOIDCEnabled()) {
+      return res.status(503).json({ error: 'OIDC is not enabled' });
+    }
+
+    // Generate state token for CSRF protection
+    const state = randomBytes(32).toString('hex');
+
+    // Store state with timestamp (expire after 10 minutes)
+    stateStore.set(state, {
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 10 * 60 * 1000
+    });
+
+    // Clean up expired states
+    for (const [key, value] of stateStore.entries()) {
+      if (Date.now() > value.expiresAt) {
+        stateStore.delete(key);
+      }
+    }
+
+    const authUrl = getAuthorizationUrl(state);
+    res.json({ authUrl, state });
+  } catch (error) {
+    console.error('OIDC login init error:', error);
+    res.status(500).json({ error: 'Failed to initiate OIDC login' });
+  }
+});
+
+// Handle OIDC callback
+app.get('/api/auth/oidc/callback', async (req, res) => {
+  try {
+    if (!isOIDCEnabled()) {
+      return res.status(503).json({ error: 'OIDC is not enabled' });
+    }
+
+    const { code, state, error: oidcError, error_description } = req.query;
+
+    // Check for OIDC errors
+    if (oidcError) {
+      console.error('OIDC error:', oidcError, error_description);
+      return res.status(400).json({
+        error: 'OIDC authentication failed',
+        details: error_description || oidcError
+      });
+    }
+
+    // Validate state
+    if (!state || !stateStore.has(state)) {
+      return res.status(400).json({ error: 'Invalid or expired state' });
+    }
+
+    // Remove used state
+    stateStore.delete(state);
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code missing' });
+    }
+
+    // Exchange code for tokens
+    const tokenSet = await handleCallback(req.query, state);
+
+    // Get user info and ID token claims
+    const userinfo = await getUserInfo(tokenSet);
+    const claims = tokenSet.claims();
+
+    // Merge claims from both sources
+    const allClaims = { ...claims, ...userinfo };
+
+    // Extract user data from claims
+    const userData = extractUserData(allClaims);
+
+    // Find or create user (JIT provisioning)
+    let user = userDb.getByOIDCSub(userData.oidcSub);
+
+    if (!user) {
+      // Check if user with same email exists
+      user = userDb.getByEmail(userData.email);
+
+      if (user) {
+        // Link existing user to OIDC
+        console.log(`Linking existing user ${userData.email} to OIDC subject ${userData.oidcSub}`);
+        userDb.linkOIDC(user.id, userData.oidcSub);
+      } else {
+        // Create new user (JIT provisioning)
+        console.log(`Creating new user via OIDC: ${userData.email} with role ${userData.role}`);
+        const result = userDb.createFromOIDC({
+          email: userData.email,
+          name: userData.fullName,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          role: userData.role,
+          oidcSub: userData.oidcSub
+        });
+
+        user = userDb.getById(result.lastInsertRowid);
+
+        // Log user creation
+        auditDb.log(
+          'create',
+          'user',
+          user.id,
+          user.email,
+          `User created via OIDC with role ${user.role}`,
+          user.email
+        );
+      }
+    }
+
+    // Update last login
+    userDb.updateLastLogin(user.id);
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    res.json({
+      message: 'OIDC login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name
+      }
+    });
+  } catch (error) {
+    console.error('OIDC callback error:', error);
+    res.status(500).json({ error: 'Failed to process OIDC callback', details: error.message });
   }
 });
 

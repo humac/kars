@@ -108,6 +108,12 @@ export const AuthProvider = ({ children }) => {
     };
   };
 
+  const setAuthData = (newToken, userData) => {
+    setToken(newToken);
+    setUser(userData);
+    localStorage.setItem('token', newToken);
+  };
+
   const value = {
     user,
     token,
@@ -116,6 +122,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
+    setAuthData,
     isAuthenticated: !!user,
     getAuthHeaders
   };

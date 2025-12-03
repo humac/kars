@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -9,8 +9,9 @@ import {
   Alert,
   Link,
   CircularProgress,
+  Divider,
 } from '@mui/material';
-import { Login as LoginIcon } from '@mui/icons-material';
+import { Login as LoginIcon, VpnKey } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = ({ onSwitchToRegister }) => {
@@ -20,7 +21,17 @@ const Login = ({ onSwitchToRegister }) => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [oidcLoading, setOidcLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [oidcEnabled, setOidcEnabled] = useState(false);
+
+  useEffect(() => {
+    // Check if OIDC is enabled
+    fetch('/api/auth/oidc/config')
+      .then(res => res.json())
+      .then(data => setOidcEnabled(data.enabled))
+      .catch(err => console.error('Failed to check OIDC config:', err));
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -41,6 +52,26 @@ const Login = ({ onSwitchToRegister }) => {
     }
 
     setLoading(false);
+  };
+
+  const handleOIDCLogin = async () => {
+    setOidcLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/oidc/login');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to initiate OIDC login');
+      }
+
+      // Redirect to OIDC provider
+      window.location.href = data.authUrl;
+    } catch (err) {
+      setError(err.message);
+      setOidcLoading(false);
+    }
   };
 
   return (
@@ -117,11 +148,32 @@ const Login = ({ onSwitchToRegister }) => {
               type="submit"
               variant="contained"
               size="large"
-              disabled={loading}
+              disabled={loading || oidcLoading}
               startIcon={loading ? <CircularProgress size={20} /> : <LoginIcon />}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
+
+            {oidcEnabled && (
+              <>
+                <Divider sx={{ my: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    OR
+                  </Typography>
+                </Divider>
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  onClick={handleOIDCLogin}
+                  disabled={loading || oidcLoading}
+                  startIcon={oidcLoading ? <CircularProgress size={20} /> : <VpnKey />}
+                >
+                  {oidcLoading ? 'Redirecting...' : 'Sign In with SSO'}
+                </Button>
+              </>
+            )}
 
             <Box
               sx={{
