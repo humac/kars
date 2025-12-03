@@ -108,6 +108,40 @@ const initDb = () => {
 
   db.exec(createUsersTableQuery);
 
+  // Create OIDC settings table (single row configuration)
+  const createOIDCSettingsTableQuery = `
+    CREATE TABLE IF NOT EXISTS oidc_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER NOT NULL DEFAULT 0,
+      issuer_url TEXT,
+      client_id TEXT,
+      client_secret TEXT,
+      redirect_uri TEXT,
+      scope TEXT DEFAULT 'openid email profile',
+      role_claim_path TEXT DEFAULT 'roles',
+      default_role TEXT DEFAULT 'employee',
+      updated_at TEXT NOT NULL,
+      updated_by TEXT
+    )
+  `;
+
+  db.exec(createOIDCSettingsTableQuery);
+
+  // Insert default OIDC settings if not exists
+  try {
+    const checkSettings = db.prepare('SELECT id FROM oidc_settings WHERE id = 1').get();
+    if (!checkSettings) {
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO oidc_settings (id, enabled, updated_at)
+        VALUES (1, 0, ?)
+      `).run(now);
+      console.log('Default OIDC settings created');
+    }
+  } catch (e) {
+    console.error('Error creating default OIDC settings:', e);
+  }
+
   // Migration: Add first_name and last_name columns if they don't exist
   try {
     db.exec('ALTER TABLE users ADD COLUMN first_name TEXT');
@@ -552,6 +586,47 @@ export const userDb = {
   linkOIDC: (userId, oidcSub) => {
     const stmt = db.prepare('UPDATE users SET oidc_sub = ? WHERE id = ?');
     return stmt.run(oidcSub, userId);
+  }
+};
+
+// OIDC Settings operations
+export const oidcSettingsDb = {
+  // Get OIDC settings
+  get: () => {
+    const stmt = db.prepare('SELECT * FROM oidc_settings WHERE id = 1');
+    return stmt.get();
+  },
+
+  // Update OIDC settings
+  update: (settings, userEmail) => {
+    const stmt = db.prepare(`
+      UPDATE oidc_settings
+      SET enabled = ?,
+          issuer_url = ?,
+          client_id = ?,
+          client_secret = ?,
+          redirect_uri = ?,
+          scope = ?,
+          role_claim_path = ?,
+          default_role = ?,
+          updated_at = ?,
+          updated_by = ?
+      WHERE id = 1
+    `);
+
+    const now = new Date().toISOString();
+    return stmt.run(
+      settings.enabled ? 1 : 0,
+      settings.issuer_url || null,
+      settings.client_id || null,
+      settings.client_secret || null,
+      settings.redirect_uri || null,
+      settings.scope || 'openid email profile',
+      settings.role_claim_path || 'roles',
+      settings.default_role || 'employee',
+      now,
+      userEmail
+    );
   }
 };
 

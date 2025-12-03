@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { randomBytes } from 'crypto';
@@ -16,10 +16,19 @@ app.use(express.json());
 // Initialize database
 assetDb.init();
 
-// Initialize OIDC (async)
-initializeOIDC().catch(err => {
-  console.error('OIDC initialization failed:', err.message);
-});
+// Initialize OIDC from database settings (async)
+(async () => {
+  try {
+    const settings = oidcSettingsDb.get();
+    if (settings && settings.enabled === 1) {
+      await initializeOIDC(settings);
+    } else {
+      console.log('OIDC is disabled in settings');
+    }
+  } catch (err) {
+    console.error('OIDC initialization failed:', err.message);
+  }
+})();
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -351,6 +360,69 @@ app.delete('/api/auth/users/:id', authenticate, authorize('admin'), (req, res) =
   }
 });
 
+// ===== OIDC Settings Management (Admin Only) =====
+
+// Get OIDC settings
+app.get('/api/admin/oidc-settings', authenticate, authorize('admin'), (req, res) => {
+  try {
+    const settings = oidcSettingsDb.get();
+    // Don't send client_secret to frontend for security
+    const { client_secret, ...safeSettings } = settings || {};
+    res.json({
+      ...safeSettings,
+      has_client_secret: !!client_secret
+    });
+  } catch (error) {
+    console.error('Get OIDC settings error:', error);
+    res.status(500).json({ error: 'Failed to get OIDC settings' });
+  }
+});
+
+// Update OIDC settings
+app.put('/api/admin/oidc-settings', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const settings = req.body;
+
+    // Validate required fields if enabling OIDC
+    if (settings.enabled) {
+      if (!settings.issuer_url || !settings.client_id || !settings.redirect_uri) {
+        return res.status(400).json({
+          error: 'Issuer URL, Client ID, and Redirect URI are required when enabling OIDC'
+        });
+      }
+    }
+
+    // Get existing settings to preserve client_secret if not provided
+    const existingSettings = oidcSettingsDb.get();
+    if (!settings.client_secret && existingSettings?.client_secret) {
+      settings.client_secret = existingSettings.client_secret;
+    }
+
+    // Update settings
+    oidcSettingsDb.update(settings, req.user.email);
+
+    // Reinitialize OIDC client with new settings
+    if (settings.enabled) {
+      await initializeOIDC(settings);
+    }
+
+    // Log the change
+    auditDb.log(
+      'update',
+      'oidc_settings',
+      1,
+      'OIDC Configuration',
+      `OIDC settings updated (enabled: ${settings.enabled})`,
+      req.user.email
+    );
+
+    res.json({ message: 'OIDC settings updated successfully' });
+  } catch (error) {
+    console.error('Update OIDC settings error:', error);
+    res.status(500).json({ error: 'Failed to update OIDC settings' });
+  }
+});
+
 // ===== OIDC Authentication Endpoints =====
 
 // Store for state tokens (in production, use Redis or similar)
@@ -358,9 +430,14 @@ const stateStore = new Map();
 
 // Get OIDC configuration (for frontend)
 app.get('/api/auth/oidc/config', (req, res) => {
-  res.json({
-    enabled: isOIDCEnabled()
-  });
+  try {
+    const settings = oidcSettingsDb.get();
+    res.json({
+      enabled: settings?.enabled === 1 && isOIDCEnabled()
+    });
+  } catch (error) {
+    res.json({ enabled: false });
+  }
 });
 
 // Initiate OIDC login

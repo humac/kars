@@ -34,8 +34,10 @@ import {
   SettingsApplications,
   Delete,
   Warning,
+  VpnKey,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import OIDCSettings from './OIDCSettings';
 
 const AdminSettings = () => {
   const { getAuthHeaders, user } = useAuth();
@@ -213,6 +215,12 @@ const AdminSettings = () => {
               iconPosition="start"
               label="Application Settings"
               value="settings"
+            />
+            <Tab
+              icon={<VpnKey />}
+              iconPosition="start"
+              label="OIDC/SSO"
+              value="oidc"
             />
           </Tabs>
         </Box>
@@ -570,6 +578,13 @@ const AdminSettings = () => {
                 </Card>
               </Grid>
             </Grid>
+          </Box>
+        )}
+
+        {/* OIDC/SSO Settings */}
+        {activeView === 'oidc' && (
+          <Box>
+            <OIDCSettings />
           </Box>
         )}
       </Card>

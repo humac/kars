@@ -1,38 +1,57 @@
 import { Issuer, generators } from 'openid-client';
 
-// OIDC Configuration
-const OIDC_CONFIG = {
-  enabled: process.env.OIDC_ENABLED === 'true',
-  issuerUrl: process.env.OIDC_ISSUER_URL,
-  clientId: process.env.OIDC_CLIENT_ID,
-  clientSecret: process.env.OIDC_CLIENT_SECRET,
-  redirectUri: process.env.OIDC_REDIRECT_URI || 'http://localhost:3000/auth/callback',
-  scope: process.env.OIDC_SCOPE || 'openid email profile',
-  // Role mapping from OIDC claims
-  roleClaimPath: process.env.OIDC_ROLE_CLAIM_PATH || 'roles', // e.g., "roles" or "https://myapp.com/roles"
+// OIDC Configuration - will be loaded from database
+let OIDC_CONFIG = {
+  enabled: false,
+  issuerUrl: null,
+  clientId: null,
+  clientSecret: null,
+  redirectUri: 'http://localhost:3000/auth/callback',
+  scope: 'openid email profile',
+  roleClaimPath: 'roles',
   roleMapping: {
-    // Map OIDC roles to app roles
     admin: 'admin',
     manager: 'manager',
     employee: 'employee',
   },
-  defaultRole: process.env.OIDC_DEFAULT_ROLE || 'employee',
+  defaultRole: 'employee',
 };
 
 let oidcClient = null;
 let codeVerifierStore = new Map(); // Store PKCE code verifiers temporarily
 
 /**
- * Initialize OIDC client
+ * Initialize OIDC client with settings from database
  */
-async function initializeOIDC() {
+async function initializeOIDC(settings = null) {
+  // If settings provided, use them; otherwise keep existing config
+  if (settings) {
+    OIDC_CONFIG = {
+      enabled: settings.enabled === 1 || settings.enabled === true,
+      issuerUrl: settings.issuer_url,
+      clientId: settings.client_id,
+      clientSecret: settings.client_secret,
+      redirectUri: settings.redirect_uri || 'http://localhost:3000/auth/callback',
+      scope: settings.scope || 'openid email profile',
+      roleClaimPath: settings.role_claim_path || 'roles',
+      roleMapping: {
+        admin: 'admin',
+        manager: 'manager',
+        employee: 'employee',
+      },
+      defaultRole: settings.default_role || 'employee',
+    };
+  }
+
   if (!OIDC_CONFIG.enabled) {
     console.log('OIDC is disabled');
+    oidcClient = null;
     return null;
   }
 
   if (!OIDC_CONFIG.issuerUrl || !OIDC_CONFIG.clientId) {
-    console.error('OIDC configuration missing: OIDC_ISSUER_URL and OIDC_CLIENT_ID are required');
+    console.error('OIDC configuration missing: issuer_url and client_id are required');
+    oidcClient = null;
     return null;
   }
 
@@ -51,6 +70,7 @@ async function initializeOIDC() {
     return oidcClient;
   } catch (error) {
     console.error('Failed to initialize OIDC:', error.message);
+    oidcClient = null;
     return null;
   }
 }
