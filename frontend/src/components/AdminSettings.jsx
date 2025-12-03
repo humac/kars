@@ -56,6 +56,8 @@ const AdminSettings = () => {
     restartRequired: true
   });
   const [dbLoading, setDbLoading] = useState(false);
+  const [sqliteFile, setSqliteFile] = useState(null);
+  const [sqliteImporting, setSqliteImporting] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -175,6 +177,54 @@ const AdminSettings = () => {
       setError(err.message);
     } finally {
       setDbLoading(false);
+    }
+  };
+
+  const handleSqliteImport = async () => {
+    setError(null);
+    setSuccess(null);
+
+    if (dbSettings.effectiveEngine !== 'postgres') {
+      setError('Switch to PostgreSQL before importing SQLite data. Save the connection string first.');
+      return;
+    }
+
+    if (!sqliteFile) {
+      setError('Select a SQLite assets.db file before starting the import.');
+      return;
+    }
+
+    setSqliteImporting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('sqliteFile', sqliteFile);
+
+      const response = await fetch('/api/admin/database/import-sqlite', {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders()
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to import SQLite data');
+      }
+
+      const details = data.imported
+        ? `Imported ${data.imported.assets} assets, ${data.imported.companies} companies, ${data.imported.users} users, and ${data.imported.auditLogs} audit logs.`
+        : '';
+
+      setSuccess(`SQLite import completed successfully. ${details}`.trim());
+      setSqliteFile(null);
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSqliteImporting(false);
     }
   };
 
@@ -671,13 +721,57 @@ const AdminSettings = () => {
                       TLS requirements and allowed IPs/security groups
                     </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    <strong>Migration tip:</strong> After configuring PostgreSQL, migrate existing SQLite data using the
-                    documented export/import workflow to preserve assets, users, companies, and audit logs.
-                  </Typography>
-                  <Button
-                    href="https://github.com/humac/claude_app_poc#postgresql-configuration-and-migration"
-                    target="_blank"
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>Migration tip:</strong> After configuring PostgreSQL, migrate existing SQLite data using the
+                      documented export/import workflow to preserve assets, users, companies, and audit logs.
+                    </Typography>
+                    <Box
+                      sx={{
+                        mt: 2,
+                        p: 2,
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        bgcolor: 'background.paper'
+                      }}
+                    >
+                      <Typography variant="subtitle1" gutterBottom>
+                        Import SQLite assets.db
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Upload your existing SQLite backup to populate PostgreSQL without leaving the admin console. Existing
+                        PostgreSQL data will be replaced during the import.
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          disabled={sqliteImporting}
+                        >
+                          {sqliteFile ? `Selected: ${sqliteFile.name}` : 'Choose assets.db file'}
+                          <input
+                            type="file"
+                            hidden
+                            accept=".db,.sqlite,application/octet-stream"
+                            onChange={(event) => setSqliteFile(event.target.files?.[0] || null)}
+                          />
+                        </Button>
+                        <Button
+                          variant="contained"
+                          onClick={handleSqliteImport}
+                          disabled={sqliteImporting}
+                        >
+                          {sqliteImporting ? 'Importing…' : 'Import SQLite into PostgreSQL'}
+                        </Button>
+                        <Typography variant="caption" color="text.secondary">
+                          Tip: Backup PostgreSQL first. The import truncates PostgreSQL tables before copying records from your
+                          SQLite file.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Button
+                      href="https://github.com/humac/claude_app_poc#postgresql-configuration-and-migration"
+                      target="_blank"
                     rel="noopener noreferrer"
                     variant="contained"
                     size="small"

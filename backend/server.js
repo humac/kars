@@ -1,14 +1,18 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, databaseSettings, databaseEngine } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, databaseSettings, databaseEngine, importSqliteDatabase } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
 import { randomBytes } from 'crypto';
+import multer from 'multer';
+import { unlink } from 'fs/promises';
+import os from 'os';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 // Middleware
 app.use(cors());
@@ -696,6 +700,30 @@ app.put('/api/admin/database', authenticate, authorize('admin'), async (req, res
   } catch (error) {
     console.error('Update database settings error:', error);
     res.status(500).json({ error: error.message || 'Failed to update database settings' });
+  }
+});
+
+app.post('/api/admin/database/import-sqlite', authenticate, authorize('admin'), upload.single('sqliteFile'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Upload a SQLite assets.db file to import' });
+  }
+
+  if (databaseEngine !== 'postgres') {
+    await unlink(req.file.path).catch(() => {});
+    return res.status(400).json({ error: 'Switch to PostgreSQL before importing SQLite data' });
+  }
+
+  try {
+    const results = await importSqliteDatabase(req.file.path);
+    res.json({
+      message: 'SQLite data imported into PostgreSQL successfully',
+      imported: results
+    });
+  } catch (error) {
+    console.error('SQLite import failed:', error);
+    res.status(500).json({ error: error.message || 'Failed to import SQLite data' });
+  } finally {
+    await unlink(req.file.path).catch(() => {});
   }
 });
 

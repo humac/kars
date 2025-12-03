@@ -717,4 +717,125 @@ export const databaseSettings = {
 
 export const databaseEngine = selectedEngine;
 
+const parseDate = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
+export const importSqliteDatabase = async (sqlitePath) => {
+  if (!isPostgres || !pgPool) {
+    throw new Error('PostgreSQL engine must be active to import SQLite data');
+  }
+
+  const sqlite = new Database(sqlitePath, { readonly: true });
+  const client = await pgPool.connect();
+
+  try {
+    await client.query('BEGIN');
+    await client.query('TRUNCATE TABLE audit_logs, assets, companies, users RESTART IDENTITY CASCADE');
+
+    const assets = sqlite.prepare('SELECT * FROM assets').all();
+    const companies = sqlite.prepare('SELECT * FROM companies').all();
+    const auditLogs = sqlite.prepare('SELECT * FROM audit_logs').all();
+    const users = sqlite.prepare('SELECT * FROM users').all();
+
+    for (const row of companies) {
+      await client.query(
+        `INSERT INTO companies (id, name, description, created_date)
+         VALUES ($1, $2, $3, $4)` ,
+        [row.id, row.name, row.description || '', parseDate(row.created_date)]
+      );
+    }
+
+    for (const row of assets) {
+      await client.query(
+        `INSERT INTO assets (
+          id, employee_name, employee_email, manager_name, manager_email,
+          client_name, laptop_serial_number, laptop_asset_tag, laptop_make, laptop_model,
+          status, registration_date, last_updated, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)` ,
+        [
+          row.id,
+          row.employee_name,
+          row.employee_email,
+          row.manager_name,
+          row.manager_email,
+          row.client_name,
+          row.laptop_serial_number,
+          row.laptop_asset_tag,
+          row.laptop_make || '',
+          row.laptop_model || '',
+          row.status,
+          parseDate(row.registration_date),
+          parseDate(row.last_updated),
+          row.notes || ''
+        ]
+      );
+    }
+
+    for (const row of users) {
+      await client.query(
+        `INSERT INTO users (
+          id, email, password_hash, name, role, created_at, last_login,
+          first_name, last_name, oidc_sub, mfa_enabled, mfa_secret, mfa_backup_codes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)` ,
+        [
+          row.id,
+          row.email,
+          row.password_hash,
+          row.name,
+          row.role,
+          parseDate(row.created_at),
+          parseDate(row.last_login),
+          row.first_name || null,
+          row.last_name || null,
+          row.oidc_sub || null,
+          row.mfa_enabled || 0,
+          row.mfa_secret || null,
+          row.mfa_backup_codes || null
+        ]
+      );
+    }
+
+    for (const row of auditLogs) {
+      await client.query(
+        `INSERT INTO audit_logs (
+          id, action, entity_type, entity_id, entity_name, details, timestamp, user_email
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)` ,
+        [
+          row.id,
+          row.action,
+          row.entity_type,
+          row.entity_id,
+          row.entity_name,
+          row.details || '',
+          parseDate(row.timestamp),
+          row.user_email || null
+        ]
+      );
+    }
+
+    await client.query("SELECT setval(pg_get_serial_sequence('companies', 'id'), COALESCE(MAX(id), 0)) FROM companies");
+    await client.query("SELECT setval(pg_get_serial_sequence('assets', 'id'), COALESCE(MAX(id), 0)) FROM assets");
+    await client.query("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 0)) FROM users");
+    await client.query("SELECT setval(pg_get_serial_sequence('audit_logs', 'id'), COALESCE(MAX(id), 0)) FROM audit_logs");
+
+    await client.query('COMMIT');
+
+    return {
+      companies: companies.length,
+      assets: assets.length,
+      users: users.length,
+      auditLogs: auditLogs.length
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    sqlite.close();
+    client.release();
+  }
+};
+
 export default { databaseEngine };
