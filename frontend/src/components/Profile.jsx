@@ -11,9 +11,16 @@ import {
   Chip,
   Paper,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
-import { Save, Lock, Person } from '@mui/icons-material';
+import { Save, Lock, Person, Security, CheckCircle, Cancel } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import MFASetupModal from './MFASetupModal';
 
 const Profile = () => {
   const { user, getAuthHeaders, updateUser } = useAuth();
@@ -33,6 +40,15 @@ const Profile = () => {
   const [success, setSuccess] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  // MFA state
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [showMFASetup, setShowMFASetup] = useState(false);
+  const [showDisableMFA, setShowDisableMFA] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [mfaError, setMfaError] = useState('');
+  const [mfaSuccess, setMfaSuccess] = useState('');
+
   useEffect(() => {
     // Initialize form with user data
     if (user) {
@@ -42,6 +58,25 @@ const Profile = () => {
       });
     }
   }, [user]);
+
+  // Fetch MFA status
+  useEffect(() => {
+    const fetchMFAStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/mfa/status', {
+          headers: getAuthHeaders(),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setMfaEnabled(data.enabled);
+        }
+      } catch (err) {
+        console.error('Failed to fetch MFA status:', err);
+      }
+    };
+
+    fetchMFAStatus();
+  }, [getAuthHeaders]);
 
   const handleChange = (e) => {
     setFormData({
@@ -151,6 +186,50 @@ const Profile = () => {
       employee: 'info',
     };
     return colors[role] || 'default';
+  };
+
+  const handleMFASetupComplete = () => {
+    setMfaEnabled(true);
+    setShowMFASetup(false);
+    setMfaSuccess('Two-factor authentication enabled successfully!');
+    setTimeout(() => setMfaSuccess(''), 5000);
+  };
+
+  const handleDisableMFA = async () => {
+    if (!disablePassword) {
+      setMfaError('Password is required to disable MFA');
+      return;
+    }
+
+    setMfaLoading(true);
+    setMfaError('');
+
+    try {
+      const response = await fetch('/api/auth/mfa/disable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ password: disablePassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to disable MFA');
+      }
+
+      setMfaEnabled(false);
+      setShowDisableMFA(false);
+      setDisablePassword('');
+      setMfaSuccess('Two-factor authentication disabled successfully');
+      setTimeout(() => setMfaSuccess(''), 5000);
+    } catch (err) {
+      setMfaError(err.message);
+    } finally {
+      setMfaLoading(false);
+    }
   };
 
   return (
@@ -322,7 +401,146 @@ const Profile = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Two-Factor Authentication Card */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Security sx={{ mr: 1 }} color="primary" />
+                <Typography variant="h5" fontWeight={600}>
+                  Two-Factor Authentication
+                </Typography>
+              </Box>
+
+              {mfaSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  {mfaSuccess}
+                </Alert>
+              )}
+
+              {mfaError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {mfaError}
+                </Alert>
+              )}
+
+              <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600} gutterBottom>
+                      Status
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {mfaEnabled ? (
+                        <>
+                          <CheckCircle color="success" fontSize="small" />
+                          <Typography variant="body2" color="success.main" fontWeight={600}>
+                            Enabled
+                          </Typography>
+                        </>
+                      ) : (
+                        <>
+                          <Cancel color="error" fontSize="small" />
+                          <Typography variant="body2" color="error.main">
+                            Disabled
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {mfaEnabled ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => setShowDisableMFA(true)}
+                    >
+                      Disable MFA
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      onClick={() => setShowMFASetup(true)}
+                    >
+                      Enable MFA
+                    </Button>
+                  )}
+                </Box>
+              </Paper>
+
+              <Alert severity="info">
+                <Typography variant="body2">
+                  Two-factor authentication adds an extra layer of security to your account by requiring
+                  a verification code from your phone in addition to your password.
+                </Typography>
+              </Alert>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
+
+      {/* MFA Setup Modal */}
+      <MFASetupModal
+        open={showMFASetup}
+        onClose={() => setShowMFASetup(false)}
+        onComplete={handleMFASetupComplete}
+        getAuthHeaders={getAuthHeaders}
+      />
+
+      {/* Disable MFA Confirmation Dialog */}
+      <Dialog
+        open={showDisableMFA}
+        onClose={() => {
+          setShowDisableMFA(false);
+          setDisablePassword('');
+          setMfaError('');
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This will make your account less secure. Are you sure?
+          </Alert>
+
+          {mfaError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {mfaError}
+            </Alert>
+          )}
+
+          <TextField
+            fullWidth
+            type="password"
+            label="Enter your password to confirm"
+            value={disablePassword}
+            onChange={(e) => setDisablePassword(e.target.value)}
+            placeholder="Enter password"
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setShowDisableMFA(false);
+              setDisablePassword('');
+              setMfaError('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDisableMFA}
+            disabled={mfaLoading || !disablePassword}
+          >
+            {mfaLoading ? <CircularProgress size={24} /> : 'Disable MFA'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

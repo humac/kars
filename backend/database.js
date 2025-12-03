@@ -162,6 +162,25 @@ const initDb = () => {
     // Column already exists
   }
 
+  // Migration: Add MFA columns
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN mfa_enabled INTEGER DEFAULT 0');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN mfa_secret TEXT');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN mfa_backup_codes TEXT');
+  } catch (e) {
+    // Column already exists
+  }
+
   // Create indexes for faster searching
   db.exec('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_manager_name ON assets(manager_name)');
@@ -592,6 +611,50 @@ export const userDb = {
   linkOIDC: (userId, oidcSub) => {
     const stmt = db.prepare('UPDATE users SET oidc_sub = ? WHERE id = ?');
     return stmt.run(oidcSub, userId);
+  },
+
+  // Enable MFA for user
+  enableMFA: (userId, secret, backupCodes) => {
+    const stmt = db.prepare(`
+      UPDATE users
+      SET mfa_enabled = 1, mfa_secret = ?, mfa_backup_codes = ?
+      WHERE id = ?
+    `);
+    return stmt.run(secret, JSON.stringify(backupCodes), userId);
+  },
+
+  // Disable MFA for user
+  disableMFA: (userId) => {
+    const stmt = db.prepare(`
+      UPDATE users
+      SET mfa_enabled = 0, mfa_secret = NULL, mfa_backup_codes = NULL
+      WHERE id = ?
+    `);
+    return stmt.run(userId);
+  },
+
+  // Get MFA status for user
+  getMFAStatus: (userId) => {
+    const stmt = db.prepare('SELECT mfa_enabled, mfa_secret, mfa_backup_codes FROM users WHERE id = ?');
+    return stmt.get(userId);
+  },
+
+  // Verify and consume backup code
+  useBackupCode: (userId, code) => {
+    const user = userDb.getMFAStatus(userId);
+    if (!user || !user.mfa_backup_codes) return false;
+
+    const backupCodes = JSON.parse(user.mfa_backup_codes);
+    const codeIndex = backupCodes.indexOf(code);
+
+    if (codeIndex === -1) return false;
+
+    // Remove used backup code
+    backupCodes.splice(codeIndex, 1);
+    const stmt = db.prepare('UPDATE users SET mfa_backup_codes = ? WHERE id = ?');
+    stmt.run(JSON.stringify(backupCodes), userId);
+
+    return true;
   }
 };
 

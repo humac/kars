@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Login as LoginIcon, VpnKey } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import MFAVerifyModal from './MFAVerifyModal';
 
 const Login = ({ onSwitchToRegister }) => {
   const { login } = useAuth();
@@ -24,6 +25,12 @@ const Login = ({ onSwitchToRegister }) => {
   const [oidcLoading, setOidcLoading] = useState(false);
   const [error, setError] = useState(null);
   const [oidcEnabled, setOidcEnabled] = useState(false);
+
+  // MFA state
+  const [showMFAVerify, setShowMFAVerify] = useState(false);
+  const [mfaSessionId, setMfaSessionId] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState('');
 
   useEffect(() => {
     // Check if OIDC is enabled
@@ -45,13 +52,78 @@ const Login = ({ onSwitchToRegister }) => {
     setLoading(true);
     setError(null);
 
-    const result = await login(formData.email, formData.password);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-    if (!result.success) {
-      setError(result.error);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Check if MFA is required
+      if (data.mfaRequired) {
+        setMfaSessionId(data.mfaSessionId);
+        setShowMFAVerify(true);
+        setLoading(false);
+        return;
+      }
+
+      // Regular login success
+      const result = await login(formData.email, formData.password);
+      if (!result.success) {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setLoading(false);
+  const handleMFAVerify = async (code, useBackupCode) => {
+    setMfaLoading(true);
+    setMfaError('');
+
+    try {
+      const response = await fetch('/api/auth/mfa/verify-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mfaSessionId,
+          token: code,
+          useBackupCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Invalid verification code');
+      }
+
+      // Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Reload to trigger auth context update
+      window.location.reload();
+    } catch (err) {
+      setMfaError(err.message);
+    } finally {
+      setMfaLoading(false);
+    }
   };
 
   const handleOIDCLogin = async () => {
@@ -200,6 +272,18 @@ const Login = ({ onSwitchToRegister }) => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* MFA Verification Modal */}
+      <MFAVerifyModal
+        open={showMFAVerify}
+        onClose={() => {
+          setShowMFAVerify(false);
+          setMfaError('');
+        }}
+        onVerify={handleMFAVerify}
+        loading={mfaLoading}
+        error={mfaError}
+      />
     </Box>
   );
 };

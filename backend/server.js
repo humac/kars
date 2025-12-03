@@ -4,6 +4,7 @@ import cors from 'cors';
 import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
+import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
 import { randomBytes } from 'crypto';
 
 const app = express();
@@ -29,6 +30,19 @@ assetDb.init();
     console.error('OIDC initialization failed:', err.message);
   }
 })();
+
+// Store for pending MFA logins (in production, use Redis)
+const pendingMFALogins = new Map();
+
+// Cleanup expired MFA sessions every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, data] of pendingMFALogins.entries()) {
+    if (now - data.timestamp > 5 * 60 * 1000) { // 5 minutes
+      pendingMFALogins.delete(sessionId);
+    }
+  }
+}, 5 * 60 * 1000);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -134,6 +148,24 @@ app.post('/api/auth/login', async (req, res) => {
     const isValid = await comparePassword(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if MFA is enabled
+    if (user.mfa_enabled) {
+      // Generate MFA session ID
+      const mfaSessionId = randomBytes(32).toString('hex');
+
+      // Store user info temporarily
+      pendingMFALogins.set(mfaSessionId, {
+        userId: user.id,
+        timestamp: Date.now()
+      });
+
+      return res.json({
+        mfaRequired: true,
+        mfaSessionId: mfaSessionId,
+        message: 'MFA verification required'
+      });
     }
 
     // Update last login
@@ -276,6 +308,209 @@ app.put('/api/auth/change-password', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// ===== MFA Endpoints =====
+
+// Get MFA status for current user
+app.get('/api/auth/mfa/status', authenticate, (req, res) => {
+  try {
+    const mfaStatus = userDb.getMFAStatus(req.user.id);
+    res.json({
+      enabled: mfaStatus?.mfa_enabled === 1,
+      hasBackupCodes: mfaStatus?.mfa_backup_codes ? JSON.parse(mfaStatus.mfa_backup_codes).length > 0 : false
+    });
+  } catch (error) {
+    console.error('Get MFA status error:', error);
+    res.status(500).json({ error: 'Failed to get MFA status' });
+  }
+});
+
+// Start MFA enrollment
+app.post('/api/auth/mfa/enroll', authenticate, async (req, res) => {
+  try {
+    const user = userDb.getById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if MFA is already enabled
+    if (user.mfa_enabled) {
+      return res.status(400).json({ error: 'MFA is already enabled' });
+    }
+
+    // Generate MFA secret and QR code
+    const { secret, qrCode } = await generateMFASecret(user.email);
+
+    // Store secret temporarily in session (not in database yet)
+    pendingMFALogins.set(`enroll_${req.user.id}`, {
+      secret,
+      timestamp: Date.now()
+    });
+
+    res.json({
+      qrCode,
+      secret, // Send secret for manual entry if QR code fails
+      message: 'Scan QR code with your authenticator app'
+    });
+  } catch (error) {
+    console.error('MFA enrollment error:', error);
+    res.status(500).json({ error: 'Failed to start MFA enrollment' });
+  }
+});
+
+// Verify and complete MFA enrollment
+app.post('/api/auth/mfa/verify-enrollment', authenticate, async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Verification token is required' });
+    }
+
+    // Get pending enrollment
+    const enrollKey = `enroll_${req.user.id}`;
+    const enrollment = pendingMFALogins.get(enrollKey);
+
+    if (!enrollment) {
+      return res.status(400).json({ error: 'No pending MFA enrollment found' });
+    }
+
+    // Verify TOTP token
+    const isValid = verifyTOTP(enrollment.secret, token);
+
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    // Generate backup codes
+    const backupCodes = generateBackupCodes();
+
+    // Enable MFA in database
+    userDb.enableMFA(req.user.id, enrollment.secret, backupCodes);
+
+    // Clean up pending enrollment
+    pendingMFALogins.delete(enrollKey);
+
+    // Log the action
+    auditDb.log(
+      'enable_mfa',
+      'user',
+      req.user.id,
+      req.user.email,
+      { message: 'MFA enabled' },
+      req.user.email
+    );
+
+    res.json({
+      message: 'MFA enabled successfully',
+      backupCodes: backupCodes.map(formatBackupCode)
+    });
+  } catch (error) {
+    console.error('MFA verification error:', error);
+    res.status(500).json({ error: 'Failed to verify MFA enrollment' });
+  }
+});
+
+// Disable MFA
+app.post('/api/auth/mfa/disable', authenticate, async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required to disable MFA' });
+    }
+
+    // Verify password
+    const user = userDb.getById(req.user.id);
+    const isValid = await comparePassword(password, user.password_hash);
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    // Disable MFA
+    userDb.disableMFA(req.user.id);
+
+    // Log the action
+    auditDb.log(
+      'disable_mfa',
+      'user',
+      req.user.id,
+      req.user.email,
+      { message: 'MFA disabled' },
+      req.user.email
+    );
+
+    res.json({ message: 'MFA disabled successfully' });
+  } catch (error) {
+    console.error('MFA disable error:', error);
+    res.status(500).json({ error: 'Failed to disable MFA' });
+  }
+});
+
+// Verify MFA during login
+app.post('/api/auth/mfa/verify-login', async (req, res) => {
+  try {
+    const { mfaSessionId, token, useBackupCode } = req.body;
+
+    if (!mfaSessionId || !token) {
+      return res.status(400).json({ error: 'Session ID and token are required' });
+    }
+
+    // Get pending login
+    const pendingLogin = pendingMFALogins.get(mfaSessionId);
+
+    if (!pendingLogin) {
+      return res.status(400).json({ error: 'Invalid or expired MFA session' });
+    }
+
+    // Get user
+    const user = userDb.getById(pendingLogin.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let isValid = false;
+
+    if (useBackupCode) {
+      // Verify and consume backup code
+      const cleanedCode = token.replace(/-/g, '').toUpperCase();
+      isValid = userDb.useBackupCode(user.id, cleanedCode);
+    } else {
+      // Verify TOTP token
+      isValid = verifyTOTP(user.mfa_secret, token);
+    }
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid verification code' });
+    }
+
+    // Clean up pending login
+    pendingMFALogins.delete(mfaSessionId);
+
+    // Update last login
+    userDb.updateLastLogin(user.id);
+
+    // Generate token
+    const authToken = generateToken(user);
+
+    res.json({
+      message: 'Login successful',
+      token: authToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name
+      }
+    });
+  } catch (error) {
+    console.error('MFA login verification error:', error);
+    res.status(500).json({ error: 'Failed to verify MFA' });
   }
 });
 
