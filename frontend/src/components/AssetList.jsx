@@ -339,7 +339,7 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
+              <FormControl fullWidth size="small" sx={{ minWidth: 180 }}>
                 <InputLabel>Status</InputLabel>
                 <Select
                   name="status"

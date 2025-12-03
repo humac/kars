@@ -281,7 +281,7 @@ const AuditReporting = () => {
             </Box>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={4} lg={2}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>Action</InputLabel>
                   <Select
                     name="action"
@@ -299,7 +299,7 @@ const AuditReporting = () => {
               </Grid>
 
               <Grid item xs={12} sm={6} md={4} lg={2}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>Entity Type</InputLabel>
                   <Select
                     name="entityType"
@@ -354,7 +354,7 @@ const AuditReporting = () => {
               </Grid>
 
               <Grid item xs={12} sm={6} md={4} lg={2}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>Limit</InputLabel>
                   <Select
                     name="limit"
