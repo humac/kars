@@ -915,7 +915,7 @@ app.get('/api/assets/search', async (req, res) => {
 });
 
 // Create new asset
-app.post('/api/assets', authenticate, (req, res) => {
+app.post('/api/assets', authenticate, async (req, res) => {
   try {
     const { employee_name, employee_email, manager_name, manager_email, client_name, laptop_serial_number, laptop_asset_tag, notes } = req.body;
 
