@@ -27,6 +27,7 @@ const Login = ({ onSwitchToRegister }) => {
   const [error, setError] = useState(null);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [brandingLogo, setBrandingLogo] = useState(null);
 
   // MFA state
   const [showMFAVerify, setShowMFAVerify] = useState(false);
@@ -40,6 +41,16 @@ const Login = ({ onSwitchToRegister }) => {
       .then(res => res.json())
       .then(data => setOidcEnabled(data.enabled))
       .catch(err => console.error('Failed to check OIDC config:', err));
+
+    // Fetch branding settings
+    fetch('/api/branding')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo_data) {
+          setBrandingLogo(data.logo_data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch branding:', err));
   }, []);
 
   const handleChange = (e) => {
@@ -249,12 +260,31 @@ const Login = ({ onSwitchToRegister }) => {
             textAlign: 'center',
           }}
         >
-          <Typography variant="h5" fontWeight={600} gutterBottom>
-            ARS - Asset Registration System
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Sign in to manage client assets
-          </Typography>
+          {brandingLogo ? (
+            <Box sx={{ mb: 2 }}>
+              <img
+                src={brandingLogo}
+                alt="Company Logo"
+                style={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  maxHeight: '120px',
+                  objectFit: 'contain',
+                  display: 'block',
+                  margin: '0 auto'
+                }}
+              />
+            </Box>
+          ) : (
+            <>
+              <Typography variant="h5" fontWeight={600} gutterBottom>
+                ARS - Asset Registration System
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Sign in to manage client assets
+              </Typography>
+            </>
+          )}
         </Box>
 
         <CardContent sx={{ p: 4 }}>

@@ -15,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Settings, Users, LayoutDashboard, Database, Key, Trash2, Loader2, AlertTriangle, Shield } from 'lucide-react';
+import { Settings, Users, LayoutDashboard, Database, Key, Trash2, Loader2, AlertTriangle, Shield, Image } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 
 const AdminSettingsNew = () => {
@@ -27,10 +27,14 @@ const AdminSettingsNew = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
   const [dbSettings, setDbSettings] = useState({ engine: 'sqlite', postgresUrl: '', managedByEnv: false, effectiveEngine: 'sqlite' });
   const [dbLoading, setDbLoading] = useState(false);
+  const [brandingSettings, setBrandingSettings] = useState({ logo_data: null, logo_filename: null });
+  const [brandingLoading, setBrandingLoading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState(null);
 
   useEffect(() => {
     if (activeView === 'users') fetchUsers();
     if (activeView === 'settings') fetchDatabaseSettings();
+    if (activeView === 'branding') fetchBrandingSettings();
   }, [activeView]);
 
   const fetchUsers = async () => {
@@ -104,6 +108,83 @@ const AdminSettingsNew = () => {
     } finally { setDbLoading(false); }
   };
 
+  const fetchBrandingSettings = async () => {
+    setBrandingLoading(true);
+    try {
+      const response = await fetch('/api/branding');
+      if (!response.ok) throw new Error('Failed to load branding settings');
+      const data = await response.json();
+      setBrandingSettings(data);
+      setLogoPreview(data.logo_data || null);
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setBrandingLoading(false); }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Error", description: "Image size must be less than 2MB", variant: "destructive" });
+      return;
+    }
+
+    setBrandingLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const logo_data = reader.result;
+        setLogoPreview(logo_data);
+
+        const response = await fetch('/api/admin/branding', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({
+            logo_data,
+            logo_filename: file.name,
+            logo_content_type: file.type
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to upload logo');
+
+        toast({ title: "Success", description: "Logo uploaded successfully", variant: "success" });
+        fetchBrandingSettings();
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+      setBrandingLoading(false);
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    setBrandingLoading(true);
+    try {
+      const response = await fetch('/api/admin/branding', {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders() }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to remove logo');
+
+      setLogoPreview(null);
+      toast({ title: "Success", description: "Logo removed successfully", variant: "success" });
+      fetchBrandingSettings();
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setBrandingLoading(false); }
+  };
+
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never';
   const getRoleColor = (role) => ({ admin: 'destructive', manager: 'success', employee: 'default' }[role] || 'secondary');
 
@@ -135,6 +216,7 @@ const AdminSettingsNew = () => {
               <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" />Users</TabsTrigger>
               <TabsTrigger value="overview" className="gap-2"><LayoutDashboard className="h-4 w-4" />Overview</TabsTrigger>
               <TabsTrigger value="settings" className="gap-2"><Database className="h-4 w-4" />Database</TabsTrigger>
+              <TabsTrigger value="branding" className="gap-2"><Image className="h-4 w-4" />Branding</TabsTrigger>
               <TabsTrigger value="oidc" className="gap-2"><Key className="h-4 w-4" />OIDC/SSO</TabsTrigger>
             </TabsList>
 
@@ -249,6 +331,59 @@ const AdminSettingsNew = () => {
                     <li>Monitor audit logs for suspicious activity</li>
                     <li>Keep the application updated</li>
                   </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="branding" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Company Logo</CardTitle>
+                  <CardDescription>Upload a custom logo to replace the default ARS branding on the login page.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {brandingLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <>
+                      {logoPreview && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-center p-6 border rounded-lg bg-muted/50">
+                            <img
+                              src={logoPreview}
+                              alt="Company Logo"
+                              className="max-h-32 object-contain"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="destructive"
+                              onClick={handleLogoRemove}
+                              disabled={brandingLoading}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove Logo
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={brandingLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Supported formats: PNG, JPG, SVG. Max size: 2MB.
+                          The logo will be automatically scaled to fit the login page width.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

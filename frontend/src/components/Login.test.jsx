@@ -15,6 +15,11 @@ describe('Login Component', () => {
       ok: true,
       json: async () => ({ enabled: false }),
     });
+    // Mock branding fetch
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ logo_data: null }),
+    });
   });
 
   it('renders login form', async () => {

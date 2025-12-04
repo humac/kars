@@ -301,11 +301,32 @@ const initDb = async () => {
     )
   `;
 
+  const brandingSettingsTable = isPostgres ? `
+    CREATE TABLE IF NOT EXISTS branding_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      logo_data TEXT,
+      logo_filename TEXT,
+      logo_content_type TEXT,
+      updated_at TIMESTAMP NOT NULL,
+      updated_by TEXT
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS branding_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      logo_data TEXT,
+      logo_filename TEXT,
+      logo_content_type TEXT,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT
+    )
+  `;
+
   await dbRun(assetsTable);
   await dbRun(companiesTable);
   await dbRun(auditLogsTable);
   await dbRun(usersTable);
   await dbRun(oidcSettingsTable);
+  await dbRun(brandingSettingsTable);
   await dbRun(passkeysTable);
 
   // Migrate existing databases to add manager fields to users table
@@ -441,6 +462,16 @@ const initDb = async () => {
     await dbRun(`
       INSERT INTO oidc_settings (id, enabled, updated_at)
       VALUES (1, 0, ?)
+    `, [now]);
+  }
+
+  // Insert default branding settings if not exists
+  const checkBranding = await dbGet('SELECT id FROM branding_settings WHERE id = 1');
+  if (!checkBranding) {
+    const now = new Date().toISOString();
+    await dbRun(`
+      INSERT INTO branding_settings (id, updated_at)
+      VALUES (1, ?)
     `, [now]);
   }
 
@@ -754,7 +785,7 @@ export const userDb = {
     const id = isPostgres ? result.rows?.[0]?.id : result.lastInsertRowid;
     return { id };
   },
-  getByEmail: async (email) => dbGet('SELECT * FROM users WHERE email = ?', [email]),
+  getByEmail: async (email) => dbGet('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [email]),
   getById: async (id) => dbGet('SELECT * FROM users WHERE id = ?', [id]),
   getAll: async () => dbAll('SELECT * FROM users ORDER BY created_at DESC'),
   getByManagerEmail: async (managerEmail) => dbAll('SELECT * FROM users WHERE manager_email = ?', [managerEmail]),
@@ -878,6 +909,39 @@ export const oidcSettingsDb = {
       now,
       userEmail
     ]);
+  }
+};
+
+export const brandingSettingsDb = {
+  get: async () => dbGet('SELECT * FROM branding_settings WHERE id = 1'),
+  update: async (settings, userEmail) => {
+    const now = new Date().toISOString();
+    return dbRun(`
+      UPDATE branding_settings
+      SET logo_data = ?,
+          logo_filename = ?,
+          logo_content_type = ?,
+          updated_at = ?,
+          updated_by = ?
+      WHERE id = 1
+    `, [
+      settings.logo_data || null,
+      settings.logo_filename || null,
+      settings.logo_content_type || null,
+      now,
+      userEmail
+    ]);
+  },
+  delete: async () => {
+    const now = new Date().toISOString();
+    return dbRun(`
+      UPDATE branding_settings
+      SET logo_data = NULL,
+          logo_filename = NULL,
+          logo_content_type = NULL,
+          updated_at = ?
+      WHERE id = 1
+    `, [now]);
   }
 };
 

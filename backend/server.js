@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
@@ -886,8 +886,10 @@ app.post('/api/auth/passkeys/auth-options', async (req, res) => {
       }
 
       const userPasskeys = await passkeyDb.listByUser(user.id);
+      console.log(`[Passkey Auth] User ${user.email} has ${userPasskeys.length} passkeys`);
+
       if (!userPasskeys.length) {
-        return res.status(400).json({ error: 'No passkeys registered for this account' });
+        return res.status(400).json({ error: 'No passkeys registered for this account. Please register a passkey first from your profile settings.' });
       }
 
       // Filter out passkeys with invalid credential_id and convert to buffer
@@ -895,8 +897,15 @@ app.post('/api/auth/passkeys/auth-options', async (req, res) => {
         pk.credential_id && typeof pk.credential_id === 'string'
       );
 
+      console.log(`[Passkey Auth] ${validPasskeys.length} valid passkeys out of ${userPasskeys.length} total`);
+
       if (validPasskeys.length === 0) {
-        return res.status(400).json({ error: 'No valid passkeys found for this account' });
+        console.error('[Passkey Auth] Invalid passkey data:', userPasskeys.map(pk => ({
+          id: pk.id,
+          credential_id: pk.credential_id,
+          type: typeof pk.credential_id
+        })));
+        return res.status(400).json({ error: 'No valid passkeys found for this account. Please re-register your passkey from profile settings.' });
       }
 
       allowCredentials = validPasskeys.map((pk) => ({
@@ -1207,6 +1216,68 @@ app.put('/api/admin/oidc-settings', authenticate, authorize('admin'), async (req
   } catch (error) {
     console.error('Update OIDC settings error:', error);
     res.status(500).json({ error: 'Failed to update OIDC settings' });
+  }
+});
+
+// Branding settings routes (public read, admin write)
+app.get('/api/branding', async (req, res) => {
+  try {
+    const settings = await brandingSettingsDb.get();
+    res.json(settings || {});
+  } catch (error) {
+    console.error('Get branding settings error:', error);
+    res.status(500).json({ error: 'Failed to load branding settings' });
+  }
+});
+
+app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { logo_data, logo_filename, logo_content_type } = req.body;
+
+    // Validate logo data if provided
+    if (logo_data && !logo_data.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid logo data format' });
+    }
+
+    await brandingSettingsDb.update({
+      logo_data,
+      logo_filename,
+      logo_content_type
+    }, req.user.email);
+
+    await auditDb.log(
+      'update',
+      'branding_settings',
+      1,
+      'Branding Configuration',
+      'Branding settings updated',
+      req.user.email
+    );
+
+    res.json({ message: 'Branding settings updated successfully' });
+  } catch (error) {
+    console.error('Update branding settings error:', error);
+    res.status(500).json({ error: 'Failed to update branding settings' });
+  }
+});
+
+app.delete('/api/admin/branding', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    await brandingSettingsDb.delete();
+
+    await auditDb.log(
+      'delete',
+      'branding_settings',
+      1,
+      'Branding Configuration',
+      'Logo removed',
+      req.user.email
+    );
+
+    res.json({ message: 'Logo removed successfully' });
+  } catch (error) {
+    console.error('Delete branding settings error:', error);
+    res.status(500).json({ error: 'Failed to remove logo' });
   }
 });
 
