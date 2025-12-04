@@ -16,7 +16,14 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { Person, CheckCircle, Cancel } from '@mui/icons-material';
+import {
+  Person,
+  CheckCircle,
+  Cancel,
+  AccountCircle,
+  Edit,
+  Security as SecurityIcon,
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import MFASetupModal from './MFASetupModal';
 
@@ -49,7 +56,7 @@ const Profile = () => {
   const [disablePassword, setDisablePassword] = useState('');
   const [mfaError, setMfaError] = useState('');
   const [mfaSuccess, setMfaSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('update');
+  const [activeTab, setActiveTab] = useState('account');
 
   useEffect(() => {
     // Initialize form with user data
@@ -285,25 +292,56 @@ const Profile = () => {
           </Alert>
         )}
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={5} lg={4}>
-            <Card sx={{ p: 3, bgcolor: 'background.default', height: '100%' }}>
-              <Typography variant="h6" gutterBottom>
-                Account Information
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Your core account details are managed by the administrator and cannot be edited here.
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 3 }}>
-                <Box>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            textColor="primary"
+            indicatorColor="primary"
+          >
+            <Tab
+              icon={<AccountCircle />}
+              iconPosition="start"
+              label="Account Information"
+              value="account"
+            />
+            <Tab
+              icon={<Edit />}
+              iconPosition="start"
+              label="Update Information"
+              value="update"
+            />
+            <Tab
+              icon={<SecurityIcon />}
+              iconPosition="start"
+              label="Security"
+              value="security"
+            />
+          </Tabs>
+        </Box>
+
+        {activeTab === 'account' && (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Account Information
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Your core account details are managed by the administrator and cannot be edited here.
+            </Typography>
+
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', height: '100%' }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Email
                   </Typography>
                   <Typography variant="body1" fontWeight={600}>
                     {user?.email || 'Not available'}
                   </Typography>
-                </Box>
-                <Box>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', height: '100%' }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Role
                   </Typography>
@@ -313,277 +351,268 @@ const Profile = () => {
                     size="small"
                     sx={{ fontWeight: 600 }}
                   />
-                </Box>
-                <Box>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', height: '100%' }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Current Name
                   </Typography>
                   <Typography variant="body1" fontWeight={600}>
                     {user?.name || 'Not set'}
                   </Typography>
-                </Box>
-                <Box>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', height: '100%' }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Manager Name
                   </Typography>
                   <Typography variant="body1" fontWeight={600}>
                     {user?.manager_name || 'Not set'}
                   </Typography>
-                </Box>
-                <Box>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', height: '100%' }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Manager Email
                   </Typography>
                   <Typography variant="body1" fontWeight={600}>
                     {user?.manager_email || 'Not set'}
                   </Typography>
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
+                </Card>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
 
-          <Grid item xs={12} md={7} lg={8}>
-            <Card sx={{ p: 3, bgcolor: 'background.default', height: '100%' }}>
-              <Tabs
-                value={activeTab}
-                onChange={handleTabChange}
-                textColor="primary"
-                indicatorColor="primary"
-                sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+        {activeTab === 'update' && (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Update Information
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Update your personal information and manager details. Your email address cannot be changed.
+            </Typography>
+
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
+            <Box component="form" onSubmit={handleSubmit}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    required
+                    placeholder="John"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    required
+                    placeholder="Doe"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Manager First Name"
+                    name="manager_first_name"
+                    value={formData.manager_first_name}
+                    onChange={handleChange}
+                    placeholder="Jane"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Manager Last Name"
+                    name="manager_last_name"
+                    value={formData.manager_last_name}
+                    onChange={handleChange}
+                    placeholder="Smith"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    type="email"
+                    label="Manager Email"
+                    name="manager_email"
+                    value={formData.manager_email}
+                    onChange={handleChange}
+                    placeholder="manager@example.com"
+                  />
+                </Grid>
+              </Grid>
+
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={loading}
+                sx={{ mt: 3 }}
               >
-                <Tab label="Update Profile" value="update" />
-                <Tab label="Security" value="security" />
-              </Tabs>
+                {loading ? <CircularProgress size={24} /> : 'Update Profile'}
+              </Button>
+            </Box>
+          </Box>
+        )}
 
-              {activeTab === 'update' && (
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    Update Profile
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Update your personal information and manager details. Your email address cannot be changed.
-                  </Typography>
+        {activeTab === 'security' && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Security
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Manage your password and multi-factor authentication preferences.
+              </Typography>
 
-                  {error && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                      {error}
-                    </Alert>
-                  )}
+              <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Update Password
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Update your password regularly to help keep your account secure.
+                </Typography>
 
-                  <Box component="form" onSubmit={handleSubmit}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="First Name"
-                          name="first_name"
-                          value={formData.first_name}
-                          onChange={handleChange}
-                          required
-                          placeholder="John"
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Last Name"
-                          name="last_name"
-                          value={formData.last_name}
-                          onChange={handleChange}
-                          required
-                          placeholder="Doe"
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Manager First Name"
-                          name="manager_first_name"
-                          value={formData.manager_first_name}
-                          onChange={handleChange}
-                          placeholder="Jane"
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Manager Last Name"
-                          name="manager_last_name"
-                          value={formData.manager_last_name}
-                          onChange={handleChange}
-                          placeholder="Smith"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          type="email"
-                          label="Manager Email"
-                          name="manager_email"
-                          value={formData.manager_email}
-                          onChange={handleChange}
-                          placeholder="manager@example.com"
-                        />
-                      </Grid>
-                    </Grid>
+                {passwordError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {passwordError}
+                  </Alert>
+                )}
 
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={loading}
-                      sx={{ mt: 3 }}
-                    >
-                      {loading ? <CircularProgress size={24} /> : 'Update Profile'}
-                    </Button>
-                  </Box>
+                <Box component="form" onSubmit={handlePasswordSubmit}>
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="Current Password"
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    placeholder="Enter current password"
+                    sx={{ mb: 2 }}
+                  />
+
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="New Password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    placeholder="Enter new password (min 6 characters)"
+                    inputProps={{ minLength: 6 }}
+                    sx={{ mb: 2 }}
+                  />
+
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="Confirm New Password"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    placeholder="Confirm new password"
+                    inputProps={{ minLength: 6 }}
+                    sx={{ mb: 2 }}
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={passwordLoading}
+                  >
+                    {passwordLoading ? <CircularProgress size={24} /> : 'Change Password'}
+                  </Button>
                 </Box>
-              )}
+              </Card>
 
-              {activeTab === 'security' && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper', mt: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Two-Factor Authentication
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Add an extra layer of security to your account by requiring a verification code from your phone in addition to your password.
+                </Typography>
+
+                {mfaError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {mfaError}
+                  </Alert>
+                )}
+
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                   <Box>
-                    <Typography variant="h6" gutterBottom>
-                      Security
+                    <Typography variant="subtitle2" gutterBottom>
+                      Status
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Manage your password and multi-factor authentication preferences.
-                    </Typography>
-
-                    <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
-                      <Typography variant="subtitle1" gutterBottom>
-                        Update Password
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Update your password regularly to help keep your account secure.
-                      </Typography>
-
-                      {passwordError && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                          {passwordError}
-                        </Alert>
-                      )}
-
-                      <Box component="form" onSubmit={handlePasswordSubmit}>
-                        <TextField
-                          fullWidth
-                          type="password"
-                          label="Current Password"
-                          name="currentPassword"
-                          value={passwordData.currentPassword}
-                          onChange={handlePasswordChange}
-                          required
-                          placeholder="Enter current password"
-                          sx={{ mb: 2 }}
-                        />
-
-                        <TextField
-                          fullWidth
-                          type="password"
-                          label="New Password"
-                          name="newPassword"
-                          value={passwordData.newPassword}
-                          onChange={handlePasswordChange}
-                          required
-                          placeholder="Enter new password (min 6 characters)"
-                          inputProps={{ minLength: 6 }}
-                          sx={{ mb: 2 }}
-                        />
-
-                        <TextField
-                          fullWidth
-                          type="password"
-                          label="Confirm New Password"
-                          name="confirmPassword"
-                          value={passwordData.confirmPassword}
-                          onChange={handlePasswordChange}
-                          required
-                          placeholder="Confirm new password"
-                          inputProps={{ minLength: 6 }}
-                          sx={{ mb: 2 }}
-                        />
-
-                        <Button
-                          type="submit"
-                          variant="contained"
-                          disabled={passwordLoading}
-                        >
-                          {passwordLoading ? <CircularProgress size={24} /> : 'Change Password'}
-                        </Button>
-                      </Box>
-                    </Card>
-
-                    <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper', mt: 3 }}>
-                      <Typography variant="subtitle1" gutterBottom>
-                        Two-Factor Authentication
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Add an extra layer of security to your account by requiring a verification code from your phone in addition to your password.
-                      </Typography>
-
-                      {mfaError && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                          {mfaError}
-                        </Alert>
-                      )}
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Box>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Status
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {mfaEnabled ? (
+                        <>
+                          <CheckCircle color="success" fontSize="small" />
+                          <Typography variant="body2" color="success.main" fontWeight={600}>
+                            Enabled
                           </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {mfaEnabled ? (
-                              <>
-                                <CheckCircle color="success" fontSize="small" />
-                                <Typography variant="body2" color="success.main" fontWeight={600}>
-                                  Enabled
-                                </Typography>
-                              </>
-                            ) : (
-                              <>
-                                <Cancel color="error" fontSize="small" />
-                                <Typography variant="body2" color="error.main">
-                                  Disabled
-                                </Typography>
-                              </>
-                            )}
-                          </Box>
-                        </Box>
-
-                        {mfaEnabled ? (
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            onClick={() => setShowDisableMFA(true)}
-                          >
-                            Disable MFA
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            onClick={() => setShowMFASetup(true)}
-                          >
-                            Enable MFA
-                          </Button>
-                        )}
-                      </Box>
-
-                      <Alert severity="info">
-                        <Typography variant="body2">
-                          {mfaEnabled
-                            ? 'Two-factor authentication is currently protecting your account.'
-                            : 'Enable two-factor authentication to better protect your account from unauthorized access.'}
-                        </Typography>
-                      </Alert>
-                    </Card>
+                        </>
+                      ) : (
+                        <>
+                          <Cancel color="error" fontSize="small" />
+                          <Typography variant="body2" color="error.main">
+                            Disabled
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
                   </Box>
+
+                  {mfaEnabled ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => setShowDisableMFA(true)}
+                    >
+                      Disable MFA
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => setShowMFASetup(true)}
+                    >
+                      Enable MFA
+                    </Button>
+                  )}
                 </Box>
-              )}
-            </Card>
-          </Grid>
-        </Grid>
+
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    {mfaEnabled
+                      ? 'Two-factor authentication is currently protecting your account.'
+                      : 'Enable two-factor authentication to better protect your account from unauthorized access.'}
+                  </Typography>
+                </Alert>
+              </Card>
+            </Box>
+          </Box>
+        )}
       </Card>
 
       {/* MFA Setup Modal */}
