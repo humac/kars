@@ -900,12 +900,33 @@ app.post('/api/auth/passkeys/auth-options', async (req, res) => {
       console.log(`[Passkey Auth] ${validPasskeys.length} valid passkeys out of ${userPasskeys.length} total`);
 
       if (validPasskeys.length === 0) {
-        console.error('[Passkey Auth] Invalid passkey data:', userPasskeys.map(pk => ({
+        console.error('[Passkey Auth] Invalid passkey data detected for user:', user.email);
+        console.error('[Passkey Auth] Passkey details:', userPasskeys.map(pk => ({
           id: pk.id,
+          name: pk.name,
           credential_id: pk.credential_id,
-          type: typeof pk.credential_id
+          credential_id_type: typeof pk.credential_id,
+          credential_id_length: pk.credential_id ? pk.credential_id.length : 0,
+          public_key: pk.public_key ? 'present' : 'missing',
+          created_at: pk.created_at
         })));
-        return res.status(400).json({ error: 'No valid passkeys found for this account. Please re-register your passkey from profile settings.' });
+
+        // Clean up invalid passkeys automatically
+        console.log('[Passkey Auth] Attempting to clean up invalid passkeys...');
+        for (const pk of userPasskeys) {
+          if (!pk.credential_id || typeof pk.credential_id !== 'string') {
+            try {
+              await passkeyDb.delete(pk.id);
+              console.log(`[Passkey Auth] Deleted invalid passkey ID ${pk.id}`);
+            } catch (deleteErr) {
+              console.error(`[Passkey Auth] Failed to delete invalid passkey ID ${pk.id}:`, deleteErr);
+            }
+          }
+        }
+
+        return res.status(400).json({
+          error: 'Your passkey data was corrupted and has been automatically removed. Please register a new passkey from your profile settings.'
+        });
       }
 
       allowCredentials = validPasskeys.map((pk) => ({
@@ -1223,6 +1244,15 @@ app.put('/api/admin/oidc-settings', authenticate, authorize('admin'), async (req
 app.get('/api/branding', async (req, res) => {
   try {
     const settings = await brandingSettingsDb.get();
+    if (settings && settings.logo_data) {
+      console.log('[Branding] Returning logo data:', {
+        filename: settings.logo_filename,
+        content_type: settings.logo_content_type,
+        data_length: settings.logo_data.length
+      });
+    } else {
+      console.log('[Branding] No logo data available');
+    }
     res.json(settings || {});
   } catch (error) {
     console.error('Get branding settings error:', error);
@@ -1234,8 +1264,17 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
   try {
     const { logo_data, logo_filename, logo_content_type } = req.body;
 
+    console.log('[Branding] Update request received:', {
+      user: req.user.email,
+      filename: logo_filename,
+      content_type: logo_content_type,
+      data_length: logo_data ? logo_data.length : 0,
+      data_prefix: logo_data ? logo_data.substring(0, 50) : 'null'
+    });
+
     // Validate logo data if provided
     if (logo_data && !logo_data.startsWith('data:image/')) {
+      console.error('[Branding] Invalid logo data format - does not start with data:image/');
       return res.status(400).json({ error: 'Invalid logo data format' });
     }
 
@@ -1245,12 +1284,14 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       logo_content_type
     }, req.user.email);
 
+    console.log('[Branding] Logo updated successfully in database');
+
     await auditDb.log(
       'update',
       'branding_settings',
       1,
       'Branding Configuration',
-      'Branding settings updated',
+      `Logo uploaded: ${logo_filename || 'unnamed'}`,
       req.user.email
     );
 
