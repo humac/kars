@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # Portainer - Container Management UI
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    networks:
+      - asset-network
+    command: --admin-password='${PORTAINER_ADMIN_PASSWORD}'
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: asset-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-ars}
+      - POSTGRES_USER=${POSTGRES_USER:-ars_app}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - asset-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ars_app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  # Backend Application
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/claude_app_poc}/backend:latest
+    pull_policy: always
+    container_name: asset-registration-backend
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_EXPIRES_IN=7d
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      # PostgreSQL Configuration
+      - DB_CLIENT=postgres
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-ars_app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ars}
+      - POSTGRES_SSL=${POSTGRES_SSL:-false}
+    volumes:
+      - asset-data:/app/data
+    networks:
+      - asset-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Application
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/claude_app_poc}/frontend:latest
+    pull_policy: always
+    container_name: asset-registration-frontend
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      - backend
+    networks:
+      - asset-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  portainer-data:
+    driver: local
+  postgres-data:
+    driver: local
+  asset-data:
+    driver: local
+
+networks:
+  asset-network:
+    driver: bridge

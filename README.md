@@ -122,11 +122,13 @@ npm run dev
 
 ```bash
 # 1. Create stack in Portainer
-# 2. Use docker-compose.portainer.yml
+# 2. Use docker-compose.portainer.yml (SQLite) or
+#    docker-compose.portainer-postgres.yml (PostgreSQL + Portainer UI)
 # 3. Set environment variables
 # 4. Deploy!
 
 # See QUICKSTART-PORTAINER.md for details
+# See "Portainer + PostgreSQL" section below for PostgreSQL setup
 ```
 
 ---
@@ -248,6 +250,51 @@ docker-compose up -d
    APP_PORT=8080
    ```
 4. **Deploy!**
+
+### Portainer + PostgreSQL (Production with DB)
+
+For production deployments with PostgreSQL and Portainer container management:
+
+1. **Use** `docker-compose.portainer-postgres.yml`
+2. **Copy environment template:** `cp .env.portainer-postgres.example .env`
+3. **Edit `.env` file** and set your values:
+   ```env
+   # Application Settings
+   GITHUB_REPOSITORY=humac/claude_app_poc
+   JWT_SECRET=your-64-char-random-string
+   ADMIN_EMAIL=admin@jvhlabs.com
+   APP_PORT=8080
+
+   # PostgreSQL Settings
+   POSTGRES_DB=ars
+   POSTGRES_USER=ars_app
+   POSTGRES_PASSWORD=your-secure-postgres-password
+   POSTGRES_PORT=5432
+   POSTGRES_SSL=false
+
+   # Portainer Settings (optional, use for initial admin password)
+   PORTAINER_ADMIN_PASSWORD=$$2y$$05$$...  # bcrypt hash
+   ```
+4. **Deploy Stack** in Portainer or via Docker Compose:
+   ```bash
+   docker-compose -f docker-compose.portainer-postgres.yml up -d
+   ```
+5. **Access Services:**
+   - Application: `http://localhost:8080` (or your configured port)
+   - Portainer UI: `https://localhost:9443` or `http://localhost:9000`
+   - PostgreSQL: `localhost:5432`
+
+6. **First Time Setup:**
+   - Access Portainer at `http://localhost:9000`
+   - Create admin account (if PORTAINER_ADMIN_PASSWORD not set)
+   - Monitor containers and logs through Portainer UI
+
+**Note:** This setup includes:
+- Portainer CE for container management
+- PostgreSQL 16 (Alpine) for production database
+- Automatic health checks for all services
+- Persistent volumes for data
+- Network isolation with bridge networking
 
 ### GitHub Actions (CI/CD)
 
