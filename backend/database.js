@@ -729,6 +729,7 @@ export const userDb = {
   getByEmail: async (email) => dbGet('SELECT * FROM users WHERE email = ?', [email]),
   getById: async (id) => dbGet('SELECT * FROM users WHERE id = ?', [id]),
   getAll: async () => dbAll('SELECT * FROM users ORDER BY created_at DESC'),
+  getByManagerEmail: async (managerEmail) => dbAll('SELECT * FROM users WHERE manager_email = ?', [managerEmail]),
   updateRole: async (id, role) => dbRun('UPDATE users SET role = ? WHERE id = ?', [role, id]),
   updateLastLogin: async (id) => {
     const now = new Date().toISOString();

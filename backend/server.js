@@ -74,6 +74,54 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Asset Registration API is running' });
 });
 
+// ===== Helper Functions =====
+
+/**
+ * Auto-assign manager role to a user if they have employees reporting to them
+ * @param {string} email - The email of the user to potentially assign manager role to
+ * @param {string} triggeredBy - Email of the user who triggered this action (for audit log)
+ * @returns {Promise<boolean>} - Returns true if role was updated, false otherwise
+ */
+const autoAssignManagerRole = async (email, triggeredBy) => {
+  try {
+    const user = await userDb.getByEmail(email);
+
+    // If user doesn't exist, nothing to do
+    if (!user) {
+      return false;
+    }
+
+    // If user is already a manager or admin, no need to update
+    if (user.role === 'manager' || user.role === 'admin') {
+      return false;
+    }
+
+    // Update user role to manager
+    await userDb.updateRole(user.id, 'manager');
+    console.log(`Auto-assigned manager role to ${email}`);
+
+    // Log the role change in audit
+    await auditDb.log(
+      'update',
+      'user',
+      user.id,
+      user.email,
+      {
+        old_role: user.role,
+        new_role: 'manager',
+        auto_assigned: true,
+        triggered_by: triggeredBy
+      },
+      triggeredBy
+    );
+
+    return true;
+  } catch (error) {
+    console.error(`Error auto-assigning manager role to ${email}:`, error);
+    return false;
+  }
+};
+
 // ===== Authentication Endpoints =====
 
 // Register new user
@@ -186,6 +234,31 @@ app.post('/api/auth/register', async (req, res) => {
     } catch (linkError) {
       console.error('Error linking assets during registration:', linkError);
       // Don't fail registration if asset linking fails
+    }
+
+    // Auto-assign manager role if applicable
+    try {
+      // Case 1: If this user specified a manager_email that matches an existing user,
+      // that user should be assigned the manager role (if not already manager/admin)
+      if (newUser.manager_email) {
+        await autoAssignManagerRole(newUser.manager_email, newUser.email);
+      }
+
+      // Case 2: If any existing users have this new user's email as their manager_email,
+      // this new user should be assigned the manager role (if not already manager/admin)
+      const employeesWithThisManager = await userDb.getByManagerEmail(newUser.email);
+      if (employeesWithThisManager && employeesWithThisManager.length > 0) {
+        const wasUpdated = await autoAssignManagerRole(newUser.email, newUser.email);
+        if (wasUpdated) {
+          // Refresh the newUser object to reflect the updated role
+          const updatedUser = await userDb.getById(newUser.id);
+          newUser.role = updatedUser.role;
+          console.log(`User ${newUser.email} has ${employeesWithThisManager.length} employees and was assigned manager role`);
+        }
+      }
+    } catch (roleError) {
+      console.error('Error auto-assigning manager role during registration:', roleError);
+      // Don't fail registration if role assignment fails
     }
 
     // Return user info (without password hash)
