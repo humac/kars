@@ -862,11 +862,8 @@ app.post('/api/auth/passkeys/verify-registration', authenticate, async (req, res
     }
 
     // In SimpleWebAuthn v10+, the structure changed
-    // registrationInfo now has a 'credential' object containing id and publicKey
-    const { credential: registeredCredential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
-    const credentialID = registeredCredential.id;
-    const credentialPublicKey = registeredCredential.publicKey;
-    const counter = registeredCredential.counter;
+    // Properties are directly on registrationInfo, not nested under 'credential'
+    const { credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
 
     console.log('[Passkey Registration] Extracted data:', {
       credentialIDLength: credentialID?.length || 0,
