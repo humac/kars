@@ -43,6 +43,35 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 - Secure password hashing (bcrypt, 10 rounds)
 - 7-day token expiration
 
+**Passkey/WebAuthn Support**
+- FIDO2/WebAuthn standard compliance for passwordless authentication
+- Platform authenticators:
+  - Touch ID (macOS/iOS)
+  - Face ID (iOS)
+  - Windows Hello (Windows)
+  - Android biometric unlock
+- Security key support:
+  - YubiKey
+  - Titan Security Key
+  - Any FIDO2-compliant hardware key
+- Passkey management from Profile:
+  - Register multiple passkeys per account
+  - Name passkeys for easy identification
+  - View all registered passkeys with creation dates
+  - Delete unused passkeys
+  - Track last usage timestamp
+- Passwordless sign-in:
+  - "Sign in with Passkey" button on login page
+  - Email-based passkey discovery
+  - Automatic credential selection (when available)
+  - Fallback to password if needed
+- Enhanced security:
+  - Phishing-resistant authentication
+  - No passwords to leak or guess
+  - Hardware-bound credentials
+  - Counter-based replay protection
+  - Transport preference tracking (USB, NFC, BLE, internal)
+
 **Multi-Factor Authentication (MFA/2FA)**
 - TOTP-based two-factor authentication
 - QR code enrollment with authenticator apps:
@@ -89,9 +118,14 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 - Color-coded role badge display
 - MFA enrollment status display
 - Enable/disable two-factor authentication
+- Passkey management:
+  - View all registered passkeys
+  - Register new passkeys with custom names
+  - Delete unused passkeys
+  - See passkey creation and last usage dates
 - Real-time profile updates (no page reload)
 - Profile data validation
-- Three-card layout: Profile Info, Password Change, MFA Settings
+- Four-tab layout: Account Info, Security (Password + MFA), Passkeys, Manager Info
 
 ### Role-Based Access Control (RBAC)
 
@@ -237,6 +271,7 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 
 **Authentication Security**
 - JWT token authentication
+- Passkey/WebAuthn authentication (FIDO2)
 - Multi-factor authentication (TOTP-based)
 - OIDC/SSO integration with PKCE flow
 - Secure password hashing (bcrypt, 10 rounds)
@@ -247,6 +282,8 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 - MFA session timeout (5 minutes)
 - State token CSRF protection for OAuth
 - Backup code one-time consumption
+- Hardware-bound passkey credentials
+- Phishing-resistant authentication
 
 **Authorization**
 - Role-based access control
@@ -387,12 +424,15 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 ## 📊 Data Management
 
 **Database**
-- SQLite for reliability
-- Automatic schema creation
+- SQLite (default) or PostgreSQL (production)
+- Automatic schema creation for both engines
 - Migration support
 - Indexed tables for performance
 - Foreign key constraints
 - Transaction support
+- Environment-based or config-based database selection
+- PostgreSQL connection pooling
+- SSL support for PostgreSQL connections
 
 **Data Persistence**
 - Docker volume mounting
@@ -446,11 +486,11 @@ While not currently implemented, the architecture supports:
 - Mobile app (React Native)
 - API rate limiting and throttling
 - WebSocket real-time updates
-- WebAuthn/Passkey support
 - Database encryption at rest
 - Asset barcode scanning
 - Scheduled reports
 - Data retention policies
+- Enhanced passkey features (conditional UI, autofill)
 
 ---
 

@@ -16,6 +16,12 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 
 ### 🔐 Authentication & Security
 - **JWT Authentication** - Secure token-based auth with 7-day expiration
+- **Passkey/WebAuthn Support** - Passwordless authentication with biometrics
+  - FIDO2/WebAuthn standard compliance
+  - Platform authenticators (Touch ID, Face ID, Windows Hello)
+  - Security key support (YubiKey, etc.)
+  - Register and manage multiple passkeys from profile
+  - Passwordless sign-in option on login page
 - **Multi-Factor Authentication (MFA/2FA)** - TOTP-based authentication with backup codes
   - QR code enrollment with authenticator apps (Google, Microsoft, Authy)
   - 10 backup codes for account recovery
@@ -30,7 +36,7 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **Role-Based Access Control** - Three roles: Employee, Manager, Admin
 - **Automatic Manager Promotion** - Users listed as a manager are auto-promoted to manager with audit logging
 - **First Admin Setup** - Automatic admin promotion for first user
-- **Profile Management** - Update first/last name, password, MFA settings, and profile photos
+- **Profile Management** - Update first/last name, password, MFA settings, passkeys, and profile photos
 
 ### 📦 Asset Management
 - **Self-Service Registration** - Consultants register client laptops
@@ -158,23 +164,49 @@ npm run dev
                        │ HTTPS
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   Frontend (React)                       │
+│                   Frontend (React 18)                    │
 │          Nginx → Port 80 (containerized)                 │
-│     Vite Build + Context API + React Router              │
+│                                                           │
+│  Components:                                              │
+│  • Login/Register/AuthPage (JWT + Passkey + SSO)         │
+│  • Dashboard (Asset Overview)                            │
+│  • Profile (MFA + Passkey Management)                    │
+│  • AssetList + AssetRegistrationForm                     │
+│  • AdminSettings (User + OIDC + Company Mgmt)            │
+│  • AuditReporting (Compliance + Export)                  │
+│                                                           │
+│  Tech: Vite + Material-UI + Context API + React Router   │
 └──────────────────────┬───────────────────────────────────┘
-                       │ HTTP/REST
+                       │ HTTP/REST API
                        ▼
 ┌─────────────────────────────────────────────────────────┐
 │              Backend (Node.js/Express)                   │
 │                    Port 3001                             │
-│      JWT Auth + RBAC + Audit Logging                     │
+│                                                           │
+│  Authentication:                                          │
+│  • JWT (jsonwebtoken) - 7-day tokens                     │
+│  • Passkeys (@simplewebauthn/server)                     │
+│  • MFA/2FA (speakeasy + qrcode)                          │
+│  • OIDC/SSO (openid-client)                              │
+│                                                           │
+│  Authorization: RBAC Middleware + Audit Logging          │
 └──────────────────────┬───────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│              Database (SQLite)                           │
+│              Database Layer                              │
+│                                                           │
+│  SQLite (default) OR PostgreSQL (production)             │
 │         Persistent Docker Volume                         │
-│   Users + Assets + Companies + Audit Logs               │
+│                                                           │
+│  Tables:                                                  │
+│  • users (auth, roles, MFA, OIDC, profile)               │
+│  • passkeys (WebAuthn credentials)                       │
+│  • assets (laptop tracking)                              │
+│  • companies (client orgs)                               │
+│  • audit_logs (compliance)                               │
+│  • oidc_settings (SSO config)                            │
+│  • branding_settings (logo)                              │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -210,9 +242,10 @@ npm run dev
 **Backend:**
 - Node.js 18+
 - Express.js 4
-- SQLite3 (better-sqlite3)
+- SQLite3 (better-sqlite3) or PostgreSQL (pg)
 - JWT (jsonwebtoken)
 - bcrypt (password hashing)
+- @simplewebauthn/server (WebAuthn/Passkey support)
 - speakeasy (TOTP for MFA)
 - qrcode (QR code generation)
 - openid-client (OIDC/SSO integration)
@@ -350,11 +383,18 @@ PORT=3001                          # Server port
 DATA_DIR=/app/data                 # Database directory
 NODE_ENV=production                # Environment mode
 
-# OIDC/SSO (configured via Admin UI - no env vars needed)
-# MFA/2FA (no configuration needed - user-controlled)
+# Database Configuration
 DB_CLIENT=postgres                 # Override database engine (sqlite or postgres)
 POSTGRES_URL=postgresql://user:pass@host:5432/ars  # Required when DB_CLIENT=postgres
 POSTGRES_SSL=true                  # Set to 'true' to enable SSL when using PostgreSQL
+
+# Passkey/WebAuthn Configuration
+PASSKEY_RP_ID=localhost            # Relying Party ID (domain name)
+PASSKEY_RP_NAME=KARS - KeyData Asset Registration System
+PASSKEY_ORIGIN=http://localhost:5173  # Frontend origin for WebAuthn
+
+# OIDC/SSO (configured via Admin UI - no env vars needed)
+# MFA/2FA (no configuration needed - user-controlled)
 ```
 
 ### Portainer Stack
@@ -385,7 +425,26 @@ CREATE TABLE users (
   oidc_sub TEXT,              -- OIDC subject identifier
   mfa_enabled INTEGER DEFAULT 0,
   mfa_secret TEXT,            -- TOTP secret
-  mfa_backup_codes TEXT       -- JSON array of backup codes
+  mfa_backup_codes TEXT,      -- JSON array of backup codes
+  manager_name TEXT,
+  manager_email TEXT,
+  profile_image TEXT
+);
+```
+
+### Passkeys Table
+```sql
+CREATE TABLE passkeys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  credential_id TEXT NOT NULL UNIQUE,
+  public_key TEXT NOT NULL,
+  counter INTEGER NOT NULL DEFAULT 0,
+  transports TEXT,            -- JSON array of transport types
+  created_at TEXT NOT NULL,
+  last_used_at TEXT,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```
 
@@ -433,6 +492,7 @@ CREATE TABLE oidc_settings (
 
 ✅ **Password Security** - bcrypt hashing (10 rounds)
 ✅ **JWT Tokens** - Secure authentication with 7-day expiration
+✅ **Passkey/WebAuthn Support** - FIDO2 passwordless authentication
 ✅ **Multi-Factor Authentication** - TOTP-based 2FA with backup codes
 ✅ **OIDC/SSO Integration** - Enterprise identity provider support
 ✅ **Role-Based Access** - Granular permission control
@@ -455,6 +515,16 @@ POST   /api/auth/login                Login (returns token or MFA challenge)
 GET    /api/auth/me                   Get current user info
 PUT    /api/auth/profile              Update user profile (name)
 PUT    /api/auth/change-password      Change user password
+```
+
+### Passkey Authentication (WebAuthn)
+```
+GET    /api/auth/passkeys                      List user's passkeys
+POST   /api/auth/passkeys/registration-options Generate passkey registration challenge
+POST   /api/auth/passkeys/verify-registration  Verify and save new passkey
+POST   /api/auth/passkeys/auth-options         Generate passkey authentication challenge
+POST   /api/auth/passkeys/verify-authentication Verify passkey and login
+DELETE /api/auth/passkeys/:id                  Delete a passkey
 ```
 
 ### Multi-Factor Authentication (MFA)
@@ -682,12 +752,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Multi-Factor Authentication (MFA/2FA)
 - [x] OIDC/SSO Integration
 - [x] Database-Backed SSO Configuration
+- [x] WebAuthn/Passkey Support
+- [x] PostgreSQL Database Support
 - [ ] Email Notifications
 - [ ] Advanced Reporting Dashboard
 - [ ] Mobile App
 - [ ] API Rate Limiting
 - [ ] Database Encryption at Rest
-- [ ] WebAuthn/Passkey Support
 
 ---
 

@@ -389,6 +389,254 @@ POST /api/auth/mfa/verify-login
 
 ---
 
+## Passkey Authentication (WebAuthn)
+
+### List Passkeys
+
+Get all passkeys registered for the current user.
+
+```http
+GET /api/auth/passkeys
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "passkeys": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "name": "MacBook Pro Touch ID",
+      "credential_id": "AVdGcO...",
+      "transports": ["internal"],
+      "created_at": "2024-01-15T10:30:00Z",
+      "last_used_at": "2024-01-20T14:25:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Generate Registration Options
+
+Start passkey registration by generating WebAuthn challenge.
+
+```http
+POST /api/auth/passkeys/registration-options
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "challenge": "3Q2+7w...",
+  "rp": {
+    "name": "KARS - KeyData Asset Registration System",
+    "id": "localhost"
+  },
+  "user": {
+    "id": "MQ==",
+    "name": "user@example.com",
+    "displayName": "John Doe"
+  },
+  "pubKeyCredParams": [
+    { "type": "public-key", "alg": -7 },
+    { "type": "public-key", "alg": -257 }
+  ],
+  "timeout": 60000,
+  "attestation": "none",
+  "excludeCredentials": [],
+  "authenticatorSelection": {
+    "residentKey": "preferred",
+    "userVerification": "preferred"
+  }
+}
+```
+
+**Note:** Use this response with `navigator.credentials.create()` in the browser.
+
+---
+
+### Verify Registration
+
+Complete passkey registration by verifying the WebAuthn response.
+
+```http
+POST /api/auth/passkeys/verify-registration
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "MacBook Pro Touch ID",
+  "credential": {
+    "id": "AVdGcO...",
+    "rawId": "AVdGcO...",
+    "response": {
+      "attestationObject": "o2NmbXRk...",
+      "clientDataJSON": "eyJ0eXBl..."
+    },
+    "type": "public-key",
+    "clientExtensionResults": {},
+    "transports": ["internal"]
+  }
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "passkey": {
+    "id": 1,
+    "user_id": 1,
+    "name": "MacBook Pro Touch ID",
+    "credential_id": "AVdGcO...",
+    "transports": ["internal"],
+    "created_at": "2024-01-15T10:30:00Z",
+    "last_used_at": null
+  }
+}
+```
+
+**Errors:**
+- `400` - No registration in progress or verification failed
+- `500` - Unable to verify passkey registration
+
+---
+
+### Generate Authentication Options
+
+Start passkey sign-in by generating WebAuthn challenge.
+
+```http
+POST /api/auth/passkeys/auth-options
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "challenge": "3Q2+7w...",
+  "timeout": 60000,
+  "rpId": "localhost",
+  "allowCredentials": [
+    {
+      "id": "AVdGcO...",
+      "type": "public-key",
+      "transports": ["internal"]
+    }
+  ],
+  "userVerification": "preferred"
+}
+```
+
+**Note:** Use this response with `navigator.credentials.get()` in the browser.
+
+**Errors:**
+- `400` - Missing email or no passkeys registered
+- `500` - Unable to generate authentication options
+
+---
+
+### Verify Authentication
+
+Complete passkey sign-in by verifying the WebAuthn response.
+
+```http
+POST /api/auth/passkeys/verify-authentication
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "credential": {
+    "id": "AVdGcO...",
+    "rawId": "AVdGcO...",
+    "response": {
+      "authenticatorData": "SZYN5YgO...",
+      "clientDataJSON": "eyJ0eXBl...",
+      "signature": "MEUCIQDm...",
+      "userHandle": "MQ=="
+    },
+    "type": "public-key",
+    "clientExtensionResults": {}
+  }
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Passkey sign-in successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "employee",
+    "first_name": "John",
+    "last_name": "Doe"
+  }
+}
+```
+
+**Errors:**
+- `400` - Missing email or credential
+- `401` - Passkey verification failed
+- `404` - User or passkey not found
+- `500` - Unable to verify passkey authentication
+
+---
+
+### Delete Passkey
+
+Remove a passkey from the user's account.
+
+```http
+DELETE /api/auth/passkeys/:id
+```
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Passkey deleted successfully"
+}
+```
+
+**Errors:**
+- `404` - Passkey not found or not owned by user
+- `500` - Unable to delete passkey
+
+---
+
 ## OIDC/SSO Authentication
 
 ### Check OIDC Configuration
