@@ -5,7 +5,7 @@ import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, databaseSettings, 
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
-import { randomBytes } from 'crypto';
+import { randomBytes, webcrypto as nodeWebcrypto } from 'crypto';
 import multer from 'multer';
 import { readFile, unlink } from 'fs/promises';
 import os from 'os';
@@ -20,6 +20,10 @@ import { isoBase64URL } from '@simplewebauthn/server/helpers';
 const app = express();
 const PORT = process.env.PORT || 3001;
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 25 * 1024 * 1024 } });
+
+if (!globalThis.crypto) {
+  globalThis.crypto = nodeWebcrypto;
+}
 
 const rpID = process.env.PASSKEY_RP_ID || 'localhost';
 const rpName = process.env.PASSKEY_RP_NAME || 'Asset Registration System';
