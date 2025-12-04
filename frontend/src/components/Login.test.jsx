@@ -32,7 +32,8 @@ describe('Login Component', () => {
 
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in with passkey/i })).toBeInTheDocument();
   });
 
   it('updates form fields on user input', async () => {
