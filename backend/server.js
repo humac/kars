@@ -802,7 +802,8 @@ app.post('/api/auth/passkeys/registration-options', authenticate, async (req, re
       rpID,
       userName: req.user.email,
       userDisplayName: req.user.name || req.user.email,
-      userID: req.user.id.toString(),
+      // simplewebauthn requires userID to be a BufferSource (not string)
+      userID: Buffer.from(req.user.id.toString()),
       attestationType: 'none',
       authenticatorSelection: {
         residentKey: 'preferred',
