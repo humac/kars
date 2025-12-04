@@ -15,7 +15,7 @@ services:
     networks:
       - asset-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ars_app}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ars_app} -d ${POSTGRES_DB:-ars}"]
       interval: 10s
       timeout: 5s
       retries: 5
