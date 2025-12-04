@@ -23,7 +23,8 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    manager_name: '',
+    manager_first_name: '',
+    manager_last_name: '',
     manager_email: ''
   });
   const [passwordData, setPasswordData] = useState({
@@ -50,10 +51,16 @@ const Profile = () => {
   useEffect(() => {
     // Initialize form with user data
     if (user) {
+      // Split manager_name if it exists
+      const managerNameParts = user.manager_name ? user.manager_name.trim().split(' ') : ['', ''];
+      const manager_first_name = managerNameParts[0] || '';
+      const manager_last_name = managerNameParts.slice(1).join(' ') || '';
+
       setFormData({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        manager_name: user.manager_name || '',
+        manager_first_name,
+        manager_last_name,
         manager_email: user.manager_email || ''
       });
     }
@@ -99,13 +106,22 @@ const Profile = () => {
     setSuccess(false);
 
     try {
+      // Combine manager first and last names for API
+      const submitData = {
+        ...formData,
+        manager_name: `${formData.manager_first_name} ${formData.manager_last_name}`.trim()
+      };
+      // Remove the separate fields since API expects manager_name
+      delete submitData.manager_first_name;
+      delete submitData.manager_last_name;
+
       const response = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -334,52 +350,70 @@ const Profile = () => {
               )}
 
               <Box component="form" onSubmit={handleSubmit}>
-                <TextField
-                  fullWidth
-                  label="First Name"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  required
-                  placeholder="John"
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Last Name"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  required
-                  placeholder="Doe"
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Manager Name"
-                  name="manager_name"
-                  value={formData.manager_name}
-                  onChange={handleChange}
-                  required
-                  placeholder="Jane Smith"
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Manager Email"
-                  name="manager_email"
-                  type="email"
-                  value={formData.manager_email}
-                  onChange={handleChange}
-                  required
-                  placeholder="manager@company.com"
-                  sx={{ mb: 2 }}
-                />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="First Name"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      required
+                      placeholder="John"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Last Name"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      required
+                      placeholder="Doe"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Manager First Name"
+                      name="manager_first_name"
+                      value={formData.manager_first_name}
+                      onChange={handleChange}
+                      required
+                      placeholder="Jane"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Manager Last Name"
+                      name="manager_last_name"
+                      value={formData.manager_last_name}
+                      onChange={handleChange}
+                      required
+                      placeholder="Smith"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Manager Email"
+                      name="manager_email"
+                      type="email"
+                      value={formData.manager_email}
+                      onChange={handleChange}
+                      required
+                      placeholder="manager@company.com"
+                    />
+                  </Grid>
+                </Grid>
 
                 <Button
                   type="submit"
                   variant="contained"
                   disabled={loading}
+                  sx={{ mt: 2 }}
                 >
                   {loading ? <CircularProgress size={24} /> : 'Update Profile'}
                 </Button>

@@ -22,7 +22,8 @@ const Register = ({ onSwitchToLogin }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    manager_name: '',
+    manager_first_name: '',
+    manager_last_name: '',
     manager_email: ''
   });
   const [loading, setLoading] = useState(false);
@@ -54,7 +55,10 @@ const Register = ({ onSwitchToLogin }) => {
       return;
     }
 
-    const result = await register(formData.email, formData.password, formData.first_name, formData.last_name, formData.manager_name, formData.manager_email);
+    // Combine manager first and last names
+    const manager_name = `${formData.manager_first_name} ${formData.manager_last_name}`.trim();
+
+    const result = await register(formData.email, formData.password, formData.first_name, formData.last_name, manager_name, formData.manager_email);
 
     if (!result.success) {
       setError(result.error);
@@ -144,18 +148,29 @@ const Register = ({ onSwitchToLogin }) => {
                   placeholder="you@company.com"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
-                  label="Manager Name"
-                  name="manager_name"
-                  value={formData.manager_name}
+                  label="Manager First Name"
+                  name="manager_first_name"
+                  value={formData.manager_first_name}
                   onChange={handleChange}
                   required
-                  placeholder="Jane Smith"
+                  placeholder="Jane"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Manager Last Name"
+                  name="manager_last_name"
+                  value={formData.manager_last_name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Smith"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   label="Manager Email"

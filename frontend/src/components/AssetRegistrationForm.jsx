@@ -18,9 +18,10 @@ import { Save } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const AssetRegistrationForm = ({ onAssetRegistered }) => {
-  const { getAuthHeaders } = useAuth();
+  const { getAuthHeaders, user } = useAuth();
   const [formData, setFormData] = useState({
-    employee_name: '',
+    employee_first_name: '',
+    employee_last_name: '',
     employee_email: '',
     client_name: '',
     laptop_make: '',
@@ -37,7 +38,17 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
 
   useEffect(() => {
     fetchCompanies();
-  }, []);
+
+    // Pre-populate employee fields for non-admin/manager users
+    if (user && user.role === 'employee') {
+      setFormData(prev => ({
+        ...prev,
+        employee_first_name: user.first_name || '',
+        employee_last_name: user.last_name || '',
+        employee_email: user.email || ''
+      }));
+    }
+  }, [user]);
 
   const fetchCompanies = async () => {
     try {
@@ -69,13 +80,22 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
     setSuccess(false);
 
     try {
+      // Combine first and last names for API
+      const submitData = {
+        ...formData,
+        employee_name: `${formData.employee_first_name} ${formData.employee_last_name}`.trim()
+      };
+      // Remove the separate fields since API expects employee_name
+      delete submitData.employee_first_name;
+      delete submitData.employee_last_name;
+
       const response = await fetch('/api/assets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -85,16 +105,33 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
       }
 
       setSuccess(true);
-      setFormData({
-        employee_name: '',
-        employee_email: '',
-        client_name: '',
-        laptop_make: '',
-        laptop_model: '',
-        laptop_serial_number: '',
-        laptop_asset_tag: '',
-        notes: ''
-      });
+
+      // Reset form, but keep employee info pre-populated for employees
+      if (user && user.role === 'employee') {
+        setFormData({
+          employee_first_name: user.first_name || '',
+          employee_last_name: user.last_name || '',
+          employee_email: user.email || '',
+          client_name: '',
+          laptop_make: '',
+          laptop_model: '',
+          laptop_serial_number: '',
+          laptop_asset_tag: '',
+          notes: ''
+        });
+      } else {
+        setFormData({
+          employee_first_name: '',
+          employee_last_name: '',
+          employee_email: '',
+          client_name: '',
+          laptop_make: '',
+          laptop_model: '',
+          laptop_serial_number: '',
+          laptop_asset_tag: '',
+          notes: ''
+        });
+      }
 
       if (onAssetRegistered) {
         onAssetRegistered(data.asset);
@@ -134,27 +171,44 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           </Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <TextField
                 fullWidth
-                label="Employee Name"
-                name="employee_name"
-                value={formData.employee_name}
+                label="First Name"
+                name="employee_first_name"
+                value={formData.employee_first_name}
                 onChange={handleChange}
                 required
-                placeholder="John Doe"
+                disabled={user?.role === 'employee'}
+                placeholder="John"
+                helperText={user?.role === 'employee' ? 'Pre-filled from your account' : ''}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                name="employee_last_name"
+                value={formData.employee_last_name}
+                onChange={handleChange}
+                required
+                disabled={user?.role === 'employee'}
+                placeholder="Doe"
+                helperText={user?.role === 'employee' ? 'Pre-filled from your account' : ''}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
               <TextField
                 fullWidth
                 type="email"
-                label="Employee Email"
+                label="Email"
                 name="employee_email"
                 value={formData.employee_email}
                 onChange={handleChange}
                 required
+                disabled={user?.role === 'employee'}
                 placeholder="john.doe@company.com"
+                helperText={user?.role === 'employee' ? 'Pre-filled from your account' : ''}
               />
             </Grid>
           </Grid>
