@@ -39,13 +39,14 @@ import {
   Clear,
   Edit,
   UploadFile,
+  Delete,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import StatusUpdateModal from './StatusUpdateModal';
 import AssetRegistrationForm from './AssetRegistrationForm';
 
 const AssetList = ({ refresh, onAssetRegistered }) => {
-  const { getAuthHeaders } = useAuth();
+  const { getAuthHeaders, user } = useAuth();
   const [assets, setAssets] = useState([]);
   const [filteredAssets, setFilteredAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,10 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(null);
   const [importResult, setImportResult] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -223,6 +228,48 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
     setImportFile(null);
     setImportError(null);
     setImportResult(null);
+  };
+
+  const handleDeleteClick = (asset) => {
+    setAssetToDelete(asset);
+    setShowDeleteConfirm(true);
+    setDeleteError(null);
+  };
+
+  const handleDeleteConfirmClose = () => {
+    setShowDeleteConfirm(false);
+    setAssetToDelete(null);
+    setDeleteError(null);
+  };
+
+  const handleDeleteAsset = async () => {
+    if (!assetToDelete) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/assets/${assetToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          ...getAuthHeaders()
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete asset');
+      }
+
+      // Close the dialog and refresh the asset list
+      handleDeleteConfirmClose();
+      fetchAssets();
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -427,6 +474,16 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
                       >
                         <Edit fontSize="small" />
                       </IconButton>
+                      {user?.role === 'admin' && (
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteClick(asset)}
+                          title="Delete Asset"
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -541,6 +598,45 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
         <DialogActions>
           <Button onClick={handleRegistrationModalClose}>
             Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog
+        open={showDeleteConfirm}
+        onClose={handleDeleteConfirmClose}
+        maxWidth="sm"
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete this asset?
+          </Typography>
+          {assetToDelete && (
+            <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="body2"><strong>Employee:</strong> {assetToDelete.employee_name}</Typography>
+              <Typography variant="body2"><strong>Serial Number:</strong> {assetToDelete.laptop_serial_number}</Typography>
+              <Typography variant="body2"><strong>Asset Tag:</strong> {assetToDelete.laptop_asset_tag}</Typography>
+            </Box>
+          )}
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteConfirmClose} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteAsset}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
