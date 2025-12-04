@@ -55,45 +55,6 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.error || 'Login failed');
       }
 
-      if (data.mfaRequired) {
-        return {
-          success: false,
-          mfaRequired: true,
-          mfaSessionId: data.mfaSessionId,
-          message: data.message,
-        };
-      }
-
-      setToken(data.token);
-      setUser(data.user);
-      localStorage.setItem('token', data.token);
-
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  const verifyMfaLogin = async (mfaSessionId, code, useBackupCode = false) => {
-    try {
-      const response = await fetch('/api/auth/mfa/verify-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mfaSessionId,
-          token: code,
-          useBackupCode,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Invalid verification code');
-      }
-
       setToken(data.token);
       setUser(data.user);
       localStorage.setItem('token', data.token);
@@ -162,7 +123,6 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     setAuthData,
-    verifyMfaLogin,
     isAuthenticated: !!user,
     getAuthHeaders
   };

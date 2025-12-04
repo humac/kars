@@ -2,23 +2,16 @@ import { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from '../ui/use-toast';
 
 const SignIn = () => {
-  const { login, verifyMfaLogin } = useAuth();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mfaSessionId, setMfaSessionId] = useState('');
-  const [mfaCode, setMfaCode] = useState('');
-  const [useBackupCode, setUseBackupCode] = useState(false);
-  const [mfaError, setMfaError] = useState('');
-  const [mfaLoading, setMfaLoading] = useState(false);
-  const [showMfaDialog, setShowMfaDialog] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -26,37 +19,12 @@ const SignIn = () => {
     setError('');
 
     const result = await login(formData.email, formData.password);
-
-    if (result.mfaRequired) {
-      setMfaSessionId(result.mfaSessionId);
-      setShowMfaDialog(true);
-      toast({
-        title: 'Additional verification required',
-        description: 'Enter your MFA code to finish signing in.',
-      });
-    } else if (!result.success) {
+    if (!result.success) {
       setError(result.error || 'Unable to sign in');
     } else {
       toast({ title: 'Welcome back', description: 'Signed in successfully.' });
     }
     setLoading(false);
-  };
-
-  const handleVerifyMfa = async (event) => {
-    event.preventDefault();
-    setMfaLoading(true);
-    setMfaError('');
-
-    const result = await verifyMfaLogin(mfaSessionId, mfaCode, useBackupCode);
-    if (!result.success) {
-      setMfaError(result.error || 'Invalid verification code');
-    } else {
-      setShowMfaDialog(false);
-      setMfaCode('');
-      setUseBackupCode(false);
-      toast({ title: 'Verification complete', description: 'Signed in successfully.' });
-    }
-    setMfaLoading(false);
   };
 
   return (
@@ -137,60 +105,6 @@ const SignIn = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={showMfaDialog} onOpenChange={setShowMfaDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Two-factor authentication</DialogTitle>
-            <p className="text-sm text-muted-foreground">Enter the code from your authenticator app to continue.</p>
-          </DialogHeader>
-
-          <form className="space-y-4" onSubmit={handleVerifyMfa}>
-            {mfaError && (
-              <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700 border border-rose-100">
-                {mfaError}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="mfaCode">{useBackupCode ? 'Backup code' : 'Verification code'}</Label>
-              <Input
-                id="mfaCode"
-                name="mfaCode"
-                type="text"
-                inputMode={useBackupCode ? 'text' : 'numeric'}
-                maxLength={useBackupCode ? 9 : 6}
-                placeholder={useBackupCode ? 'XXXX-XXXX' : '123456'}
-                value={mfaCode}
-                onChange={(e) => {
-                  const value = useBackupCode ? e.target.value.toUpperCase() : e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setMfaCode(value);
-                }}
-                required
-              />
-              <button
-                type="button"
-                className="text-sm text-primary hover:underline"
-                onClick={() => {
-                  setUseBackupCode(!useBackupCode);
-                  setMfaCode('');
-                }}
-              >
-                {useBackupCode ? 'Use authenticator code instead' : 'Use backup code instead'}
-              </button>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setShowMfaDialog(false)} disabled={mfaLoading}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={mfaLoading || !mfaCode.trim()}>
-                {mfaLoading ? 'Verifying...' : 'Verify'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
