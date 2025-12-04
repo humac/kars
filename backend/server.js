@@ -465,6 +465,16 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
       }
     }
 
+    // Auto-assign manager role if manager_email changed
+    if (managerChanged && manager_email && oldUser.manager_email !== manager_email) {
+      try {
+        await autoAssignManagerRole(manager_email, user.email);
+      } catch (roleError) {
+        console.error('Error auto-assigning manager role during profile update:', roleError);
+        // Don't fail profile update if role assignment fails
+      }
+    }
+
     res.json({
       message: 'Profile updated successfully',
       user: {
