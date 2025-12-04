@@ -36,7 +36,9 @@ const AuditReportingNew = () => {
     setError(null);
     try {
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v && v !== 'all') params.append(k, v);
+      });
       const response = await fetch(`/api/audit/logs?${params}`, { headers: { ...getAuthHeaders() } });
       if (!response.ok) throw new Error('Failed to fetch audit logs');
       setLogs(await response.json());
@@ -94,7 +96,7 @@ const AuditReportingNew = () => {
 
   const clearFilters = () => setFilters({ action: '', entityType: '', startDate: '', endDate: '', userEmail: '', limit: '100' });
   const formatDate = (d) => new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const getActionColor = (action) => ({ CREATE: 'success', STATUS_CHANGE: 'info', UPDATE: 'warning', DELETE: 'destructive' }[action] || 'secondary');
+  const getActionColor = (action) => ({ CREATE: 'default', STATUS_CHANGE: 'secondary', UPDATE: 'outline', DELETE: 'destructive' }[action] || 'secondary');
 
   return (
     <div className="space-y-6">
@@ -144,7 +146,7 @@ const AuditReportingNew = () => {
                     <SelectItem value="50">50 records</SelectItem>
                     <SelectItem value="100">100 records</SelectItem>
                     <SelectItem value="250">250 records</SelectItem>
-                    <SelectItem value="">All records</SelectItem>
+                    <SelectItem value="all">All records</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

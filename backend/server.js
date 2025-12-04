@@ -797,7 +797,7 @@ app.get('/api/auth/passkeys', authenticate, async (req, res) => {
 app.post('/api/auth/passkeys/registration-options', authenticate, async (req, res) => {
   try {
     const userPasskeys = await passkeyDb.listByUser(req.user.id);
-    const options = generateRegistrationOptions({
+    const options = await generateRegistrationOptions({
       rpName,
       rpID,
       userName: req.user.email,
@@ -881,7 +881,7 @@ app.post('/api/auth/passkeys/auth-options', async (req, res) => {
       return res.status(400).json({ error: 'No passkeys registered for this account' });
     }
 
-    const options = generateAuthenticationOptions({
+    const options = await generateAuthenticationOptions({
       rpID,
       userVerification: 'preferred',
       allowCredentials: userPasskeys.map((pk) => ({

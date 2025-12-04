@@ -89,7 +89,7 @@ function AppNew() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container mx-auto flex h-16 items-center justify-between">
           {/* Logo and Nav */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
@@ -170,7 +170,7 @@ function AppNew() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background">
-            <div className="container py-4 space-y-4">
+            <div className="container mx-auto py-4 space-y-4">
               {/* User Info */}
               <div className="flex items-center gap-3 pb-4 border-b">
                 <Avatar className="h-10 w-10">
@@ -224,7 +224,7 @@ function AppNew() {
       </header>
 
       {/* Main Content */}
-      <main className="container py-6">
+      <main className="container mx-auto py-6">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/assets" element={<Dashboard />} />
@@ -241,7 +241,7 @@ function AppNew() {
 
       {/* Footer */}
       <footer className="border-t py-4 mt-auto">
-        <div className="container text-center text-sm text-muted-foreground">
+        <div className="container mx-auto text-center text-sm text-muted-foreground">
           SOC2 Compliance - Asset Registration System
         </div>
       </footer>
