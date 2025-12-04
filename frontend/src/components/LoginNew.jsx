@@ -27,6 +27,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const [error, setError] = useState(null);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [brandingLogo, setBrandingLogo] = useState(null);
 
   // MFA state
   const [showMFAVerify, setShowMFAVerify] = useState(false);
@@ -37,10 +38,21 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const [useBackupCode, setUseBackupCode] = useState(false);
 
   useEffect(() => {
+    // Check if OIDC is enabled
     fetch('/api/auth/oidc/config')
       .then(res => res.json())
       .then(data => setOidcEnabled(data.enabled))
       .catch(err => console.error('Failed to check OIDC config:', err));
+
+    // Fetch branding settings
+    fetch('/api/branding')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo_data) {
+          setBrandingLogo(data.logo_data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch branding:', err));
   }, []);
 
   const handleChange = (e) => {
@@ -216,11 +228,23 @@ const LoginNew = ({ onSwitchToRegister }) => {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary mb-4">
-            <Laptop className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">ARS</h1>
-          <p className="text-muted-foreground">Asset Registration System</p>
+          {brandingLogo ? (
+            <div className="mb-4">
+              <img
+                src={brandingLogo}
+                alt="Company Logo"
+                className="max-w-full h-auto max-h-32 object-contain mx-auto"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary mb-4">
+                <Laptop className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">ARS</h1>
+              <p className="text-muted-foreground">Asset Registration System</p>
+            </>
+          )}
         </div>
 
         <Card className="shadow-lg">
