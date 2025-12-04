@@ -244,6 +244,33 @@ const initDb = async () => {
     )
   `;
 
+  const passkeysTable = isPostgres ? `
+    CREATE TABLE IF NOT EXISTS passkeys (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      credential_id TEXT NOT NULL UNIQUE,
+      public_key TEXT NOT NULL,
+      counter INTEGER NOT NULL DEFAULT 0,
+      transports TEXT,
+      created_at TIMESTAMP NOT NULL,
+      last_used_at TIMESTAMP
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS passkeys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      credential_id TEXT NOT NULL UNIQUE,
+      public_key TEXT NOT NULL,
+      counter INTEGER NOT NULL DEFAULT 0,
+      transports TEXT,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `;
+
   const oidcSettingsTable = isPostgres ? `
     CREATE TABLE IF NOT EXISTS oidc_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -279,6 +306,7 @@ const initDb = async () => {
   await dbRun(auditLogsTable);
   await dbRun(usersTable);
   await dbRun(oidcSettingsTable);
+  await dbRun(passkeysTable);
 
   // Migrate existing databases to add manager fields to users table
   try {
@@ -790,6 +818,35 @@ export const userDb = {
     await dbRun('UPDATE users SET mfa_backup_codes = ? WHERE id = ?', [JSON.stringify(backupCodes), userId]);
     return true;
   }
+};
+
+export const passkeyDb = {
+  listByUser: async (userId) => dbAll('SELECT * FROM passkeys WHERE user_id = ? ORDER BY created_at DESC', [userId]),
+  getByCredentialId: async (credentialId) => dbGet('SELECT * FROM passkeys WHERE credential_id = ?', [credentialId]),
+  getById: async (id) => dbGet('SELECT * FROM passkeys WHERE id = ?', [id]),
+  create: async ({ userId, name, credentialId, publicKey, counter, transports }) => {
+    const now = new Date().toISOString();
+    const insertQuery = `
+      INSERT INTO passkeys (user_id, name, credential_id, public_key, counter, transports, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ${isPostgres ? 'RETURNING id' : ''}
+    `;
+
+    const result = await dbRun(insertQuery, [
+      userId,
+      name,
+      credentialId,
+      publicKey,
+      counter || 0,
+      transports ? JSON.stringify(transports) : null,
+      now
+    ]);
+
+    const id = isPostgres ? result.rows?.[0]?.id : result.lastInsertRowid;
+    return { id, created_at: now };
+  },
+  delete: async (id) => dbRun('DELETE FROM passkeys WHERE id = ?', [id]),
+  updateCounter: async (id, counter) => dbRun('UPDATE passkeys SET counter = ?, last_used_at = ? WHERE id = ?', [counter, new Date().toISOString(), id])
 };
 
 export const oidcSettingsDb = {

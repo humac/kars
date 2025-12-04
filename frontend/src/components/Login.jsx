@@ -14,9 +14,10 @@ import {
 import { Login as LoginIcon, VpnKey } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import MFAVerifyModal from './MFAVerifyModal';
+import { prepareRequestOptions, uint8ArrayToBase64Url } from '../utils/webauthn';
 
 const Login = ({ onSwitchToRegister }) => {
-  const { login } = useAuth();
+  const { login, setAuthData } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -25,6 +26,7 @@ const Login = ({ onSwitchToRegister }) => {
   const [oidcLoading, setOidcLoading] = useState(false);
   const [error, setError] = useState(null);
   const [oidcEnabled, setOidcEnabled] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
 
   // MFA state
   const [showMFAVerify, setShowMFAVerify] = useState(false);
@@ -146,6 +148,75 @@ const Login = ({ onSwitchToRegister }) => {
     }
   };
 
+  const handlePasskeyLogin = async () => {
+    if (!window.PublicKeyCredential) {
+      setError('Passkeys are not supported in this browser.');
+      return;
+    }
+
+    if (!formData.email) {
+      setError('Enter your email to continue with a passkey.');
+      return;
+    }
+
+    setPasskeyLoading(true);
+    setError(null);
+
+    try {
+      const optionsResponse = await fetch('/api/auth/passkeys/auth-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+
+      const optionsData = await optionsResponse.json();
+      if (!optionsResponse.ok) {
+        throw new Error(optionsData.error || 'Unable to start passkey sign in');
+      }
+
+      const publicKeyOptions = prepareRequestOptions(optionsData.options);
+      const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
+
+      if (!assertion) {
+        throw new Error('No credential was provided by the authenticator');
+      }
+
+      const verificationPayload = {
+        email: formData.email,
+        credential: {
+          id: assertion.id,
+          type: assertion.type,
+          rawId: uint8ArrayToBase64Url(assertion.rawId),
+          response: {
+            clientDataJSON: uint8ArrayToBase64Url(assertion.response.clientDataJSON),
+            authenticatorData: uint8ArrayToBase64Url(assertion.response.authenticatorData),
+            signature: uint8ArrayToBase64Url(assertion.response.signature),
+            userHandle: assertion.response.userHandle
+              ? uint8ArrayToBase64Url(assertion.response.userHandle)
+              : null
+          }
+        }
+      };
+
+      const verifyResponse = await fetch('/api/auth/passkeys/verify-authentication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(verificationPayload)
+      });
+
+      const verifyData = await verifyResponse.json();
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.error || 'Passkey verification failed');
+      }
+
+      setAuthData(verifyData.token, verifyData.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -220,10 +291,22 @@ const Login = ({ onSwitchToRegister }) => {
               type="submit"
               variant="contained"
               size="large"
-              disabled={loading || oidcLoading}
+              disabled={loading || oidcLoading || passkeyLoading}
               startIcon={loading ? <CircularProgress size={20} /> : <LoginIcon />}
             >
               {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              size="large"
+              onClick={handlePasskeyLogin}
+              disabled={loading || oidcLoading || passkeyLoading}
+              startIcon={passkeyLoading ? <CircularProgress size={20} /> : <VpnKey />}
+              sx={{ mt: 2 }}
+            >
+              {passkeyLoading ? 'Waiting for passkey...' : 'Use Passkey'}
             </Button>
 
             {oidcEnabled && (
@@ -239,7 +322,7 @@ const Login = ({ onSwitchToRegister }) => {
                   variant="outlined"
                   size="large"
                   onClick={handleOIDCLogin}
-                  disabled={loading || oidcLoading}
+                  disabled={loading || oidcLoading || passkeyLoading}
                   startIcon={oidcLoading ? <CircularProgress size={20} /> : <VpnKey />}
                 >
                   {oidcLoading ? 'Redirecting...' : 'Sign In with SSO'}

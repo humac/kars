@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, databaseSettings, databaseEngine, importSqliteDatabase } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
@@ -9,10 +9,21 @@ import { randomBytes } from 'crypto';
 import multer from 'multer';
 import { readFile, unlink } from 'fs/promises';
 import os from 'os';
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse
+} from '@simplewebauthn/server';
+import { isoBase64URL } from '@simplewebauthn/server/helpers';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 25 * 1024 * 1024 } });
+
+const rpID = process.env.PASSKEY_RP_ID || 'localhost';
+const rpName = process.env.PASSKEY_RP_NAME || 'Asset Registration System';
+const defaultOrigin = process.env.PASSKEY_ORIGIN || 'http://localhost:5173';
 
 const parseCSVFile = async (filePath) => {
   const content = await readFile(filePath, 'utf8');
@@ -42,6 +53,10 @@ app.use(cors());
 app.use(express.json());
 
 const pendingMFALogins = new Map();
+const pendingPasskeyRegistrations = new Map();
+const pendingPasskeyLogins = new Map();
+
+const getExpectedOrigin = (req) => process.env.PASSKEY_ORIGIN || req.get('origin') || defaultOrigin;
 
 // Initialize OIDC from database settings (async)
 const initializeOIDCFromSettings = async () => {
@@ -75,6 +90,11 @@ app.get('/api/health', (req, res) => {
 });
 
 // ===== Helper Functions =====
+
+const serializePasskey = (passkey) => ({
+  ...passkey,
+  transports: passkey?.transports ? JSON.parse(passkey.transports) : [],
+});
 
 /**
  * Auto-assign manager role to a user if they have employees reporting to them
@@ -755,6 +775,191 @@ app.post('/api/auth/mfa/verify-login', async (req, res) => {
   } catch (error) {
     console.error('MFA login verification error:', error);
     res.status(500).json({ error: 'Failed to verify MFA' });
+  }
+});
+
+// ===== Passkey Endpoints =====
+
+app.get('/api/auth/passkeys', authenticate, async (req, res) => {
+  try {
+    const passkeys = await passkeyDb.listByUser(req.user.id);
+    res.json({ passkeys: passkeys.map(serializePasskey) });
+  } catch (error) {
+    console.error('Failed to list passkeys:', error);
+    res.status(500).json({ error: 'Unable to load passkeys' });
+  }
+});
+
+app.post('/api/auth/passkeys/registration-options', authenticate, async (req, res) => {
+  try {
+    const userPasskeys = await passkeyDb.listByUser(req.user.id);
+    const options = generateRegistrationOptions({
+      rpName,
+      rpID,
+      userName: req.user.email,
+      userDisplayName: req.user.name || req.user.email,
+      userID: req.user.id.toString(),
+      attestationType: 'none',
+      authenticatorSelection: {
+        residentKey: 'preferred',
+        userVerification: 'preferred'
+      },
+      excludeCredentials: userPasskeys.map((pk) => ({
+        id: isoBase64URL.toBuffer(pk.credential_id),
+        type: 'public-key'
+      }))
+    });
+
+    pendingPasskeyRegistrations.set(req.user.id, options.challenge);
+    res.json({ options });
+  } catch (error) {
+    console.error('Failed to generate passkey registration options:', error);
+    res.status(500).json({ error: 'Unable to start passkey registration' });
+  }
+});
+
+app.post('/api/auth/passkeys/verify-registration', authenticate, async (req, res) => {
+  try {
+    const { credential, name } = req.body;
+    const expectedChallenge = pendingPasskeyRegistrations.get(req.user.id);
+
+    if (!expectedChallenge) {
+      return res.status(400).json({ error: 'No passkey registration in progress' });
+    }
+
+    const verification = await verifyRegistrationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: getExpectedOrigin(req),
+      expectedRPID: rpID
+    });
+
+    if (!verification?.verified || !verification.registrationInfo) {
+      return res.status(400).json({ error: 'Passkey registration verification failed' });
+    }
+
+    const { credentialPublicKey, credentialID, counter } = verification.registrationInfo;
+
+    const record = await passkeyDb.create({
+      userId: req.user.id,
+      name: name || 'Passkey',
+      credentialId: isoBase64URL.fromBuffer(credentialID),
+      publicKey: isoBase64URL.fromBuffer(credentialPublicKey),
+      counter,
+      transports: credential?.response?.transports || []
+    });
+
+    pendingPasskeyRegistrations.delete(req.user.id);
+    const savedPasskey = await passkeyDb.getById(record.id);
+
+    res.json({ passkey: serializePasskey(savedPasskey) });
+  } catch (error) {
+    console.error('Failed to verify passkey registration:', error);
+    res.status(500).json({ error: 'Unable to verify passkey registration' });
+  }
+});
+
+app.post('/api/auth/passkeys/auth-options', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required to use a passkey' });
+    }
+
+    const user = await userDb.getByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'No account found for this email' });
+    }
+
+    const userPasskeys = await passkeyDb.listByUser(user.id);
+    if (!userPasskeys.length) {
+      return res.status(400).json({ error: 'No passkeys registered for this account' });
+    }
+
+    const options = generateAuthenticationOptions({
+      rpID,
+      userVerification: 'preferred',
+      allowCredentials: userPasskeys.map((pk) => ({
+        id: isoBase64URL.toBuffer(pk.credential_id),
+        type: 'public-key',
+        transports: pk.transports ? JSON.parse(pk.transports) : undefined
+      }))
+    });
+
+    pendingPasskeyLogins.set(user.id, { challenge: options.challenge, email: user.email });
+    res.json({ options });
+  } catch (error) {
+    console.error('Failed to generate passkey authentication options:', error);
+    res.status(500).json({ error: 'Unable to start passkey sign in' });
+  }
+});
+
+app.post('/api/auth/passkeys/verify-authentication', async (req, res) => {
+  try {
+    const { email, credential } = req.body;
+
+    if (!email || !credential) {
+      return res.status(400).json({ error: 'Email and credential response are required' });
+    }
+
+    const user = await userDb.getByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'No account found for this email' });
+    }
+
+    const pending = pendingPasskeyLogins.get(user.id);
+    if (!pending || pending.email !== email) {
+      return res.status(400).json({ error: 'No pending passkey authentication found' });
+    }
+
+    const dbPasskey = await passkeyDb.getByCredentialId(credential.id);
+    if (!dbPasskey || dbPasskey.user_id !== user.id) {
+      return res.status(404).json({ error: 'Passkey not recognized for this account' });
+    }
+
+    const verification = await verifyAuthenticationResponse({
+      response: credential,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: getExpectedOrigin(req),
+      expectedRPID: rpID,
+      authenticator: {
+        credentialID: isoBase64URL.toBuffer(dbPasskey.credential_id),
+        credentialPublicKey: isoBase64URL.toBuffer(dbPasskey.public_key),
+        counter: dbPasskey.counter,
+        transports: dbPasskey.transports ? JSON.parse(dbPasskey.transports) : []
+      }
+    });
+
+    if (!verification?.verified || !verification.authenticationInfo) {
+      return res.status(400).json({ error: 'Passkey authentication failed' });
+    }
+
+    await passkeyDb.updateCounter(dbPasskey.id, verification.authenticationInfo.newCounter ?? dbPasskey.counter);
+    await userDb.updateLastLogin(user.id);
+
+    const token = generateToken(user);
+    pendingPasskeyLogins.delete(user.id);
+
+    res.json({ token, user });
+  } catch (error) {
+    console.error('Failed to verify passkey authentication:', error);
+    res.status(500).json({ error: 'Unable to verify passkey sign in' });
+  }
+});
+
+app.delete('/api/auth/passkeys/:id', authenticate, async (req, res) => {
+  try {
+    const passkey = await passkeyDb.getById(req.params.id);
+
+    if (!passkey || passkey.user_id !== req.user.id) {
+      return res.status(404).json({ error: 'Passkey not found' });
+    }
+
+    await passkeyDb.delete(req.params.id);
+    res.json({ message: 'Passkey removed' });
+  } catch (error) {
+    console.error('Failed to delete passkey:', error);
+    res.status(500).json({ error: 'Unable to delete passkey' });
   }
 });
 

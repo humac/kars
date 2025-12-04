@@ -15,6 +15,12 @@ import {
   DialogActions,
   Tabs,
   Tab,
+  Stack,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Person,
@@ -23,9 +29,12 @@ import {
   AccountCircle,
   Edit,
   Security as SecurityIcon,
+  VpnKey,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import MFASetupModal from './MFASetupModal';
+import { prepareCreationOptions, uint8ArrayToBase64Url } from '../utils/webauthn';
 
 const Profile = () => {
   const { user, getAuthHeaders, updateUser } = useAuth();
@@ -57,6 +66,11 @@ const Profile = () => {
   const [mfaError, setMfaError] = useState('');
   const [mfaSuccess, setMfaSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('account');
+  const [passkeys, setPasskeys] = useState([]);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyError, setPasskeyError] = useState('');
+  const [passkeySuccess, setPasskeySuccess] = useState('');
+  const [newPasskeyName, setNewPasskeyName] = useState('');
 
   useEffect(() => {
     // Initialize form with user data
@@ -94,6 +108,12 @@ const Profile = () => {
 
     fetchMFAStatus();
   }, [getAuthHeaders]);
+
+  useEffect(() => {
+    if (activeTab === 'security') {
+      fetchPasskeys();
+    }
+  }, [activeTab]);
 
   const handleChange = (e) => {
     setFormData({
@@ -258,9 +278,134 @@ const Profile = () => {
     }
   };
 
+  const fetchPasskeys = async () => {
+    setPasskeyLoading(true);
+    setPasskeyError('');
+
+    try {
+      const response = await fetch('/api/auth/passkeys', {
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load passkeys');
+      }
+
+      setPasskeys(data.passkeys || []);
+    } catch (err) {
+      setPasskeyError(err.message);
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
+  const handlePasskeyRegistration = async () => {
+    if (!window.PublicKeyCredential) {
+      setPasskeyError('Passkeys are not supported in this browser.');
+      return;
+    }
+
+    setPasskeyLoading(true);
+    setPasskeyError('');
+    setPasskeySuccess('');
+
+    try {
+      const optionsResponse = await fetch('/api/auth/passkeys/registration-options', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+      });
+
+      const optionsData = await optionsResponse.json();
+      if (!optionsResponse.ok) {
+        throw new Error(optionsData.error || 'Unable to start passkey setup');
+      }
+
+      const creationOptions = prepareCreationOptions(optionsData.options);
+      const credential = await navigator.credentials.create({ publicKey: creationOptions });
+
+      if (!credential) {
+        throw new Error('No credential was returned by the authenticator');
+      }
+
+      const verificationPayload = {
+        name: newPasskeyName.trim() || 'Passkey',
+        credential: {
+          id: credential.id,
+          rawId: uint8ArrayToBase64Url(credential.rawId),
+          type: credential.type,
+          response: {
+            clientDataJSON: uint8ArrayToBase64Url(credential.response.clientDataJSON),
+            attestationObject: uint8ArrayToBase64Url(credential.response.attestationObject),
+            transports:
+              typeof credential.response.getTransports === 'function'
+                ? credential.response.getTransports()
+                : credential.response.transports || [],
+          },
+        },
+      };
+
+      const verifyResponse = await fetch('/api/auth/passkeys/verify-registration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(verificationPayload),
+      });
+
+      const verifyData = await verifyResponse.json();
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.error || 'Unable to save passkey');
+      }
+
+      setPasskeys((prev) => [verifyData.passkey, ...prev.filter((pk) => pk.id !== verifyData.passkey.id)]);
+      setPasskeySuccess('Passkey added successfully.');
+      setNewPasskeyName('');
+    } catch (err) {
+      setPasskeyError(err.message);
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
+  const handleDeletePasskey = async (passkeyId) => {
+    setPasskeyLoading(true);
+    setPasskeyError('');
+    setPasskeySuccess('');
+
+    try {
+      const response = await fetch(`/api/auth/passkeys/${passkeyId}`, {
+        method: 'DELETE',
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete passkey');
+      }
+
+      setPasskeys((prev) => prev.filter((pk) => pk.id !== passkeyId));
+      setPasskeySuccess('Passkey removed successfully.');
+    } catch (err) {
+      setPasskeyError(err.message);
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
+
+  const formatPasskeyDate = (value) => (value ? new Date(value).toLocaleString() : 'Never');
 
   return (
     <>
@@ -478,138 +623,226 @@ const Profile = () => {
                 Security
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Manage your password and multi-factor authentication preferences.
+                Manage your password, passkeys, and multi-factor authentication preferences.
               </Typography>
+              <Stack spacing={3}>
+                <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Update Password
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Update your password regularly to help keep your account secure.
+                  </Typography>
 
-              <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Update Password
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Update your password regularly to help keep your account secure.
-                </Typography>
+                  {passwordError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {passwordError}
+                    </Alert>
+                  )}
 
-                {passwordError && (
-                  <Alert severity="error" sx={{ mb: 2 }}>
-                    {passwordError}
-                  </Alert>
-                )}
+                  <Box component="form" onSubmit={handlePasswordSubmit}>
+                    <TextField
+                      fullWidth
+                      type="password"
+                      label="Current Password"
+                      name="currentPassword"
+                      value={passwordData.currentPassword}
+                      onChange={handlePasswordChange}
+                      required
+                      placeholder="Enter current password"
+                      sx={{ mb: 2 }}
+                    />
 
-                <Box component="form" onSubmit={handlePasswordSubmit}>
-                  <TextField
-                    fullWidth
-                    type="password"
-                    label="Current Password"
-                    name="currentPassword"
-                    value={passwordData.currentPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="Enter current password"
-                    sx={{ mb: 2 }}
-                  />
+                    <TextField
+                      fullWidth
+                      type="password"
+                      label="New Password"
+                      name="newPassword"
+                      value={passwordData.newPassword}
+                      onChange={handlePasswordChange}
+                      required
+                      placeholder="Enter new password (min 6 characters)"
+                      inputProps={{ minLength: 6 }}
+                      sx={{ mb: 2 }}
+                    />
 
-                  <TextField
-                    fullWidth
-                    type="password"
-                    label="New Password"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="Enter new password (min 6 characters)"
-                    inputProps={{ minLength: 6 }}
-                    sx={{ mb: 2 }}
-                  />
+                    <TextField
+                      fullWidth
+                      type="password"
+                      label="Confirm New Password"
+                      name="confirmPassword"
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      required
+                      placeholder="Confirm new password"
+                      inputProps={{ minLength: 6 }}
+                      sx={{ mb: 2 }}
+                    />
 
-                  <TextField
-                    fullWidth
-                    type="password"
-                    label="Confirm New Password"
-                    name="confirmPassword"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="Confirm new password"
-                    inputProps={{ minLength: 6 }}
-                    sx={{ mb: 2 }}
-                  />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={passwordLoading}
+                    >
+                      {passwordLoading ? <CircularProgress size={24} /> : 'Change Password'}
+                    </Button>
+                  </Box>
+                </Card>
 
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={passwordLoading}
-                  >
-                    {passwordLoading ? <CircularProgress size={24} /> : 'Change Password'}
-                  </Button>
-                </Box>
-              </Card>
+                <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Two-Factor Authentication
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Add an extra layer of security to your account by requiring a verification code from your phone in addition to your password.
+                  </Typography>
 
-              <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper', mt: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Two-Factor Authentication
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Add an extra layer of security to your account by requiring a verification code from your phone in addition to your password.
-                </Typography>
+                  {mfaError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {mfaError}
+                    </Alert>
+                  )}
 
-                {mfaError && (
-                  <Alert severity="error" sx={{ mb: 2 }}>
-                    {mfaError}
-                  </Alert>
-                )}
-
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Status
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {mfaEnabled ? (
-                        <>
-                          <CheckCircle color="success" fontSize="small" />
-                          <Typography variant="body2" color="success.main" fontWeight={600}>
-                            Enabled
-                          </Typography>
-                        </>
-                      ) : (
-                        <>
-                          <Cancel color="error" fontSize="small" />
-                          <Typography variant="body2" color="error.main">
-                            Disabled
-                          </Typography>
-                        </>
-                      )}
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Status
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {mfaEnabled ? (
+                          <>
+                            <CheckCircle color="success" fontSize="small" />
+                            <Typography variant="body2" color="success.main" fontWeight={600}>
+                              Enabled
+                            </Typography>
+                          </>
+                        ) : (
+                          <>
+                            <Cancel color="error" fontSize="small" />
+                            <Typography variant="body2" color="error.main">
+                              Disabled
+                            </Typography>
+                          </>
+                        )}
+                      </Box>
                     </Box>
+
+                    {mfaEnabled ? (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => setShowDisableMFA(true)}
+                      >
+                        Disable MFA
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setShowMFASetup(true)}
+                      >
+                        Enable MFA
+                      </Button>
+                    )}
                   </Box>
 
-                  {mfaEnabled ? (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      onClick={() => setShowDisableMFA(true)}
-                    >
-                      Disable MFA
-                    </Button>
-                  ) : (
+                  <Alert severity="info">
+                    <Typography variant="body2">
+                      {mfaEnabled
+                        ? 'Two-factor authentication is currently protecting your account.'
+                        : 'Enable two-factor authentication to better protect your account from unauthorized access.'}
+                    </Typography>
+                  </Alert>
+                </Card>
+
+                <Card variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <VpnKey color="primary" />
+                    <Typography variant="subtitle1" gutterBottom sx={{ mb: 0 }}>
+                      Passkeys
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Use passkeys for passwordless sign-in and manage the authenticators tied to your account.
+                  </Typography>
+
+                  {passkeyError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {passkeyError}
+                    </Alert>
+                  )}
+
+                  {passkeySuccess && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      {passkeySuccess}
+                    </Alert>
+                  )}
+
+                  <Stack spacing={2} sx={{ mb: 2 }}>
+                    <TextField
+                      fullWidth
+                      label="Passkey name"
+                      value={newPasskeyName}
+                      onChange={(e) => setNewPasskeyName(e.target.value)}
+                      placeholder="e.g. MacBook Touch ID"
+                    />
                     <Button
                       variant="contained"
-                      size="small"
-                      onClick={() => setShowMFASetup(true)}
+                      onClick={handlePasskeyRegistration}
+                      disabled={passkeyLoading}
+                      startIcon={passkeyLoading ? <CircularProgress size={24} /> : <VpnKey />}
                     >
-                      Enable MFA
+                      {passkeyLoading ? 'Waiting for passkey...' : 'Create new passkey'}
                     </Button>
-                  )}
-                </Box>
+                  </Stack>
 
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    {mfaEnabled
-                      ? 'Two-factor authentication is currently protecting your account.'
-                      : 'Enable two-factor authentication to better protect your account from unauthorized access.'}
-                  </Typography>
-                </Alert>
-              </Card>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Passkeys require a supported browser and device. Keep at least one passkey available in case you forget your password.
+                  </Alert>
+
+                  {passkeyLoading && !passkeys.length ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Loading passkeys...
+                    </Typography>
+                  ) : (
+                    <List dense>
+                      {passkeys.map((pk) => (
+                        <ListItem
+                          key={pk.id}
+                          secondaryAction={
+                            <Tooltip title="Remove passkey">
+                              <span>
+                                <IconButton
+                                  edge="end"
+                                  onClick={() => handleDeletePasskey(pk.id)}
+                                  disabled={passkeyLoading}
+                                  aria-label="Delete passkey"
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          }
+                        >
+                          <ListItemText
+                            primary={pk.name}
+                            secondary={`Created ${formatPasskeyDate(pk.created_at)} • Last used ${formatPasskeyDate(pk.last_used_at)}`}
+                          />
+                        </ListItem>
+                      ))}
+                      {!passkeys.length && (
+                        <ListItem>
+                          <ListItemText
+                            primary="No passkeys yet"
+                            secondary="Create a passkey to enable passwordless sign-in."
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  )}
+                </Card>
+              </Stack>
             </Box>
           </Box>
         )}
