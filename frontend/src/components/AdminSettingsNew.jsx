@@ -15,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Settings, Users, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image } from 'lucide-react';
+import { Settings, Users, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Edit } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 import SecuritySettingsNew from './SecuritySettingsNew';
 
@@ -338,17 +338,14 @@ const AdminSettingsNew = () => {
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">{formatDate(u.last_login)}</TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => openEditDialog(u)}
-                            >
-                              Edit
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog({ open: true, user: u })} disabled={u.id === user.id}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(u)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog({ open: true, user: u })} disabled={u.id === user.id}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

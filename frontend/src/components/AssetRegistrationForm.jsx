@@ -214,20 +214,20 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           </Grid>
         </Box>
 
-        {/* Client Information Section */}
+        {/* Company Information Section */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" color="primary" sx={{ fontWeight: 600, mb: 2 }}>
-            Client Information
+            Company Information
           </Typography>
           <Divider sx={{ mb: 2 }} />
           <FormControl fullWidth required error={companies.length === 0}>
-            <InputLabel id="client-company-label">Client Company</InputLabel>
+            <InputLabel id="company-label">Company</InputLabel>
             <Select
-              labelId="client-company-label"
+              labelId="company-label"
               name="client_name"
               value={formData.client_name}
               onChange={handleChange}
-              label="Client Company"
+              label="Company"
               required
             >
               <MenuItem value="">

@@ -32,6 +32,9 @@ import {
   List,
   ListItem,
   ListItemText,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
 } from '@mui/material';
 import {
   Add,
@@ -40,9 +43,10 @@ import {
   Edit,
   UploadFile,
   Delete,
+  ViewColumn,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import StatusUpdateModal from './StatusUpdateModal';
+import AssetEditModal from './AssetEditModal';
 import AssetRegistrationForm from './AssetRegistrationForm';
 
 const AssetList = ({ refresh, onAssetRegistered }) => {
@@ -52,7 +56,7 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedAsset, setSelectedAsset] = useState(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -72,6 +76,19 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
     client: '',
     status: ''
   });
+
+  // Column visibility state - optional columns that can be shown/hidden
+  const [optionalColumns, setOptionalColumns] = useState(() => {
+    const saved = localStorage.getItem('assetTableColumns');
+    return saved ? JSON.parse(saved) : {
+      make: true,
+      model: true,
+      registered: true,
+      manager: true,
+      notes: false
+    };
+  });
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
 
   useEffect(() => {
     fetchAssets();
@@ -152,19 +169,28 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
     });
   };
 
-  const handleStatusUpdate = (asset) => {
-    setSelectedAsset(asset);
-    setShowStatusModal(true);
+  const toggleColumn = (columnName) => {
+    const newColumns = {
+      ...optionalColumns,
+      [columnName]: !optionalColumns[columnName]
+    };
+    setOptionalColumns(newColumns);
+    localStorage.setItem('assetTableColumns', JSON.stringify(newColumns));
   };
 
-  const handleStatusModalClose = () => {
-    setShowStatusModal(false);
+  const handleEditAsset = (asset) => {
+    setSelectedAsset(asset);
+    setShowEditModal(true);
+  };
+
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
     setSelectedAsset(null);
   };
 
-  const handleStatusUpdated = () => {
+  const handleAssetUpdated = () => {
     fetchAssets();
-    handleStatusModalClose();
+    handleEditModalClose();
   };
 
   const handleNewAssetClick = () => {
@@ -328,6 +354,13 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
           <Stack direction="row" spacing={1}>
             <Button
               variant="outlined"
+              startIcon={<ViewColumn />}
+              onClick={() => setShowColumnSelector(true)}
+            >
+              Columns
+            </Button>
+            <Button
+              variant="outlined"
               startIcon={<UploadFile />}
               onClick={() => setShowImportModal(true)}
             >
@@ -379,8 +412,8 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
                 fullWidth
                 size="small"
                 name="client"
-                label="Client"
-                placeholder="Search by client..."
+                label="Company"
+                placeholder="Search by company..."
                 value={filters.client}
                 onChange={handleFilterChange}
               />
@@ -431,30 +464,31 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
             <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: isMobile ? 300 : 800 }}>
               <TableHead>
                 <TableRow>
+                  {/* Fixed columns */}
                   <TableCell><strong>Employee</strong></TableCell>
                   {!isMobile && <TableCell><strong>Employee Email</strong></TableCell>}
-                  <TableCell><strong>Manager</strong></TableCell>
                   {!isMobile && <TableCell><strong>Manager Email</strong></TableCell>}
-                  <TableCell><strong>Client</strong></TableCell>
-                  {!isMobile && <TableCell><strong>Make</strong></TableCell>}
-                  {!isMobile && <TableCell><strong>Model</strong></TableCell>}
+                  <TableCell><strong>Company</strong></TableCell>
                   {!isMobile && <TableCell><strong>Serial Number</strong></TableCell>}
                   {!isMobile && <TableCell><strong>Asset Tag</strong></TableCell>}
                   <TableCell><strong>Status</strong></TableCell>
-                  {!isMobile && <TableCell><strong>Registered</strong></TableCell>}
+                  {/* Optional columns */}
+                  {!isMobile && optionalColumns.manager && <TableCell><strong>Manager</strong></TableCell>}
+                  {!isMobile && optionalColumns.make && <TableCell><strong>Make</strong></TableCell>}
+                  {!isMobile && optionalColumns.model && <TableCell><strong>Model</strong></TableCell>}
+                  {!isMobile && optionalColumns.registered && <TableCell><strong>Registered</strong></TableCell>}
+                  {!isMobile && optionalColumns.notes && <TableCell><strong>Notes</strong></TableCell>}
                   <TableCell><strong>Actions</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredAssets.map((asset) => (
                   <TableRow key={asset.id} hover>
+                    {/* Fixed columns */}
                     <TableCell>{asset.employee_name}</TableCell>
                     {!isMobile && <TableCell>{asset.employee_email || '-'}</TableCell>}
-                    <TableCell>{asset.manager_name}</TableCell>
                     {!isMobile && <TableCell>{asset.manager_email || '-'}</TableCell>}
                     <TableCell>{asset.client_name}</TableCell>
-                    {!isMobile && <TableCell>{asset.laptop_make || '-'}</TableCell>}
-                    {!isMobile && <TableCell>{asset.laptop_model || '-'}</TableCell>}
                     {!isMobile && <TableCell>{asset.laptop_serial_number}</TableCell>}
                     {!isMobile && <TableCell>{asset.laptop_asset_tag}</TableCell>}
                     <TableCell>
@@ -464,17 +498,22 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
                         size="small"
                       />
                     </TableCell>
-                    {!isMobile && <TableCell>{formatDate(asset.registration_date)}</TableCell>}
+                    {/* Optional columns */}
+                    {!isMobile && optionalColumns.manager && <TableCell>{asset.manager_name || '-'}</TableCell>}
+                    {!isMobile && optionalColumns.make && <TableCell>{asset.laptop_make || '-'}</TableCell>}
+                    {!isMobile && optionalColumns.model && <TableCell>{asset.laptop_model || '-'}</TableCell>}
+                    {!isMobile && optionalColumns.registered && <TableCell>{formatDate(asset.registration_date)}</TableCell>}
+                    {!isMobile && optionalColumns.notes && <TableCell>{asset.notes || '-'}</TableCell>}
                     <TableCell>
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => handleStatusUpdate(asset)}
-                        title="Update Status"
+                        onClick={() => handleEditAsset(asset)}
+                        title="Edit Asset"
                       >
                         <Edit fontSize="small" />
                       </IconButton>
-                      {user?.role === 'admin' && (
+                      {(user?.role === 'admin' || asset.employee_email === user?.email) && (
                         <IconButton
                           size="small"
                           color="error"
@@ -493,12 +532,77 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
         )}
       </Card>
 
-      {/* Status Update Modal */}
-      {showStatusModal && selectedAsset && (
-        <StatusUpdateModal
+      {/* Column Selector Modal */}
+      <Dialog
+        open={showColumnSelector}
+        onClose={() => setShowColumnSelector(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Customize Table Columns</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select which optional columns to display in the asset table. Fixed columns (Employee, Employee Email, Manager Email, Company, Serial Number, Asset Tag, Status) are always visible.
+          </Typography>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={optionalColumns.manager}
+                  onChange={() => toggleColumn('manager')}
+                />
+              }
+              label="Manager Name"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={optionalColumns.make}
+                  onChange={() => toggleColumn('make')}
+                />
+              }
+              label="Make"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={optionalColumns.model}
+                  onChange={() => toggleColumn('model')}
+                />
+              }
+              label="Model"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={optionalColumns.registered}
+                  onChange={() => toggleColumn('registered')}
+                />
+              }
+              label="Registered Date"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={optionalColumns.notes}
+                  onChange={() => toggleColumn('notes')}
+                />
+              }
+              label="Notes"
+            />
+          </FormGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowColumnSelector(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Asset Edit Modal */}
+      {showEditModal && selectedAsset && (
+        <AssetEditModal
           asset={selectedAsset}
-          onClose={handleStatusModalClose}
-          onUpdate={handleStatusUpdated}
+          onClose={handleEditModalClose}
+          onUpdate={handleAssetUpdated}
         />
       )}
 

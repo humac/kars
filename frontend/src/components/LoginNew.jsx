@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LogIn, Key, Loader2, AlertCircle, Laptop } from 'lucide-react';
+import { LogIn, Key, Loader2, AlertCircle, Laptop, Moon, Sun } from 'lucide-react';
 import { prepareRequestOptions, uint8ArrayToBase64Url } from '@/utils/webauthn';
 
 const LoginNew = ({ onSwitchToRegister }) => {
@@ -29,6 +29,11 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [brandingLogo, setBrandingLogo] = useState(null);
 
+  // Dark mode state - default to light mode
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
   // MFA state
   const [showMFAVerify, setShowMFAVerify] = useState(false);
   const [mfaSessionId, setMfaSessionId] = useState('');
@@ -36,6 +41,17 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const [mfaError, setMfaError] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
+
+  useEffect(() => {
+    // Apply theme
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     // Check if OIDC is enabled
@@ -221,11 +237,30 @@ const LoginNew = ({ onSwitchToRegister }) => {
     }
   };
 
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   const isLoading = loading || oidcLoading || passkeyLoading;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
       <div className="w-full max-w-md">
+        {/* Dark Mode Toggle */}
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleTheme}
+            className="rounded-full"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           {brandingLogo ? (

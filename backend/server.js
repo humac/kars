@@ -2214,7 +2214,7 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
-    const { employee_name, employee_email, client_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
+    const { employee_name, employee_email, manager_name, manager_email, client_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
 
     if (!employee_name || !employee_email || !client_name || !laptop_serial_number || !laptop_asset_tag) {
       return res.status(400).json({
@@ -2223,26 +2223,36 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       });
     }
 
-    // Get manager data from employee's user record
-    const employeeUser = await userDb.getByEmail(employee_email);
-    let manager_name = '';
-    let manager_email = '';
+    // Use provided manager info or get from employee's user record
+    let finalManagerName = manager_name;
+    let finalManagerEmail = manager_email;
 
-    if (employeeUser && employeeUser.manager_name && employeeUser.manager_email) {
-      manager_name = employeeUser.manager_name;
-      manager_email = employeeUser.manager_email;
-    } else {
-      return res.status(400).json({
-        error: 'Employee user not found or manager information not set. Please ensure the employee is registered with manager information.'
-      });
+    if (!finalManagerName || !finalManagerEmail) {
+      const employeeUser = await userDb.getByEmail(employee_email);
+      if (employeeUser && employeeUser.manager_name && employeeUser.manager_email) {
+        finalManagerName = employeeUser.manager_name;
+        finalManagerEmail = employeeUser.manager_email;
+      }
     }
 
     await assetDb.update(req.params.id, {
       ...req.body,
-      manager_name,
-      manager_email
+      manager_name: finalManagerName || '',
+      manager_email: finalManagerEmail || ''
     });
     const updatedAsset = await assetDb.getById(req.params.id);
+
+    // Log audit trail
+    await auditDb.create({
+      user_id: req.user.id,
+      action: 'UPDATE_ASSET',
+      target_type: 'asset',
+      target_id: req.params.id,
+      details: JSON.stringify({
+        previous: asset,
+        updated: updatedAsset
+      })
+    });
 
     res.json({
       message: 'Asset updated successfully',
@@ -2261,12 +2271,19 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
   }
 });
 
-// Delete asset (admin only)
-app.delete('/api/assets/:id', authenticate, authorize('admin'), async (req, res) => {
+// Delete asset (admin or employee deleting their own asset)
+app.delete('/api/assets/:id', authenticate, async (req, res) => {
   try {
     const asset = await assetDb.getById(req.params.id);
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    const user = await userDb.getById(req.user.id);
+
+    // Check if user is admin or is deleting their own asset
+    if (user.role !== 'admin' && asset.employee_email !== user.email) {
+      return res.status(403).json({ error: 'You can only delete your own assets' });
     }
 
     // Log audit before deletion
