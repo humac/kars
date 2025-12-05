@@ -483,6 +483,83 @@ const initDb = async () => {
     throw new Error(`Failed to migrate assets table: ${err.message}`);
   }
 
+  // Migrate client_name to company_name
+  try {
+    if (isPostgres) {
+      // Check if client_name column exists
+      const checkColumn = await dbAll(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'assets'
+        AND column_name = 'client_name'
+      `);
+
+      if (checkColumn.length > 0) {
+        await dbRun('ALTER TABLE assets RENAME COLUMN client_name TO company_name');
+        console.log('PostgreSQL: Renamed client_name to company_name');
+      }
+    } else {
+      // SQLite: Check if client_name exists
+      const columns = await dbAll("PRAGMA table_info(assets)");
+      const clientNameCol = columns.find(col => col.name === 'client_name');
+
+      if (clientNameCol) {
+        console.log('SQLite: Renaming client_name to company_name...');
+
+        await dbRun('BEGIN TRANSACTION');
+
+        try {
+          // Create new table with company_name
+          await dbRun(`
+            CREATE TABLE assets_temp (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              employee_name TEXT NOT NULL,
+              employee_email TEXT NOT NULL,
+              manager_name TEXT,
+              manager_email TEXT,
+              company_name TEXT NOT NULL,
+              laptop_serial_number TEXT NOT NULL UNIQUE,
+              laptop_asset_tag TEXT NOT NULL UNIQUE,
+              laptop_make TEXT,
+              laptop_model TEXT,
+              status TEXT NOT NULL DEFAULT 'active',
+              registration_date TEXT NOT NULL,
+              last_updated TEXT NOT NULL,
+              notes TEXT
+            )
+          `);
+
+          // Copy data, renaming client_name to company_name
+          await dbRun(`
+            INSERT INTO assets_temp (id, employee_name, employee_email, manager_name, manager_email,
+                                     company_name, laptop_serial_number, laptop_asset_tag,
+                                     laptop_make, laptop_model, status, registration_date, last_updated, notes)
+            SELECT id, employee_name, employee_email, manager_name, manager_email,
+                   client_name, laptop_serial_number, laptop_asset_tag,
+                   laptop_make, laptop_model, status, registration_date, last_updated, notes
+            FROM assets
+          `);
+
+          // Drop old table
+          await dbRun('DROP TABLE assets');
+
+          // Rename temp table
+          await dbRun('ALTER TABLE assets_temp RENAME TO assets');
+
+          await dbRun('COMMIT');
+          console.log('✓ SQLite: Successfully renamed client_name to company_name');
+        } catch (error) {
+          await dbRun('ROLLBACK');
+          throw error;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Column rename migration failed:', err.message);
+    console.error('Stack trace:', err.stack);
+    throw new Error(`Failed to rename client_name to company_name: ${err.message}`);
+  }
+
   // Insert default OIDC settings if not exists
   const checkSettings = await dbGet('SELECT id FROM oidc_settings WHERE id = 1');
   if (!checkSettings) {
