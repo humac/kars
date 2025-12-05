@@ -194,19 +194,15 @@ const LoginNew = ({ onSwitchToRegister }) => {
       return;
     }
 
-    if (!formData.email) {
-      setError('Enter your email to continue with a passkey.');
-      return;
-    }
-
     setPasskeyLoading(true);
     setError(null);
 
     try {
+      const optionsPayload = formData.email ? { email: formData.email } : {};
       const optionsResponse = await fetch('/api/auth/passkeys/auth-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email })
+        body: JSON.stringify(optionsPayload)
       });
 
       const optionsData = await optionsResponse.json();
@@ -215,14 +211,22 @@ const LoginNew = ({ onSwitchToRegister }) => {
       }
 
       const publicKeyOptions = prepareRequestOptions(optionsData.options);
-      const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
+      const credentialRequestOptions = { publicKey: publicKeyOptions };
+
+      if (window.PublicKeyCredential.isConditionalMediationAvailable) {
+        const conditionalAvailable = await window.PublicKeyCredential.isConditionalMediationAvailable();
+        if (conditionalAvailable) {
+          credentialRequestOptions.mediation = 'conditional';
+        }
+      }
+
+      const assertion = await navigator.credentials.get(credentialRequestOptions);
 
       if (!assertion) {
         throw new Error('No credential was provided by the authenticator');
       }
 
       const verificationPayload = {
-        email: formData.email,
         credential: {
           id: assertion.id,
           type: assertion.type,
@@ -238,6 +242,10 @@ const LoginNew = ({ onSwitchToRegister }) => {
         }
       };
 
+      if (formData.email) {
+        verificationPayload.email = formData.email;
+      }
+
       const verifyResponse = await fetch('/api/auth/passkeys/verify-authentication', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -251,7 +259,9 @@ const LoginNew = ({ onSwitchToRegister }) => {
 
       setAuthData(verifyData.token, verifyData.user);
     } catch (err) {
-      setError(err.message);
+      if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+        setError(err.message);
+      }
     } finally {
       setPasskeyLoading(false);
     }

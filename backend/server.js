@@ -1183,6 +1183,19 @@ app.post('/api/auth/passkeys/verify-authentication', async (req, res) => {
       return res.status(400).json({ error: 'Credential response is required' });
     }
 
+    // Extract the challenge from clientDataJSON so we can match the correct pending request
+    let clientChallenge = null;
+    try {
+      const clientDataBuffer = Buffer.from(credential?.response?.clientDataJSON || '', 'base64url');
+      const clientDataJson = JSON.parse(clientDataBuffer.toString('utf8'));
+      if (clientDataJson?.challenge) {
+        // Normalize to base64url without padding for consistent lookups
+        clientChallenge = Buffer.from(clientDataJson.challenge, 'base64url').toString('base64url');
+      }
+    } catch (err) {
+      console.warn('[Passkey Auth] Failed to parse clientDataJSON challenge:', err.message);
+    }
+
     // Look up passkey by credential ID
     const dbPasskey = await passkeyDb.getByCredentialId(credential.id);
     if (!dbPasskey) {
@@ -1211,6 +1224,10 @@ app.post('/api/auth/passkeys/verify-authentication', async (req, res) => {
     // Find the pending authentication challenge
     // For email-based flow, it's keyed by user.id; for passwordless, we need to search
     let pending = pendingPasskeyLogins.get(user.id);
+
+    if (!pending && clientChallenge) {
+      pending = pendingPasskeyLogins.get(clientChallenge);
+    }
 
     if (!pending) {
       // Search for challenge in passwordless flow storage
