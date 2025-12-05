@@ -36,6 +36,7 @@ import {
   Plus,
   Upload,
   Edit,
+  Info,
   Trash2,
   Loader2,
   AlertTriangle,
@@ -65,7 +66,11 @@ const Dashboard = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [assetDetailsForm, setAssetDetailsForm] = useState(null);
+  const [detailsEditMode, setDetailsEditMode] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   
   // Form states
   const [formLoading, setFormLoading] = useState(false);
@@ -196,12 +201,126 @@ const Dashboard = () => {
     );
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+  const parseEmployeeName = (fullName = '') => {
+    const parts = fullName.trim().split(' ');
+    if (parts.length === 0) return { first: '', last: '' };
+    if (parts.length === 1) return { first: parts[0], last: '' };
+    const last = parts.pop();
+    const first = parts.join(' ');
+    return { first, last };
+  };
+
+  const canEditField = (field) => {
+    if (['registration_date', 'last_updated'].includes(field)) return false;
+    if (user?.role === 'admin') return true;
+    if (user?.role === 'employee') {
+      return ['status', 'notes'].includes(field);
+    }
+    return ['status', 'notes'].includes(field);
+  };
+
+  const openAssetDetails = (asset) => {
+    const employeeName = parseEmployeeName(asset.employee_name || '');
+    setSelectedAsset(asset);
+    setAssetDetailsForm({
+      employee_first_name: employeeName.first,
+      employee_last_name: employeeName.last,
+      employee_email: asset.employee_email || '',
+      manager_name: asset.manager_name || '',
+      manager_email: asset.manager_email || '',
+      company_name: asset.company_name || '',
+      laptop_make: asset.laptop_make || '',
+      laptop_model: asset.laptop_model || '',
+      laptop_serial_number: asset.laptop_serial_number || '',
+      laptop_asset_tag: asset.laptop_asset_tag || '',
+      status: asset.status || 'active',
+      notes: asset.notes || '',
+      registration_date: asset.registration_date || '',
+      last_updated: asset.last_updated || ''
     });
+    setDetailsEditMode(false);
+    setShowInfoModal(true);
+  };
+
+  const handleDetailsChange = (field, value) => {
+    if (!detailsEditMode || !canEditField(field)) return;
+    setAssetDetailsForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleDetailsClose = () => {
+    setShowInfoModal(false);
+    setSelectedAsset(null);
+    setAssetDetailsForm(null);
+    setDetailsEditMode(false);
+    setDetailsLoading(false);
+  };
+
+  const handleDetailsEdit = async () => {
+    if (!detailsEditMode) {
+      setDetailsEditMode(true);
+      return;
+    }
+
+    if (!assetDetailsForm || !selectedAsset) return;
+
+    setDetailsLoading(true);
+    try {
+      const submitData = {
+        employee_first_name: assetDetailsForm.employee_first_name?.trim() || '',
+        employee_last_name: assetDetailsForm.employee_last_name?.trim() || '',
+        employee_email: assetDetailsForm.employee_email?.trim() || '',
+        manager_name: assetDetailsForm.manager_name?.trim() || '',
+        manager_email: assetDetailsForm.manager_email?.trim() || '',
+        company_name: assetDetailsForm.company_name?.trim() || '',
+        laptop_make: assetDetailsForm.laptop_make?.trim() || '',
+        laptop_model: assetDetailsForm.laptop_model?.trim() || '',
+        laptop_serial_number: assetDetailsForm.laptop_serial_number?.trim() || '',
+        laptop_asset_tag: assetDetailsForm.laptop_asset_tag?.trim() || '',
+        status: assetDetailsForm.status,
+        notes: assetDetailsForm.notes
+      };
+
+      const payload = {
+        ...submitData,
+        employee_name: `${submitData.employee_first_name} ${submitData.employee_last_name}`.trim(),
+      };
+
+      delete payload.employee_first_name;
+      delete payload.employee_last_name;
+
+      const response = await fetch(`/api/assets/${selectedAsset.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update asset');
+
+      toast({
+        title: "Success",
+        description: "Asset updated successfully",
+        variant: "success",
+      });
+
+      handleDetailsClose();
+      fetchAssets();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDetailsLoading(false);
+      setDetailsEditMode(false);
+    }
   };
 
   // Registration handlers
@@ -528,17 +647,11 @@ const Dashboard = () => {
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead>Employee Email</TableHead>
-                    <TableHead>Manager</TableHead>
                     <TableHead>Manager Email</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Make</TableHead>
-                    <TableHead>Model</TableHead>
+                    <TableHead>Client</TableHead>
                     <TableHead>Serial Number</TableHead>
                     <TableHead>Asset Tag</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Registered</TableHead>
-                    <TableHead>Last Updated</TableHead>
-                    <TableHead>Notes</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -549,23 +662,21 @@ const Dashboard = () => {
                         <div className="font-medium">{asset.employee_name}</div>
                       </TableCell>
                       <TableCell className="font-mono text-sm">{asset.employee_email}</TableCell>
-                      <TableCell>{asset.manager_name || '—'}</TableCell>
                       <TableCell className="font-mono text-sm">{asset.manager_email || '—'}</TableCell>
                       <TableCell>{asset.company_name}</TableCell>
-                      <TableCell>{asset.laptop_make || '—'}</TableCell>
-                      <TableCell>{asset.laptop_model || '—'}</TableCell>
                       <TableCell className="font-mono text-sm">{asset.laptop_serial_number}</TableCell>
                       <TableCell className="font-mono text-sm">{asset.laptop_asset_tag}</TableCell>
                       <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                      <TableCell>{formatDate(asset.registration_date)}</TableCell>
-                      <TableCell>{formatDate(asset.last_updated)}</TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div className="line-clamp-2 text-sm text-muted-foreground">
-                          {asset.notes || '—'}
-                        </div>
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openAssetDetails(asset)}
+                            title="More Info"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -595,6 +706,168 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Asset Details Modal */}
+      <Dialog open={showInfoModal} onOpenChange={handleDetailsClose}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Asset Details</DialogTitle>
+            <DialogDescription>
+              View complete asset information. Click Edit to update allowed fields.
+            </DialogDescription>
+          </DialogHeader>
+
+          {assetDetailsForm && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Employee First Name</Label>
+                  <Input
+                    value={assetDetailsForm.employee_first_name}
+                    onChange={(e) => handleDetailsChange('employee_first_name', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('employee_first_name')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Employee Last Name</Label>
+                  <Input
+                    value={assetDetailsForm.employee_last_name}
+                    onChange={(e) => handleDetailsChange('employee_last_name', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('employee_last_name')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Employee Email</Label>
+                  <Input
+                    type="email"
+                    value={assetDetailsForm.employee_email}
+                    onChange={(e) => handleDetailsChange('employee_email', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('employee_email')}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Manager Name</Label>
+                  <Input
+                    value={assetDetailsForm.manager_name}
+                    onChange={(e) => handleDetailsChange('manager_name', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('manager_name')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Manager Email</Label>
+                  <Input
+                    type="email"
+                    value={assetDetailsForm.manager_email}
+                    onChange={(e) => handleDetailsChange('manager_email', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('manager_email')}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Client</Label>
+                  <Input
+                    value={assetDetailsForm.company_name}
+                    onChange={(e) => handleDetailsChange('company_name', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('company_name')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={assetDetailsForm.status}
+                    onValueChange={(value) => handleDetailsChange('status', value)}
+                    disabled={!detailsEditMode || !canEditField('status')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="returned">Returned</SelectItem>
+                      <SelectItem value="lost">Lost</SelectItem>
+                      <SelectItem value="damaged">Damaged</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Laptop Make</Label>
+                  <Input
+                    value={assetDetailsForm.laptop_make}
+                    onChange={(e) => handleDetailsChange('laptop_make', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('laptop_make')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Laptop Model</Label>
+                  <Input
+                    value={assetDetailsForm.laptop_model}
+                    onChange={(e) => handleDetailsChange('laptop_model', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('laptop_model')}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Serial Number</Label>
+                  <Input
+                    value={assetDetailsForm.laptop_serial_number}
+                    onChange={(e) => handleDetailsChange('laptop_serial_number', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('laptop_serial_number')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Asset Tag</Label>
+                  <Input
+                    value={assetDetailsForm.laptop_asset_tag}
+                    onChange={(e) => handleDetailsChange('laptop_asset_tag', e.target.value)}
+                    disabled={!detailsEditMode || !canEditField('laptop_asset_tag')}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={assetDetailsForm.notes}
+                  onChange={(e) => handleDetailsChange('notes', e.target.value)}
+                  disabled={!detailsEditMode || !canEditField('notes')}
+                  className="min-h-[120px]"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Registered</Label>
+                  <Input value={assetDetailsForm.registration_date ? new Date(assetDetailsForm.registration_date).toLocaleString() : '—'} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Updated</Label>
+                  <Input value={assetDetailsForm.last_updated ? new Date(assetDetailsForm.last_updated).toLocaleString() : '—'} disabled />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button onClick={handleDetailsEdit} disabled={detailsLoading}>
+                  {detailsLoading ? 'Saving...' : 'Edit'}
+                </Button>
+                <Button variant="outline" onClick={handleDetailsClose}>
+                  Ok
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Registration Modal */}
       <Dialog open={showRegistrationModal} onOpenChange={setShowRegistrationModal}>

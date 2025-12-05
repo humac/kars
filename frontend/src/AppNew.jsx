@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Laptop,
-  LayoutDashboard,
   Building2,
   FileBarChart,
   Settings,
@@ -96,7 +95,7 @@ function AppNew() {
   }
 
   const navItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/', role: null },
+    { label: 'Assets', icon: Laptop, path: '/assets', role: null },
     { label: 'Companies', icon: Building2, path: '/companies', role: 'admin' },
     { label: 'Audit & Reports', icon: FileBarChart, path: '/audit', role: null },
     { label: 'Admin Settings', icon: Settings, path: '/admin', role: 'admin' },
@@ -105,7 +104,7 @@ function AppNew() {
   const visibleNavItems = navItems.filter(item => !item.role || user?.role === item.role);
 
   const isActive = (path) => {
-    if (path === '/') {
+    if (path === '/assets') {
       return location.pathname === '/' || location.pathname === '/assets';
     }
     return location.pathname === path;
@@ -132,7 +131,7 @@ function AppNew() {
         <div className="container mx-auto flex h-16 items-center justify-between">
           {/* Logo and Nav */}
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/assets')}>
               {brandingLogo ? (
                 <img
                   src={brandingLogo}
@@ -317,7 +316,7 @@ function AppNew() {
       {/* Main Content */}
       <main className="container mx-auto py-6">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/assets" replace />} />
           <Route path="/assets" element={<Dashboard />} />
           {user?.role === 'admin' && (
             <Route path="/companies" element={<CompanyManagementNew />} />
