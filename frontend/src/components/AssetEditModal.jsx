@@ -45,7 +45,7 @@ const AssetEditModal = ({ asset, onClose, onUpdate }) => {
     employee_email: asset.employee_email || '',
     manager_name: asset.manager_name || '',
     manager_email: asset.manager_email || '',
-    client_name: asset.client_name || '',
+    company_name: asset.company_name || '',
     laptop_serial_number: asset.laptop_serial_number || '',
     laptop_asset_tag: asset.laptop_asset_tag || '',
     laptop_make: asset.laptop_make || '',
@@ -218,11 +218,11 @@ const AssetEditModal = ({ asset, onClose, onUpdate }) => {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             <FormControl fullWidth required>
-              <InputLabel id="client-company-label">Company</InputLabel>
+              <InputLabel id="company-label">Company</InputLabel>
               <Select
-                labelId="client-company-label"
-                name="client_name"
-                value={formData.client_name}
+                labelId="company-label"
+                name="company_name"
+                value={formData.company_name}
                 onChange={handleChange}
                 label="Company"
                 required

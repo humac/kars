@@ -137,7 +137,7 @@ const initDb = async () => {
       employee_email TEXT NOT NULL,
       manager_name TEXT,
       manager_email TEXT,
-      client_name TEXT NOT NULL,
+      company_name TEXT NOT NULL,
       laptop_serial_number TEXT NOT NULL UNIQUE,
       laptop_asset_tag TEXT NOT NULL UNIQUE,
       laptop_make TEXT DEFAULT '',
@@ -154,7 +154,7 @@ const initDb = async () => {
       employee_email TEXT NOT NULL,
       manager_name TEXT,
       manager_email TEXT,
-      client_name TEXT NOT NULL,
+      company_name TEXT NOT NULL,
       laptop_serial_number TEXT NOT NULL UNIQUE,
       laptop_asset_tag TEXT NOT NULL UNIQUE,
       laptop_make TEXT,
@@ -425,7 +425,7 @@ const initDb = async () => {
               employee_email TEXT NOT NULL,
               manager_name TEXT,
               manager_email TEXT,
-              client_name TEXT NOT NULL,
+              company_name TEXT NOT NULL,
               laptop_serial_number TEXT NOT NULL UNIQUE,
               laptop_asset_tag TEXT NOT NULL UNIQUE,
               laptop_make TEXT,
@@ -441,7 +441,7 @@ const initDb = async () => {
           await dbRun(`
             INSERT INTO assets_new
             SELECT id, employee_name, employee_email, manager_name, manager_email,
-                   client_name, laptop_serial_number, laptop_asset_tag,
+                   company_name, laptop_serial_number, laptop_asset_tag,
                    laptop_make, laptop_model, status, registration_date, last_updated, notes
             FROM assets
           `);
@@ -455,7 +455,7 @@ const initDb = async () => {
           // Recreate indexes
           await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
           await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_name ON assets(manager_name)');
-          await dbRun('CREATE INDEX IF NOT EXISTS idx_client_name ON assets(client_name)');
+          await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON assets(company_name)');
           await dbRun('CREATE INDEX IF NOT EXISTS idx_status ON assets(status)');
 
           await dbRun('COMMIT');
@@ -506,7 +506,7 @@ const initDb = async () => {
   // Indexes
   await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_name ON assets(manager_name)');
-  await dbRun('CREATE INDEX IF NOT EXISTS idx_client_name ON assets(client_name)');
+  await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON assets(company_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_status ON assets(status)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON companies(name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)');
@@ -529,7 +529,7 @@ export const assetDb = {
     const insertQuery = `
       INSERT INTO assets (
         employee_name, employee_email, manager_name, manager_email,
-        client_name, laptop_make, laptop_model, laptop_serial_number, laptop_asset_tag,
+        company_name, laptop_make, laptop_model, laptop_serial_number, laptop_asset_tag,
         status, registration_date, last_updated, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ${isPostgres ? 'RETURNING id' : ''}
@@ -540,7 +540,7 @@ export const assetDb = {
       asset.employee_email,
       asset.manager_name,
       asset.manager_email,
-      asset.client_name,
+      asset.company_name,
       asset.laptop_make || '',
       asset.laptop_model || '',
       asset.laptop_serial_number,
@@ -585,9 +585,9 @@ export const assetDb = {
       params.push(`%${filters.manager_name}%`);
     }
 
-    if (filters.client_name) {
-      query += ' AND client_name LIKE ?';
-      params.push(`%${filters.client_name}%`);
+    if (filters.company_name) {
+      query += ' AND company_name LIKE ?';
+      params.push(`%${filters.company_name}%`);
     }
 
     if (filters.status) {
@@ -617,7 +617,7 @@ export const assetDb = {
     return dbRun(`
       UPDATE assets
       SET employee_name = ?, employee_email = ?, manager_name = ?, manager_email = ?,
-          client_name = ?, laptop_serial_number = ?, laptop_asset_tag = ?,
+          company_name = ?, laptop_serial_number = ?, laptop_asset_tag = ?,
           status = ?, last_updated = ?, notes = ?
       WHERE id = ?
     `, [
@@ -625,7 +625,7 @@ export const assetDb = {
       asset.employee_email,
       asset.manager_name,
       asset.manager_email,
-      asset.client_name,
+      asset.company_name,
       asset.laptop_serial_number,
       asset.laptop_asset_tag,
       asset.status,
@@ -689,7 +689,7 @@ export const companyDb = {
   `, [company.name, company.description || '', id]),
   delete: async (id) => dbRun('DELETE FROM companies WHERE id = ?', [id]),
   hasAssets: async (companyName) => {
-    const row = await dbGet('SELECT COUNT(*) as count FROM assets WHERE client_name = ?', [companyName]);
+    const row = await dbGet('SELECT COUNT(*) as count FROM assets WHERE company_name = ?', [companyName]);
     return (row?.count || 0) > 0;
   }
 };
@@ -1120,7 +1120,7 @@ export const importSqliteDatabase = async (sqlitePath) => {
       await client.query(
         `INSERT INTO assets (
           id, employee_name, employee_email, manager_name, manager_email,
-          client_name, laptop_serial_number, laptop_asset_tag, laptop_make, laptop_model,
+          company_name, laptop_serial_number, laptop_asset_tag, laptop_make, laptop_model,
           status, registration_date, last_updated, notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)` ,
         [
@@ -1129,7 +1129,7 @@ export const importSqliteDatabase = async (sqlitePath) => {
           row.employee_email,
           row.manager_name,
           row.manager_email,
-          row.client_name,
+          row.company_name,
           row.laptop_serial_number,
           row.laptop_asset_tag,
           row.laptop_make || '',

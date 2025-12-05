@@ -1963,7 +1963,7 @@ app.get('/api/assets/search', async (req, res) => {
     const filters = {
       employee_name: req.query.employee,
       manager_name: req.query.manager,
-      client_name: req.query.client,
+      company_name: req.query.company,
       status: req.query.status
     };
 
@@ -1986,7 +1986,7 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
     const requiredFields = [
       'employee_name',
       'employee_email',
-      'client_name',
+      'company_name',
       'laptop_serial_number',
       'laptop_asset_tag'
     ];
@@ -2033,7 +2033,7 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
         employee_email: normalizedRow.employee_email,
         manager_name,
         manager_email,
-        client_name: normalizedRow.client_name,
+        company_name: normalizedRow.company_name,
         laptop_make: normalizedRow.laptop_make || '',
         laptop_model: normalizedRow.laptop_model || '',
         laptop_serial_number: normalizedRow.laptop_serial_number,
@@ -2054,7 +2054,7 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
           {
             employee_name: assetData.employee_name,
             employee_email: assetData.employee_email,
-            client_name: assetData.client_name,
+            company_name: assetData.company_name,
             laptop_serial_number: assetData.laptop_serial_number,
             laptop_asset_tag: assetData.laptop_asset_tag,
             imported: true
@@ -2091,13 +2091,13 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
 // Create new asset
 app.post('/api/assets', authenticate, async (req, res) => {
   try {
-    const { employee_name, employee_email, client_name, laptop_serial_number, laptop_asset_tag, notes } = req.body;
+    const { employee_name, employee_email, company_name, laptop_serial_number, laptop_asset_tag, notes } = req.body;
 
     // Validation
-    if (!employee_name || !employee_email || !client_name || !laptop_serial_number || !laptop_asset_tag) {
+    if (!employee_name || !employee_email || !company_name || !laptop_serial_number || !laptop_asset_tag) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['employee_name', 'employee_email', 'client_name', 'laptop_serial_number', 'laptop_asset_tag']
+        required: ['employee_name', 'employee_email', 'company_name', 'laptop_serial_number', 'laptop_asset_tag']
       });
     }
 
@@ -2132,7 +2132,7 @@ app.post('/api/assets', authenticate, async (req, res) => {
         employee_email,
         manager_name,
         manager_email,
-        client_name,
+        company_name,
         laptop_serial_number,
         laptop_asset_tag
       },
@@ -2214,12 +2214,12 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
-    const { employee_name, employee_email, manager_name, manager_email, client_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
+    const { employee_name, employee_email, manager_name, manager_email, company_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
 
-    if (!employee_name || !employee_email || !client_name || !laptop_serial_number || !laptop_asset_tag) {
+    if (!employee_name || !employee_email || !company_name || !laptop_serial_number || !laptop_asset_tag) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['employee_name', 'employee_email', 'client_name', 'laptop_serial_number', 'laptop_asset_tag']
+        required: ['employee_name', 'employee_email', 'company_name', 'laptop_serial_number', 'laptop_asset_tag']
       });
     }
 
@@ -2297,7 +2297,7 @@ app.delete('/api/assets/:id', authenticate, async (req, res) => {
         employee_email: asset.employee_email,
         manager_name: asset.manager_name,
         manager_email: asset.manager_email,
-        client_name: asset.client_name,
+        company_name: asset.company_name,
         laptop_serial_number: asset.laptop_serial_number,
         laptop_asset_tag: asset.laptop_asset_tag,
         status: asset.status,
@@ -2711,7 +2711,7 @@ app.get('/api/reports/summary', authenticate, async (req, res) => {
       summary.by_status[asset.status] = (summary.by_status[asset.status] || 0) + 1;
 
       // Company breakdown
-      summary.by_company[asset.client_name] = (summary.by_company[asset.client_name] || 0) + 1;
+      summary.by_company[asset.company_name] = (summary.by_company[asset.company_name] || 0) + 1;
 
       // Manager breakdown
       summary.by_manager[asset.manager_name] = (summary.by_manager[asset.manager_name] || 0) + 1;

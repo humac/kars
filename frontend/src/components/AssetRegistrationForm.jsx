@@ -23,7 +23,7 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
     employee_first_name: '',
     employee_last_name: '',
     employee_email: '',
-    client_name: '',
+    company_name: '',
     laptop_make: '',
     laptop_model: '',
     laptop_serial_number: '',
@@ -112,7 +112,7 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           employee_first_name: user.first_name || '',
           employee_last_name: user.last_name || '',
           employee_email: user.email || '',
-          client_name: '',
+          company_name: '',
           laptop_make: '',
           laptop_model: '',
           laptop_serial_number: '',
@@ -124,7 +124,7 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
           employee_first_name: '',
           employee_last_name: '',
           employee_email: '',
-          client_name: '',
+          company_name: '',
           laptop_make: '',
           laptop_model: '',
           laptop_serial_number: '',
@@ -224,8 +224,8 @@ const AssetRegistrationForm = ({ onAssetRegistered }) => {
             <InputLabel id="company-label">Company</InputLabel>
             <Select
               labelId="company-label"
-              name="client_name"
-              value={formData.client_name}
+              name="company_name"
+              value={formData.company_name}
               onChange={handleChange}
               label="Company"
               required

@@ -73,7 +73,7 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
   const [filters, setFilters] = useState({
     employee: '',
     manager: '',
-    client: '',
+    company: '',
     status: ''
   });
 
@@ -138,9 +138,9 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
       );
     }
 
-    if (filters.client) {
+    if (filters.company) {
       filtered = filtered.filter(asset =>
-        asset.client_name.toLowerCase().includes(filters.client.toLowerCase())
+        asset.company_name.toLowerCase().includes(filters.company.toLowerCase())
       );
     }
 
@@ -164,7 +164,7 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
     setFilters({
       employee: '',
       manager: '',
-      client: '',
+      company: '',
       status: ''
     });
   };
@@ -317,7 +317,7 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
     return colors[status] || 'default';
   };
 
-  const hasActiveFilters = filters.employee || filters.manager || filters.client || filters.status;
+  const hasActiveFilters = filters.employee || filters.manager || filters.company || filters.status;
 
   if (loading) {
     return (
@@ -411,10 +411,10 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
               <TextField
                 fullWidth
                 size="small"
-                name="client"
+                name="company"
                 label="Company"
                 placeholder="Search by company..."
-                value={filters.client}
+                value={filters.company}
                 onChange={handleFilterChange}
               />
             </Grid>
@@ -488,7 +488,7 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
                     <TableCell>{asset.employee_name}</TableCell>
                     {!isMobile && <TableCell>{asset.employee_email || '-'}</TableCell>}
                     {!isMobile && <TableCell>{asset.manager_email || '-'}</TableCell>}
-                    <TableCell>{asset.client_name}</TableCell>
+                    <TableCell>{asset.company_name}</TableCell>
                     {!isMobile && <TableCell>{asset.laptop_serial_number}</TableCell>}
                     {!isMobile && <TableCell>{asset.laptop_asset_tag}</TableCell>}
                     <TableCell>

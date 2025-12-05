@@ -78,7 +78,7 @@ const Dashboard = () => {
     employee_first_name: '',
     employee_last_name: '',
     employee_email: '',
-    client_name: '',
+    company_name: '',
     laptop_make: '',
     laptop_model: '',
     laptop_serial_number: '',
@@ -168,7 +168,7 @@ const Dashboard = () => {
         asset.employee_name?.toLowerCase().includes(query) ||
         asset.employee_email?.toLowerCase().includes(query) ||
         asset.manager_name?.toLowerCase().includes(query) ||
-        asset.client_name?.toLowerCase().includes(query) ||
+        asset.company_name?.toLowerCase().includes(query) ||
         asset.laptop_serial_number?.toLowerCase().includes(query) ||
         asset.laptop_asset_tag?.toLowerCase().includes(query)
       );
@@ -258,7 +258,7 @@ const Dashboard = () => {
         employee_first_name: user.first_name || '',
         employee_last_name: user.last_name || '',
         employee_email: user.email || '',
-        client_name: '',
+        company_name: '',
         laptop_make: '',
         laptop_model: '',
         laptop_serial_number: '',
@@ -270,7 +270,7 @@ const Dashboard = () => {
         employee_first_name: '',
         employee_last_name: '',
         employee_email: '',
-        client_name: '',
+        company_name: '',
         laptop_make: '',
         laptop_model: '',
         laptop_serial_number: '',
@@ -551,7 +551,7 @@ const Dashboard = () => {
                       <TableCell className="font-mono text-sm">{asset.employee_email}</TableCell>
                       <TableCell>{asset.manager_name || '—'}</TableCell>
                       <TableCell className="font-mono text-sm">{asset.manager_email || '—'}</TableCell>
-                      <TableCell>{asset.client_name}</TableCell>
+                      <TableCell>{asset.company_name}</TableCell>
                       <TableCell>{asset.laptop_make || '—'}</TableCell>
                       <TableCell>{asset.laptop_model || '—'}</TableCell>
                       <TableCell className="font-mono text-sm">{asset.laptop_serial_number}</TableCell>
@@ -651,10 +651,10 @@ const Dashboard = () => {
             <div className="space-y-4">
               <h4 className="font-medium text-primary">Client Information</h4>
               <div className="space-y-2">
-                <Label htmlFor="client_name">Client Company</Label>
+                <Label htmlFor="company_name">Client Company</Label>
                 <Select
-                  value={regFormData.client_name}
-                  onValueChange={(value) => setRegFormData({ ...regFormData, client_name: value })}
+                  value={regFormData.company_name}
+                  onValueChange={(value) => setRegFormData({ ...regFormData, company_name: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a company..." />
@@ -855,7 +855,7 @@ const Dashboard = () => {
               <div className="rounded-md bg-muted/50 p-4 text-sm space-y-1">
                 <p className="font-medium text-foreground">Required columns</p>
                 <p className="text-muted-foreground">
-                  employee_name, employee_email, client_name, laptop_serial_number, laptop_asset_tag
+                  employee_name, employee_email, company_name, laptop_serial_number, laptop_asset_tag
                 </p>
                 <p className="font-medium text-foreground pt-2">Optional columns</p>
                 <p className="text-muted-foreground">
