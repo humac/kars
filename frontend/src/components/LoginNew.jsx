@@ -27,6 +27,12 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const [error, setError] = useState(null);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeysEnabled, setPasskeysEnabled] = useState(true);
+  const [ssoButtonConfig, setSsoButtonConfig] = useState({
+    text: 'Sign In with SSO',
+    helpText: '',
+    variant: 'outline'
+  });
   const [brandingLogo, setBrandingLogo] = useState(null);
 
   // Dark mode state - default to light mode
@@ -57,8 +63,22 @@ const LoginNew = ({ onSwitchToRegister }) => {
     // Check if OIDC is enabled
     fetch('/api/auth/oidc/config')
       .then(res => res.json())
-      .then(data => setOidcEnabled(data.enabled))
+      .then(data => {
+        setOidcEnabled(data.enabled);
+        setSsoButtonConfig({
+          text: data.button_text || 'Sign In with SSO',
+          helpText: data.button_help_text || '',
+          variant: ['default', 'secondary', 'outline', 'ghost'].includes(data.button_variant)
+            ? data.button_variant
+            : 'outline'
+        });
+      })
       .catch(err => console.error('Failed to check OIDC config:', err));
+
+    fetch('/api/auth/passkeys/config')
+      .then(res => res.json())
+      .then(data => setPasskeysEnabled(data.enabled !== false))
+      .catch(err => console.error('Failed to check passkey config:', err));
 
     // Fetch branding settings
     fetch('/api/branding')
@@ -341,24 +361,31 @@ const LoginNew = ({ onSwitchToRegister }) => {
               </Button>
             </form>
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handlePasskeyLogin}
-              disabled={isLoading}
-            >
-              {passkeyLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Waiting for passkey...
-                </>
-              ) : (
-                <>
-                  <Key className="h-4 w-4 mr-2" />
-                  Use Passkey
-                </>
-              )}
-            </Button>
+            {passkeysEnabled ? (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handlePasskeyLogin}
+                disabled={isLoading}
+              >
+                {passkeyLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Waiting for passkey...
+                  </>
+                ) : (
+                  <>
+                    <Key className="h-4 w-4 mr-2" />
+                    Use Passkey
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 p-3 rounded-md border text-sm text-muted-foreground bg-muted/50">
+                <Key className="h-4 w-4" />
+                <span>Passkey sign-in is disabled by your administrator.</span>
+              </div>
+            )}
 
             {oidcEnabled && (
               <>
@@ -372,7 +399,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
                 </div>
 
                 <Button
-                  variant="outline"
+                  variant={ssoButtonConfig.variant}
                   className="w-full"
                   onClick={handleOIDCLogin}
                   disabled={isLoading}
@@ -382,13 +409,16 @@ const LoginNew = ({ onSwitchToRegister }) => {
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Redirecting...
                     </>
-                  ) : (
-                    <>
-                      <Key className="h-4 w-4 mr-2" />
-                      Sign In with SSO
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <Key className="h-4 w-4 mr-2" />
+                        {ssoButtonConfig.text}
+                      </>
+                    )}
                 </Button>
+                {ssoButtonConfig.helpText && (
+                  <p className="text-xs text-muted-foreground text-center">{ssoButtonConfig.helpText}</p>
+                )}
               </>
             )}
 
