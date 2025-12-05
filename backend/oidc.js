@@ -140,7 +140,15 @@ async function getUserInfo(tokens) {
     throw new Error('OIDC client not initialized');
   }
 
-  const userinfo = await client.fetchUserInfo(config, tokens.access_token);
+  // Extract the subject from the ID token claims for validation
+  const claims = tokens.claims();
+  const sub = claims?.sub;
+
+  if (!sub) {
+    throw new Error('No subject (sub) claim found in ID token');
+  }
+
+  const userinfo = await client.fetchUserInfo(config, tokens.access_token, sub);
   return userinfo;
 }
 
