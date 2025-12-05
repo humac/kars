@@ -465,7 +465,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{dashboardStats.companiesCount}</div>
             <p className="text-xs text-muted-foreground">
-              Client organizations
+              Partner organizations
             </p>
           </CardContent>
         </Card>
@@ -530,7 +530,7 @@ const Dashboard = () => {
                     <TableHead>Employee Email</TableHead>
                     <TableHead>Manager</TableHead>
                     <TableHead>Manager Email</TableHead>
-                    <TableHead>Client</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead>Make</TableHead>
                     <TableHead>Model</TableHead>
                     <TableHead>Serial Number</TableHead>
@@ -647,11 +647,11 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Client Information */}
+            {/* Company Information */}
             <div className="space-y-4">
-              <h4 className="font-medium text-primary">Client Information</h4>
+              <h4 className="font-medium text-primary">Company Information</h4>
               <div className="space-y-2">
-                <Label htmlFor="company_name">Client Company</Label>
+                <Label htmlFor="company_name">Company</Label>
                 <Select
                   value={regFormData.company_name}
                   onValueChange={(value) => setRegFormData({ ...regFormData, company_name: value })}

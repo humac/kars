@@ -286,7 +286,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
             <CardDescription className="text-center">
-              Sign in to manage client assets
+              Sign in to manage company assets
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -408,7 +408,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          SOC2 Compliance - Track and manage client assets
+          SOC2 Compliance - Track and manage company assets
         </p>
       </div>
 

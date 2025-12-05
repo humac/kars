@@ -551,7 +551,7 @@ const AdminSettings = () => {
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    <strong>Purpose:</strong> SOC2 Compliance - Track and manage client assets
+                    <strong>Purpose:</strong> SOC2 Compliance - Track and manage company assets
                   </Typography>
                 </Box>
                 <Box>

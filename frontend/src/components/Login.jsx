@@ -281,7 +281,7 @@ const Login = ({ onSwitchToRegister }) => {
                 KARS - KeyData Asset Registration System
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                Sign in to manage client assets
+                Sign in to manage company assets
               </Typography>
             </>
           )}

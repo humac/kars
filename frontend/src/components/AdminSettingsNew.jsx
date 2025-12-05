@@ -374,7 +374,7 @@ const AdminSettingsNew = () => {
                 <CardHeader><CardTitle className="text-base">System Information</CardTitle></CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
                   <p><strong>Application:</strong> KARS - KeyData Asset Registration System</p>
-                  <p><strong>Purpose:</strong> SOC2 Compliance - Track and manage client assets</p>
+                  <p><strong>Purpose:</strong> SOC2 Compliance - Track and manage company assets</p>
                   <p><strong>Features:</strong> Role-based access, Asset tracking, Company management, Audit logging, CSV exports</p>
                 </CardContent>
               </Card>

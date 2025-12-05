@@ -128,7 +128,7 @@ function App() {
               KARS - KeyData Asset Registration System
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              SOC2 Compliance - Track and manage client assets
+              SOC2 Compliance - Track and manage company assets
             </Typography>
           </Box>
 

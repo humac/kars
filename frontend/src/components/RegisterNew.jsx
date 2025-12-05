@@ -245,7 +245,7 @@ const RegisterNew = ({ onSwitchToLogin }) => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          SOC2 Compliance - Track and manage client assets
+          SOC2 Compliance - Track and manage company assets
         </p>
       </div>
     </div>
