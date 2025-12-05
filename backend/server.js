@@ -32,6 +32,12 @@ let passkeyConfig = {
   defaultOrigin: process.env.PASSKEY_ORIGIN || 'http://localhost:5173'
 };
 
+const parseBooleanEnv = (value, defaultValue = true) => {
+  if (value === undefined || value === null) return defaultValue;
+  const normalized = String(value).toLowerCase();
+  return !['false', '0', 'no', 'off'].includes(normalized);
+};
+
 // Helper function to get current passkey configuration
 const getPasskeyConfig = async () => {
   // Environment variables take precedence
@@ -59,6 +65,20 @@ const getPasskeyConfig = async () => {
 
   // Fallback to defaults
   return passkeyConfig;
+};
+
+const isPasskeyEnabled = async () => {
+  if (process.env.PASSKEY_ENABLED !== undefined) {
+    return parseBooleanEnv(process.env.PASSKEY_ENABLED, true);
+  }
+
+  try {
+    const dbSettings = await passkeySettingsDb.get();
+    return dbSettings?.enabled !== 0;
+  } catch (err) {
+    console.error('Failed to read passkey enabled state:', err);
+    return true;
+  }
 };
 
 const parseCSVFile = async (filePath) => {
@@ -851,8 +871,21 @@ app.get('/api/auth/passkeys', authenticate, async (req, res) => {
   }
 });
 
+app.get('/api/auth/passkeys/config', async (req, res) => {
+  try {
+    res.json({ enabled: await isPasskeyEnabled() });
+  } catch (error) {
+    console.error('Failed to load passkey config:', error);
+    res.json({ enabled: true });
+  }
+});
+
 app.post('/api/auth/passkeys/registration-options', authenticate, async (req, res) => {
   try {
+    if (!(await isPasskeyEnabled())) {
+      return res.status(403).json({ error: 'Passkey registration is disabled by an administrator' });
+    }
+
     const config = await getPasskeyConfig();
     const origin = getExpectedOrigin(req);
 
@@ -907,6 +940,10 @@ app.post('/api/auth/passkeys/registration-options', authenticate, async (req, re
 
 app.post('/api/auth/passkeys/verify-registration', authenticate, async (req, res) => {
   try {
+    if (!(await isPasskeyEnabled())) {
+      return res.status(403).json({ error: 'Passkey registration is disabled by an administrator' });
+    }
+
     const config = await getPasskeyConfig();
     const { credential, name } = req.body;
     const expectedChallenge = pendingPasskeyRegistrations.get(req.user.id);
@@ -1037,6 +1074,10 @@ app.post('/api/auth/passkeys/verify-registration', authenticate, async (req, res
 
 app.post('/api/auth/passkeys/auth-options', async (req, res) => {
   try {
+    if (!(await isPasskeyEnabled())) {
+      return res.status(403).json({ error: 'Passkey sign-in is disabled by an administrator' });
+    }
+
     const config = await getPasskeyConfig();
     const { email } = req.body;
 
@@ -1131,6 +1172,10 @@ app.post('/api/auth/passkeys/auth-options', async (req, res) => {
 
 app.post('/api/auth/passkeys/verify-authentication', async (req, res) => {
   try {
+    if (!(await isPasskeyEnabled())) {
+      return res.status(403).json({ error: 'Passkey sign-in is disabled by an administrator' });
+    }
+
     const config = await getPasskeyConfig();
     const { email, credential } = req.body;
 
@@ -1460,6 +1505,9 @@ app.get('/api/admin/oidc-settings', authenticate, authorize('admin'), async (req
     const { client_secret, ...safeSettings } = settings || {};
     res.json({
       ...safeSettings,
+      sso_button_text: safeSettings?.sso_button_text || 'Sign In with SSO',
+      sso_button_help_text: safeSettings?.sso_button_help_text || '',
+      sso_button_variant: safeSettings?.sso_button_variant || 'outline',
       has_client_secret: !!client_secret
     });
   } catch (error) {
@@ -1487,6 +1535,10 @@ app.put('/api/admin/oidc-settings', authenticate, authorize('admin'), async (req
     if (!settings.client_secret && existingSettings?.client_secret) {
       settings.client_secret = existingSettings.client_secret;
     }
+
+    settings.sso_button_text = settings.sso_button_text || 'Sign In with SSO';
+    settings.sso_button_help_text = settings.sso_button_help_text || '';
+    settings.sso_button_variant = settings.sso_button_variant || 'outline';
 
     // Update settings
     await oidcSettingsDb.update(settings, req.user.email);
@@ -1590,13 +1642,23 @@ app.delete('/api/admin/branding', authenticate, authorize('admin'), async (req, 
 app.get('/api/admin/passkey-settings', authenticate, authorize('admin'), async (req, res) => {
   try {
     const dbSettings = await passkeySettingsDb.get();
-    const managedByEnv = Boolean(process.env.PASSKEY_RP_ID || process.env.PASSKEY_RP_NAME || process.env.PASSKEY_ORIGIN);
+    const managedByEnv = Boolean(
+      process.env.PASSKEY_RP_ID ||
+      process.env.PASSKEY_RP_NAME ||
+      process.env.PASSKEY_ORIGIN ||
+      process.env.PASSKEY_ENABLED !== undefined
+    );
+
+    const enabled = process.env.PASSKEY_ENABLED !== undefined
+      ? parseBooleanEnv(process.env.PASSKEY_ENABLED, true)
+      : dbSettings?.enabled !== 0;
 
     // Environment variables take precedence if set
     const settings = {
       rp_id: process.env.PASSKEY_RP_ID || dbSettings?.rp_id || 'localhost',
       rp_name: process.env.PASSKEY_RP_NAME || dbSettings?.rp_name || 'KARS - KeyData Asset Registration System',
       origin: process.env.PASSKEY_ORIGIN || dbSettings?.origin || 'http://localhost:5173',
+      enabled,
       managed_by_env: managedByEnv,
       updated_at: dbSettings?.updated_at,
       updated_by: dbSettings?.updated_by
@@ -1611,15 +1673,20 @@ app.get('/api/admin/passkey-settings', authenticate, authorize('admin'), async (
 
 app.put('/api/admin/passkey-settings', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const managedByEnv = Boolean(process.env.PASSKEY_RP_ID || process.env.PASSKEY_RP_NAME || process.env.PASSKEY_ORIGIN);
+    const managedByEnv = Boolean(
+      process.env.PASSKEY_RP_ID ||
+      process.env.PASSKEY_RP_NAME ||
+      process.env.PASSKEY_ORIGIN ||
+      process.env.PASSKEY_ENABLED !== undefined
+    );
 
     if (managedByEnv) {
       return res.status(400).json({
-        error: 'Passkey settings are managed by environment variables. Remove PASSKEY_RP_ID, PASSKEY_RP_NAME, and PASSKEY_ORIGIN from environment to use database configuration.'
+        error: 'Passkey settings are managed by environment variables. Remove PASSKEY_RP_ID, PASSKEY_RP_NAME, PASSKEY_ORIGIN, and PASSKEY_ENABLED from environment to use database configuration.'
       });
     }
 
-    const { rp_id, rp_name, origin } = req.body;
+    const { rp_id, rp_name, origin, enabled = true } = req.body;
 
     // Validation
     if (!rp_id || !rp_name || !origin) {
@@ -1641,7 +1708,8 @@ app.put('/api/admin/passkey-settings', authenticate, authorize('admin'), async (
     await passkeySettingsDb.update({
       rp_id,
       rp_name,
-      origin
+      origin,
+      enabled
     }, req.user.email);
 
     // Log the change
@@ -1740,11 +1808,22 @@ const stateStore = new Map();
 app.get('/api/auth/oidc/config', async (req, res) => {
   try {
     const settings = await oidcSettingsDb.get();
+    const buttonText = settings?.sso_button_text || 'Sign In with SSO';
+    const buttonHelpText = settings?.sso_button_help_text || '';
+    const buttonVariant = settings?.sso_button_variant || 'outline';
     res.json({
-      enabled: settings?.enabled === 1 && isOIDCEnabled()
+      enabled: settings?.enabled === 1 && isOIDCEnabled(),
+      button_text: buttonText,
+      button_help_text: buttonHelpText,
+      button_variant: buttonVariant
     });
   } catch (error) {
-    res.json({ enabled: false });
+    res.json({
+      enabled: false,
+      button_text: 'Sign In with SSO',
+      button_help_text: '',
+      button_variant: 'outline'
+    });
   }
 });
 

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import { Fingerprint, Key, Loader2, AlertTriangle, Info, ExternalLink } from 'lucide-react';
 import OIDCSettingsNew from './OIDCSettingsNew';
 
@@ -17,6 +18,7 @@ const SecuritySettingsNew = () => {
     rp_id: 'localhost',
     rp_name: 'KARS - KeyData Asset Registration System',
     origin: 'http://localhost:5173',
+    enabled: true,
     managed_by_env: false
   });
   const [loading, setLoading] = useState(false);
@@ -52,7 +54,8 @@ const SecuritySettingsNew = () => {
         body: JSON.stringify({
           rp_id: passkeySettings.rp_id,
           rp_name: passkeySettings.rp_name,
-          origin: passkeySettings.origin
+          origin: passkeySettings.origin,
+          enabled: passkeySettings.enabled
         })
       });
       const data = await response.json();
@@ -79,11 +82,32 @@ const SecuritySettingsNew = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 bg-muted/50">
+            <div>
+              <p className="font-medium">Passkey sign-in</p>
+              <p className="text-sm text-muted-foreground">Toggle to allow users to register and sign in with passkeys.</p>
+            </div>
+            <Switch
+              checked={passkeySettings.enabled}
+              onCheckedChange={(checked) => setPasskeySettings({ ...passkeySettings, enabled: checked })}
+              disabled={passkeySettings.managed_by_env || loading}
+            />
+          </div>
+
+          {!passkeySettings.enabled && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Passkey registration and sign-in are currently disabled. Users will not see passkey options on the login page while this is off.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {passkeySettings.managed_by_env && (
             <Alert variant="warning">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Passkey settings are currently managed by environment variables. To use database configuration, remove PASSKEY_RP_ID, PASSKEY_RP_NAME, and PASSKEY_ORIGIN from your environment variables and restart the backend.
+                Passkey settings are currently managed by environment variables. To use database configuration, remove PASSKEY_RP_ID, PASSKEY_RP_NAME, PASSKEY_ORIGIN, and PASSKEY_ENABLED from your environment variables and restart the backend.
               </AlertDescription>
             </Alert>
           )}

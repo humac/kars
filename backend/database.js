@@ -284,6 +284,9 @@ const initDb = async () => {
       scope TEXT DEFAULT 'openid email profile',
       role_claim_path TEXT DEFAULT 'roles',
       default_role TEXT DEFAULT 'employee',
+      sso_button_text TEXT DEFAULT 'Sign In with SSO',
+      sso_button_help_text TEXT,
+      sso_button_variant TEXT DEFAULT 'outline',
       updated_at TIMESTAMP NOT NULL,
       updated_by TEXT
     )
@@ -298,6 +301,9 @@ const initDb = async () => {
       scope TEXT DEFAULT 'openid email profile',
       role_claim_path TEXT DEFAULT 'roles',
       default_role TEXT DEFAULT 'employee',
+      sso_button_text TEXT DEFAULT 'Sign In with SSO',
+      sso_button_help_text TEXT,
+      sso_button_variant TEXT DEFAULT 'outline',
       updated_at TEXT NOT NULL,
       updated_by TEXT
     )
@@ -329,6 +335,7 @@ const initDb = async () => {
       rp_id TEXT DEFAULT 'localhost',
       rp_name TEXT DEFAULT 'KARS - KeyData Asset Registration System',
       origin TEXT DEFAULT 'http://localhost:5173',
+      enabled INTEGER NOT NULL DEFAULT 1,
       updated_at TIMESTAMP NOT NULL,
       updated_by TEXT
     )
@@ -338,6 +345,7 @@ const initDb = async () => {
       rp_id TEXT DEFAULT 'localhost',
       rp_name TEXT DEFAULT 'KARS - KeyData Asset Registration System',
       origin TEXT DEFAULT 'http://localhost:5173',
+      enabled INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL,
       updated_by TEXT
     )
@@ -358,12 +366,22 @@ const initDb = async () => {
       await dbRun('ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_name TEXT');
       await dbRun('ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_email TEXT');
       await dbRun('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image TEXT');
+      await dbRun('ALTER TABLE passkey_settings ADD COLUMN IF NOT EXISTS enabled INTEGER NOT NULL DEFAULT 1');
+      await dbRun("ALTER TABLE oidc_settings ADD COLUMN IF NOT EXISTS sso_button_text TEXT DEFAULT 'Sign In with SSO'");
+      await dbRun('ALTER TABLE oidc_settings ADD COLUMN IF NOT EXISTS sso_button_help_text TEXT');
+      await dbRun("ALTER TABLE oidc_settings ADD COLUMN IF NOT EXISTS sso_button_variant TEXT DEFAULT 'outline'");
     } else {
       // SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so check first
       const columns = await dbAll("PRAGMA table_info(users)");
       const hasManagerName = columns.some(col => col.name === 'manager_name');
       const hasManagerEmail = columns.some(col => col.name === 'manager_email');
       const hasProfileImage = columns.some(col => col.name === 'profile_image');
+      const passkeyColumns = await dbAll("PRAGMA table_info(passkey_settings)");
+      const hasPasskeyEnabled = passkeyColumns.some(col => col.name === 'enabled');
+      const oidcColumns = await dbAll("PRAGMA table_info(oidc_settings)");
+      const hasOidcButtonText = oidcColumns.some(col => col.name === 'sso_button_text');
+      const hasOidcButtonHelp = oidcColumns.some(col => col.name === 'sso_button_help_text');
+      const hasOidcButtonVariant = oidcColumns.some(col => col.name === 'sso_button_variant');
 
       if (!hasManagerName) {
         await dbRun('ALTER TABLE users ADD COLUMN manager_name TEXT');
@@ -373,6 +391,18 @@ const initDb = async () => {
       }
       if (!hasProfileImage) {
         await dbRun('ALTER TABLE users ADD COLUMN profile_image TEXT');
+      }
+      if (!hasPasskeyEnabled) {
+        await dbRun('ALTER TABLE passkey_settings ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1');
+      }
+      if (!hasOidcButtonText) {
+        await dbRun("ALTER TABLE oidc_settings ADD COLUMN sso_button_text TEXT DEFAULT 'Sign In with SSO'");
+      }
+      if (!hasOidcButtonHelp) {
+        await dbRun('ALTER TABLE oidc_settings ADD COLUMN sso_button_help_text TEXT');
+      }
+      if (!hasOidcButtonVariant) {
+        await dbRun("ALTER TABLE oidc_settings ADD COLUMN sso_button_variant TEXT DEFAULT 'outline'");
       }
     }
   } catch (err) {
@@ -565,9 +595,17 @@ const initDb = async () => {
   if (!checkSettings) {
     const now = new Date().toISOString();
     await dbRun(`
-      INSERT INTO oidc_settings (id, enabled, updated_at)
-      VALUES (1, 0, ?)
+      INSERT INTO oidc_settings (id, enabled, sso_button_text, sso_button_help_text, sso_button_variant, updated_at)
+      VALUES (1, 0, 'Sign In with SSO', '', 'outline', ?)
     `, [now]);
+  } else {
+    await dbRun(`
+      UPDATE oidc_settings
+      SET sso_button_text = COALESCE(sso_button_text, 'Sign In with SSO'),
+          sso_button_help_text = COALESCE(sso_button_help_text, ''),
+          sso_button_variant = COALESCE(sso_button_variant, 'outline')
+      WHERE id = 1
+    `);
   }
 
   // Insert default branding settings if not exists
@@ -1007,6 +1045,9 @@ export const oidcSettingsDb = {
           scope = ?,
           role_claim_path = ?,
           default_role = ?,
+          sso_button_text = ?,
+          sso_button_help_text = ?,
+          sso_button_variant = ?,
           updated_at = ?,
           updated_by = ?
       WHERE id = 1
@@ -1019,6 +1060,9 @@ export const oidcSettingsDb = {
       settings.scope || 'openid email profile',
       settings.role_claim_path || 'roles',
       settings.default_role || 'employee',
+      settings.sso_button_text || 'Sign In with SSO',
+      settings.sso_button_help_text || null,
+      settings.sso_button_variant || 'outline',
       now,
       userEmail
     ]);
@@ -1066,13 +1110,16 @@ export const passkeySettingsDb = {
     if (!settings) {
       const now = new Date().toISOString();
       await dbRun(`
-        INSERT INTO passkey_settings (id, rp_id, rp_name, origin, updated_at)
-        VALUES (1, 'localhost', 'KARS - KeyData Asset Registration System', 'http://localhost:5173', ?)
+        INSERT INTO passkey_settings (id, rp_id, rp_name, origin, enabled, updated_at)
+        VALUES (1, 'localhost', 'KARS - KeyData Asset Registration System', 'http://localhost:5173', 1, ?)
       `, [now]);
       settings = await dbGet('SELECT * FROM passkey_settings WHERE id = 1');
     }
 
-    return settings;
+    return {
+      ...settings,
+      enabled: settings.enabled ?? 1
+    };
   },
   update: async (settings, userEmail) => {
     const now = new Date().toISOString();
@@ -1081,12 +1128,13 @@ export const passkeySettingsDb = {
     const existing = await dbGet('SELECT * FROM passkey_settings WHERE id = 1');
     if (!existing) {
       await dbRun(`
-        INSERT INTO passkey_settings (id, rp_id, rp_name, origin, updated_at, updated_by)
-        VALUES (1, ?, ?, ?, ?, ?)
+        INSERT INTO passkey_settings (id, rp_id, rp_name, origin, enabled, updated_at, updated_by)
+        VALUES (1, ?, ?, ?, ?, ?, ?)
       `, [
         settings.rp_id || 'localhost',
         settings.rp_name || 'KARS - KeyData Asset Registration System',
         settings.origin || 'http://localhost:5173',
+        settings.enabled ? 1 : 0,
         now,
         userEmail
       ]);
@@ -1096,6 +1144,7 @@ export const passkeySettingsDb = {
         SET rp_id = ?,
             rp_name = ?,
             origin = ?,
+            enabled = ?,
             updated_at = ?,
             updated_by = ?
         WHERE id = 1
@@ -1103,6 +1152,7 @@ export const passkeySettingsDb = {
         settings.rp_id || 'localhost',
         settings.rp_name || 'KARS - KeyData Asset Registration System',
         settings.origin || 'http://localhost:5173',
+        settings.enabled ? 1 : 0,
         now,
         userEmail
       ]);

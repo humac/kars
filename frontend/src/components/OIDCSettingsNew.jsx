@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -27,6 +28,9 @@ const OIDCSettingsNew = () => {
     scope: 'openid email profile',
     role_claim_path: 'roles',
     default_role: 'employee',
+    sso_button_text: 'Sign In with SSO',
+    sso_button_help_text: '',
+    sso_button_variant: 'outline',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,6 +57,9 @@ const OIDCSettingsNew = () => {
           scope: data.scope || 'openid email profile',
           role_claim_path: data.role_claim_path || 'roles',
           default_role: data.default_role || 'employee',
+          sso_button_text: data.sso_button_text || 'Sign In with SSO',
+          sso_button_help_text: data.sso_button_help_text || '',
+          sso_button_variant: data.sso_button_variant || 'outline',
         });
         setHasClientSecret(data.has_client_secret);
       }
@@ -254,6 +261,57 @@ const OIDCSettingsNew = () => {
           <p className="text-xs text-muted-foreground">
             Default role for new users if no role mapping matches
           </p>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold">Sign in button customization</h3>
+
+        <div className="space-y-2">
+          <Label htmlFor="sso_button_text">Button label</Label>
+          <Input
+            id="sso_button_text"
+            name="sso_button_text"
+            value={settings.sso_button_text}
+            onChange={(e) => handleChange('sso_button_text', e.target.value)}
+            disabled={!settings.enabled}
+            placeholder="Sign In with SSO"
+          />
+          <p className="text-xs text-muted-foreground">Set the text users see on the sign-in button.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sso_button_help_text">Helper text (optional)</Label>
+          <Textarea
+            id="sso_button_help_text"
+            name="sso_button_help_text"
+            value={settings.sso_button_help_text}
+            onChange={(e) => handleChange('sso_button_help_text', e.target.value)}
+            disabled={!settings.enabled}
+            placeholder="Use your company identity provider."
+          />
+          <p className="text-xs text-muted-foreground">Appears below the button on the sign-in page.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sso_button_variant">Button style</Label>
+          <Select
+            value={settings.sso_button_variant}
+            onValueChange={(value) => handleChange('sso_button_variant', value)}
+            disabled={!settings.enabled}
+          >
+            <SelectTrigger id="sso_button_variant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Primary</SelectItem>
+              <SelectItem value="secondary">Muted</SelectItem>
+              <SelectItem value="outline">Outline</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Match your branding by selecting a button variant.</p>
         </div>
       </div>
 
