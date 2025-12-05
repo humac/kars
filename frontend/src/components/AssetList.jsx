@@ -461,23 +461,23 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
           </Box>
         ) : (
           <TableContainer component={Paper} variant="outlined" sx={{ maxWidth: '100%' }}>
-            <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: isMobile ? 300 : 800 }}>
+            <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 900 }}>
               <TableHead>
                 <TableRow>
                   {/* Fixed columns */}
                   <TableCell><strong>Employee</strong></TableCell>
-                  {!isMobile && <TableCell><strong>Employee Email</strong></TableCell>}
-                  {!isMobile && <TableCell><strong>Manager Email</strong></TableCell>}
+                  <TableCell><strong>Employee Email</strong></TableCell>
+                  <TableCell><strong>Manager Email</strong></TableCell>
                   <TableCell><strong>Company</strong></TableCell>
-                  {!isMobile && <TableCell><strong>Serial Number</strong></TableCell>}
-                  {!isMobile && <TableCell><strong>Asset Tag</strong></TableCell>}
+                  <TableCell><strong>Serial Number</strong></TableCell>
+                  <TableCell><strong>Asset Tag</strong></TableCell>
                   <TableCell><strong>Status</strong></TableCell>
                   {/* Optional columns */}
-                  {!isMobile && optionalColumns.manager && <TableCell><strong>Manager</strong></TableCell>}
-                  {!isMobile && optionalColumns.make && <TableCell><strong>Make</strong></TableCell>}
-                  {!isMobile && optionalColumns.model && <TableCell><strong>Model</strong></TableCell>}
-                  {!isMobile && optionalColumns.registered && <TableCell><strong>Registered</strong></TableCell>}
-                  {!isMobile && optionalColumns.notes && <TableCell><strong>Notes</strong></TableCell>}
+                  {optionalColumns.manager && <TableCell><strong>Manager</strong></TableCell>}
+                  {optionalColumns.make && <TableCell><strong>Make</strong></TableCell>}
+                  {optionalColumns.model && <TableCell><strong>Model</strong></TableCell>}
+                  {optionalColumns.registered && <TableCell><strong>Registered</strong></TableCell>}
+                  {optionalColumns.notes && <TableCell><strong>Notes</strong></TableCell>}
                   <TableCell><strong>Actions</strong></TableCell>
                 </TableRow>
               </TableHead>
@@ -486,11 +486,11 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
                   <TableRow key={asset.id} hover>
                     {/* Fixed columns */}
                     <TableCell>{asset.employee_name}</TableCell>
-                    {!isMobile && <TableCell>{asset.employee_email || '-'}</TableCell>}
-                    {!isMobile && <TableCell>{asset.manager_email || '-'}</TableCell>}
+                    <TableCell>{asset.employee_email || '-'}</TableCell>
+                    <TableCell>{asset.manager_email || '-'}</TableCell>
                     <TableCell>{asset.company_name}</TableCell>
-                    {!isMobile && <TableCell>{asset.laptop_serial_number}</TableCell>}
-                    {!isMobile && <TableCell>{asset.laptop_asset_tag}</TableCell>}
+                    <TableCell>{asset.laptop_serial_number}</TableCell>
+                    <TableCell>{asset.laptop_asset_tag}</TableCell>
                     <TableCell>
                       <Chip
                         label={asset.status.toUpperCase()}
@@ -499,11 +499,11 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
                       />
                     </TableCell>
                     {/* Optional columns */}
-                    {!isMobile && optionalColumns.manager && <TableCell>{asset.manager_name || '-'}</TableCell>}
-                    {!isMobile && optionalColumns.make && <TableCell>{asset.laptop_make || '-'}</TableCell>}
-                    {!isMobile && optionalColumns.model && <TableCell>{asset.laptop_model || '-'}</TableCell>}
-                    {!isMobile && optionalColumns.registered && <TableCell>{formatDate(asset.registration_date)}</TableCell>}
-                    {!isMobile && optionalColumns.notes && <TableCell>{asset.notes || '-'}</TableCell>}
+                    {optionalColumns.manager && <TableCell>{asset.manager_name || '-'}</TableCell>}
+                    {optionalColumns.make && <TableCell>{asset.laptop_make || '-'}</TableCell>}
+                    {optionalColumns.model && <TableCell>{asset.laptop_model || '-'}</TableCell>}
+                    {optionalColumns.registered && <TableCell>{formatDate(asset.registration_date)}</TableCell>}
+                    {optionalColumns.notes && <TableCell>{asset.notes || '-'}</TableCell>}
                     <TableCell>
                       <IconButton
                         size="small"

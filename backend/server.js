@@ -2214,7 +2214,16 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
-    const { employee_name, employee_email, manager_name, manager_email, company_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
+    const user = await userDb.getById(req.user.id);
+    const isEmployeeOwner = user.role === 'employee' && asset.employee_email === user.email;
+
+    let { employee_name, employee_email, manager_name, manager_email, company_name, laptop_serial_number, laptop_asset_tag, status, notes } = req.body;
+
+    // Employees can update the asset but cannot change their own name/email
+    if (isEmployeeOwner) {
+      employee_name = asset.employee_name;
+      employee_email = asset.employee_email;
+    }
 
     if (!employee_name || !employee_email || !company_name || !laptop_serial_number || !laptop_asset_tag) {
       return res.status(400).json({
@@ -2237,6 +2246,8 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
 
     await assetDb.update(req.params.id, {
       ...req.body,
+      employee_name,
+      employee_email,
       manager_name: finalManagerName || '',
       manager_email: finalManagerEmail || ''
     });
