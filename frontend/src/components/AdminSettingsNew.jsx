@@ -15,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Settings, Users, LayoutDashboard, Database, Key, Trash2, Loader2, AlertTriangle, Shield, Image } from 'lucide-react';
+import { Settings, Users, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 import SecuritySettingsNew from './SecuritySettingsNew';
 
@@ -25,6 +25,10 @@ const AdminSettingsNew = () => {
   const [activeView, setActiveView] = useState('users');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', manager_name: '', manager_email: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
   const [dbSettings, setDbSettings] = useState({ engine: 'sqlite', postgresUrl: '', managedByEnv: false, effectiveEngine: 'sqlite' });
   const [dbLoading, setDbLoading] = useState(false);
@@ -73,6 +77,51 @@ const AdminSettingsNew = () => {
       fetchUsers();
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const openEditDialog = (user) => {
+    setEditingUser(user);
+    setEditForm({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      manager_name: user.manager_name || '',
+      manager_email: user.manager_email || ''
+    });
+  };
+
+  const handleUserUpdate = async () => {
+    if (!editingUser) return;
+
+    if (!editForm.first_name || !editForm.last_name) {
+      toast({ title: "Missing info", description: "First and last name are required", variant: "destructive" });
+      return;
+    }
+
+    if (!editForm.manager_name || !editForm.manager_email) {
+      toast({ title: "Missing info", description: "Manager name and email are required", variant: "destructive" });
+      return;
+    }
+
+    setSavingEdit(true);
+
+    try {
+      const response = await fetch(`/api/auth/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify(editForm)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update user');
+
+      toast({ title: "Success", description: `Updated ${editingUser.email}`, variant: "success" });
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -189,6 +238,16 @@ const AdminSettingsNew = () => {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never';
   const getRoleColor = (role) => ({ admin: 'destructive', manager: 'success', employee: 'default' }[role] || 'secondary');
 
+  const filteredUsers = users.filter((u) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      u.name?.toLowerCase().includes(term) ||
+      u.email?.toLowerCase().includes(term) ||
+      u.manager_name?.toLowerCase().includes(term) ||
+      u.manager_email?.toLowerCase().includes(term)
+    );
+  });
+
   if (user?.role !== 'admin') {
     return (
       <Card className="border-destructive">
@@ -226,6 +285,14 @@ const AdminSettingsNew = () => {
                 <h3 className="text-lg font-semibold">User Management</h3>
                 <span className="text-sm text-muted-foreground">Total: {users.length}</span>
               </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Input
+                  placeholder="Search by name, email, or manager"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
               {loading ? (
                 <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
               ) : (
@@ -236,12 +303,20 @@ const AdminSettingsNew = () => {
                         <TableHead>Name</TableHead>
                         <TableHead className="hidden md:table-cell">Email</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead className="hidden lg:table-cell">Manager</TableHead>
                         <TableHead className="hidden lg:table-cell">Last Login</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((u) => (
+                      {filteredUsers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground">
+                            No users match your search.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {filteredUsers.map((u) => (
                         <TableRow key={u.id}>
                           <TableCell className="font-medium">{u.name}</TableCell>
                           <TableCell className="hidden md:table-cell">{u.email}</TableCell>
@@ -255,8 +330,22 @@ const AdminSettingsNew = () => {
                               </SelectContent>
                             </Select>
                           </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{u.manager_name || '—'}</span>
+                              <span className="text-xs text-muted-foreground">{u.manager_email || '—'}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="hidden lg:table-cell">{formatDate(u.last_login)}</TableCell>
                           <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mr-2"
+                              onClick={() => openEditDialog(u)}
+                            >
+                              Edit
+                            </Button>
                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog({ open: true, user: u })} disabled={u.id === user.id}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -395,6 +484,63 @@ const AdminSettingsNew = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Attributes</DialogTitle>
+            <DialogDescription>Update name and manager information for this user.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">First Name</label>
+                <Input
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                  placeholder="First name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Last Name</label>
+                <Input
+                  value={editForm.last_name}
+                  onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Manager Name</label>
+                <Input
+                  value={editForm.manager_name}
+                  onChange={(e) => setEditForm({ ...editForm, manager_name: e.target.value })}
+                  placeholder="Manager name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Manager Email</label>
+                <Input
+                  value={editForm.manager_email}
+                  onChange={(e) => setEditForm({ ...editForm, manager_email: e.target.value })}
+                  placeholder="manager@example.com"
+                  type="email"
+                />
+              </div>
+            </div>
+            {editingUser && (
+              <p className="text-xs text-muted-foreground">Editing: {editingUser.email}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
+            <Button onClick={handleUserUpdate} disabled={savingEdit}>
+              {savingEdit && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, user: null })}>
         <DialogContent>

@@ -1245,6 +1245,109 @@ app.get('/api/auth/users', authenticate, authorize('admin'), async (req, res) =>
   }
 });
 
+// Update user details (admin only)
+app.put('/api/auth/users/:id', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { first_name, last_name, manager_name, manager_email, profile_image } = req.body;
+
+    const targetUser = await userDb.getById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!first_name || !last_name) {
+      return res.status(400).json({ error: 'First name and last name are required' });
+    }
+
+    if (!manager_name || !manager_email) {
+      return res.status(400).json({ error: 'Manager name and manager email are required' });
+    }
+
+    let normalizedProfileImage = targetUser.profile_image;
+    if (Object.prototype.hasOwnProperty.call(req.body, 'profile_image')) {
+      if (!profile_image) {
+        normalizedProfileImage = null;
+      } else if (typeof profile_image !== 'string' || !profile_image.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Profile image must be a base64-encoded image data URL' });
+      } else {
+        const base64Payload = profile_image.split(',')[1] || '';
+        const buffer = Buffer.from(base64Payload, 'base64');
+        if (buffer.length > 5 * 1024 * 1024) {
+          return res.status(400).json({ error: 'Profile image must be 5MB or smaller' });
+        }
+        normalizedProfileImage = profile_image;
+      }
+    }
+
+    const name = `${first_name} ${last_name}`;
+
+    await userDb.updateProfile(userId, {
+      name,
+      first_name,
+      last_name,
+      manager_name,
+      manager_email,
+      profile_image: normalizedProfileImage
+    });
+
+    const updatedUser = await userDb.getById(userId);
+
+    await auditDb.log(
+      'admin_update_user',
+      'user',
+      updatedUser.id,
+      updatedUser.email,
+      {
+        old_first_name: targetUser.first_name,
+        old_last_name: targetUser.last_name,
+        old_manager_name: targetUser.manager_name,
+        old_manager_email: targetUser.manager_email,
+        old_profile_image_set: !!targetUser.profile_image,
+        new_first_name: first_name,
+        new_last_name: last_name,
+        new_manager_name: manager_name,
+        new_manager_email: manager_email,
+        new_profile_image_set: !!normalizedProfileImage,
+        changed_by: req.user.email
+      },
+      req.user.email
+    );
+
+    const managerChanged =
+      targetUser.manager_name !== manager_name || targetUser.manager_email !== manager_email;
+
+    if (managerChanged) {
+      try {
+        await assetDb.updateManagerForEmployee(
+          updatedUser.email,
+          manager_name,
+          manager_email
+        );
+      } catch (error) {
+        console.error('Failed to update manager on assets:', error);
+      }
+    }
+
+    res.json({
+      message: 'User updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        manager_name: updatedUser.manager_name,
+        manager_email: updatedUser.manager_email
+      }
+    });
+  } catch (error) {
+    console.error('Admin update user error:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
 // Update user role (admin only)
 app.put('/api/auth/users/:id/role', authenticate, authorize('admin'), async (req, res) => {
   try {
