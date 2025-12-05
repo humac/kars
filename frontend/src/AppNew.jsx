@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Laptop,
+  Users,
   Building2,
   FileBarChart,
   Settings,
@@ -30,6 +31,7 @@ import Dashboard from '@/components/Dashboard';
 import CompanyManagementNew from '@/components/CompanyManagementNew';
 import AuditReportingNew from '@/components/AuditReportingNew';
 import AdminSettingsNew from '@/components/AdminSettingsNew';
+import TeamManagement from '@/components/TeamManagement';
 import ProfileNew from '@/components/ProfileNew';
 import AuthPageNew from '@/components/AuthPageNew';
 import OIDCCallback from '@/components/OIDCCallback';
@@ -96,12 +98,17 @@ function AppNew() {
 
   const navItems = [
     { label: 'Assets', icon: Laptop, path: '/assets', role: null },
+    { label: 'Team', icon: Users, path: '/team', role: 'manager' },
     { label: 'Companies', icon: Building2, path: '/companies', role: 'admin' },
     { label: 'Audit & Reports', icon: FileBarChart, path: '/audit', role: null },
     { label: 'Admin Settings', icon: Settings, path: '/admin', role: 'admin' },
   ];
 
-  const visibleNavItems = navItems.filter(item => !item.role || user?.role === item.role);
+  const visibleNavItems = navItems.filter(item => {
+    if (!item.role) return true;
+    if (user?.role === item.role) return true;
+    return item.role === 'manager' && user?.role === 'admin';
+  });
 
   const isActive = (path) => {
     if (path === '/assets') {
@@ -318,6 +325,9 @@ function AppNew() {
         <Routes>
           <Route path="/" element={<Navigate to="/assets" replace />} />
           <Route path="/assets" element={<Dashboard />} />
+          {(user?.role === 'manager' || user?.role === 'admin') && (
+            <Route path="/team" element={<TeamManagement />} />
+          )}
           {user?.role === 'admin' && (
             <Route path="/companies" element={<CompanyManagementNew />} />
           )}
