@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import TablePaginationControls from '@/components/TablePaginationControls';
 import {
   Laptop,
   Search,
@@ -62,6 +63,8 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [assets, setAssets] = useState([]);
   const [filteredAssets, setFilteredAssets] = useState([]);
+  const [assetPage, setAssetPage] = useState(1);
+  const [assetPageSize, setAssetPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -223,19 +226,40 @@ const Dashboard = () => {
     setFilteredAssets(filtered);
   };
 
-  // Selection handlers
-  const isAllSelected = filteredAssets.length > 0 &&
-    filteredAssets.every(asset => selectedIds.has(asset.id));
+  useEffect(() => {
+    setAssetPage(1);
+  }, [assetPageSize, filteredAssets.length]);
 
-  const isSomeSelected = filteredAssets.some(asset => selectedIds.has(asset.id)) &&
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetPageSize) || 1);
+    if (assetPage > totalPages) {
+      setAssetPage(totalPages);
+    }
+  }, [assetPage, assetPageSize, filteredAssets.length]);
+
+  const paginatedAssets = useMemo(() => {
+    const start = (assetPage - 1) * assetPageSize;
+    return filteredAssets.slice(start, start + assetPageSize);
+  }, [filteredAssets, assetPage, assetPageSize]);
+
+  // Selection handlers
+  const isAllSelected = paginatedAssets.length > 0 &&
+    paginatedAssets.every(asset => selectedIds.has(asset.id));
+
+  const isSomeSelected = paginatedAssets.some(asset => selectedIds.has(asset.id)) &&
     !isAllSelected;
 
   const toggleSelectAll = () => {
-    if (isAllSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredAssets.map(a => a.id)));
-    }
+    setSelectedIds((prev) => {
+      const pageIds = paginatedAssets.map((asset) => asset.id);
+      const hasAll = pageIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      pageIds.forEach((id) => {
+        if (hasAll) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
   };
 
   const toggleSelect = (id) => {
@@ -935,7 +959,7 @@ const Dashboard = () => {
           ) : isMobile ? (
             /* Mobile Card View */
             <div className="space-y-3">
-              {filteredAssets.map((asset) => (
+              {paginatedAssets.map((asset) => (
                 <div
                   key={asset.id}
                   className={cn(
@@ -1029,7 +1053,7 @@ const Dashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAssets.map((asset) => (
+                  {paginatedAssets.map((asset) => (
                     <TableRow
                       key={asset.id}
                       data-state={selectedIds.has(asset.id) ? "selected" : undefined}
@@ -1087,6 +1111,17 @@ const Dashboard = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          {filteredAssets.length > 0 && (
+            <div className="mt-4">
+              <TablePaginationControls
+                page={assetPage}
+                pageSize={assetPageSize}
+                totalItems={filteredAssets.length}
+                onPageChange={setAssetPage}
+                onPageSizeChange={setAssetPageSize}
+              />
             </div>
           )}
         </CardContent>

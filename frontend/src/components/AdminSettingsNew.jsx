@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import TablePaginationControls from '@/components/TablePaginationControls';
 import { cn } from '@/lib/utils';
 import { Settings, Users, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Edit, Search, Sparkles } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
@@ -33,6 +34,8 @@ const AdminSettingsNew = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
   const [bulkRole, setBulkRole] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [dbSettings, setDbSettings] = useState({ engine: 'sqlite', postgresUrl: '', managedByEnv: false, effectiveEngine: 'sqlite' });
@@ -154,10 +157,16 @@ const AdminSettingsNew = () => {
     });
   };
 
-  const toggleSelectAllUsers = (list) => {
+  const toggleSelectAllUsers = () => {
     setSelectedUserIds((prev) => {
-      if (prev.size === list.length) return new Set();
-      return new Set(list.map((u) => u.id));
+      const pageIds = paginatedUsers.map((u) => u.id);
+      const hasAll = pageIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      pageIds.forEach((id) => {
+        if (hasAll) next.delete(id);
+        else next.add(id);
+      });
+      return next;
     });
   };
 
@@ -315,8 +324,25 @@ const AdminSettingsNew = () => {
     );
   }, [users, searchTerm]);
 
-  const isAllUsersSelected = filteredUsers.length > 0 && selectedUserIds.size === filteredUsers.length;
-  const isSomeUsersSelected = selectedUserIds.size > 0 && selectedUserIds.size < filteredUsers.length;
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize) || 1);
+
+  useEffect(() => {
+    setUsersPage(1);
+  }, [usersPageSize, filteredUsers.length]);
+
+  useEffect(() => {
+    if (usersPage > totalUserPages) {
+      setUsersPage(totalUserPages);
+    }
+  }, [usersPage, totalUserPages]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (usersPage - 1) * usersPageSize;
+    return filteredUsers.slice(start, start + usersPageSize);
+  }, [filteredUsers, usersPage, usersPageSize]);
+
+  const isAllUsersSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.has(u.id));
+  const isSomeUsersSelected = paginatedUsers.some((u) => selectedUserIds.has(u.id)) && !isAllUsersSelected;
 
   if (user?.role !== 'admin') {
     return (
@@ -407,7 +433,7 @@ const AdminSettingsNew = () => {
                     {filteredUsers.length === 0 && (
                       <div className="text-center text-muted-foreground border rounded-md py-6">No users match your search.</div>
                     )}
-                    {filteredUsers.map((u) => (
+                    {paginatedUsers.map((u) => (
                       <div
                         key={u.id}
                         className={cn(
@@ -453,7 +479,7 @@ const AdminSettingsNew = () => {
                           <TableHead className="w-12">
                             <Checkbox
                               checked={isAllUsersSelected ? true : isSomeUsersSelected ? "indeterminate" : false}
-                              onCheckedChange={() => toggleSelectAllUsers(filteredUsers)}
+                              onCheckedChange={toggleSelectAllUsers}
                             />
                           </TableHead>
                           <TableHead>Name</TableHead>
@@ -470,7 +496,7 @@ const AdminSettingsNew = () => {
                             <TableCell colSpan={7} className="text-center text-muted-foreground">No users match your search.</TableCell>
                           </TableRow>
                         )}
-                        {filteredUsers.map((u) => (
+                        {paginatedUsers.map((u) => (
                           <TableRow
                             key={u.id}
                             data-state={selectedUserIds.has(u.id) ? "selected" : undefined}
@@ -517,6 +543,15 @@ const AdminSettingsNew = () => {
                       </TableBody>
                     </Table>
                   </div>
+                  {filteredUsers.length > 0 && (
+                    <TablePaginationControls
+                      page={usersPage}
+                      pageSize={usersPageSize}
+                      totalItems={filteredUsers.length}
+                      onPageChange={setUsersPage}
+                      onPageSizeChange={setUsersPageSize}
+                    />
+                  )}
                 </div>
               )}
               <Card className="bg-muted/50">

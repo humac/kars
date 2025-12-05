@@ -13,6 +13,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import TablePaginationControls from '@/components/TablePaginationControls';
 import { cn } from '@/lib/utils';
 import { Building2, Plus, Edit, Trash2, Upload, Download, Loader2, Search, Sparkles } from 'lucide-react';
 
@@ -33,6 +34,8 @@ const CompanyManagementNew = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkDescription, setBulkDescription] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => { fetchCompanies(); }, []);
 
@@ -129,6 +132,22 @@ const CompanyManagementNew = () => {
     );
   }, [companies, searchTerm]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / pageSize) || 1);
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize, filteredCompanies.length]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedCompanies = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredCompanies.slice(start, start + pageSize);
+  }, [filteredCompanies, page, pageSize]);
+
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -139,8 +158,14 @@ const CompanyManagementNew = () => {
 
   const toggleSelectAll = () => {
     setSelectedIds((prev) => {
-      if (prev.size === filteredCompanies.length) return new Set();
-      return new Set(filteredCompanies.map((c) => c.id));
+      const pageIds = paginatedCompanies.map((c) => c.id);
+      const hasAll = pageIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      pageIds.forEach((id) => {
+        if (hasAll) next.delete(id);
+        else next.add(id);
+      });
+      return next;
     });
   };
 
@@ -194,8 +219,8 @@ const CompanyManagementNew = () => {
     }
   };
 
-  const isAllSelected = filteredCompanies.length > 0 && selectedIds.size === filteredCompanies.length;
-  const isSomeSelected = selectedIds.size > 0 && selectedIds.size < filteredCompanies.length;
+  const isAllSelected = paginatedCompanies.length > 0 && paginatedCompanies.every((c) => selectedIds.has(c.id));
+  const isSomeSelected = paginatedCompanies.some((c) => selectedIds.has(c.id)) && !isAllSelected;
 
   if (loading) {
     return (
@@ -254,7 +279,7 @@ const CompanyManagementNew = () => {
           ) : (
             <div className="space-y-3">
               <div className="md:hidden space-y-3">
-                {filteredCompanies.map((company) => (
+                {paginatedCompanies.map((company) => (
                   <div
                     key={company.id}
                     className={cn(
@@ -301,7 +326,7 @@ const CompanyManagementNew = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCompanies.map((company) => (
+                    {paginatedCompanies.map((company) => (
                       <TableRow
                         key={company.id}
                         data-state={selectedIds.has(company.id) ? "selected" : undefined}
@@ -327,6 +352,13 @@ const CompanyManagementNew = () => {
                   </TableBody>
                 </Table>
               </div>
+              <TablePaginationControls
+                page={page}
+                pageSize={pageSize}
+                totalItems={filteredCompanies.length}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           )}
         </CardContent>

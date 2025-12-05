@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { FileText, BarChart3, Filter, Download, Loader2, X } from 'lucide-react';
+import TablePaginationControls from '@/components/TablePaginationControls';
 
 const AuditReportingNew = () => {
   const { getAuthHeaders } = useAuth();
@@ -21,6 +22,8 @@ const AuditReportingNew = () => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPageSize, setLogsPageSize] = useState(10);
   const [filters, setFilters] = useState({
     action: '', entityType: '', startDate: '', endDate: '', userEmail: '', limit: '100'
   });
@@ -98,6 +101,22 @@ const AuditReportingNew = () => {
   const formatDate = (d) => new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const getActionColor = (action) => ({ CREATE: 'default', STATUS_CHANGE: 'secondary', UPDATE: 'outline', DELETE: 'destructive' }[action] || 'secondary');
 
+  useEffect(() => {
+    setLogsPage(1);
+  }, [logsPageSize, logs.length]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(logs.length / logsPageSize) || 1);
+    if (logsPage > totalPages) {
+      setLogsPage(totalPages);
+    }
+  }, [logsPage, logsPageSize, logs.length]);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (logsPage - 1) * logsPageSize;
+    return logs.slice(start, start + logsPageSize);
+  }, [logs, logsPage, logsPageSize]);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -174,7 +193,7 @@ const AuditReportingNew = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {logs.map((log) => (
+                      {paginatedLogs.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell className="text-sm">{formatDate(log.timestamp)}</TableCell>
                           <TableCell><Badge variant={getActionColor(log.action)}>{log.action}</Badge></TableCell>
@@ -186,6 +205,15 @@ const AuditReportingNew = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  <div className="mt-4">
+                    <TablePaginationControls
+                      page={logsPage}
+                      pageSize={logsPageSize}
+                      totalItems={logs.length}
+                      onPageChange={setLogsPage}
+                      onPageSizeChange={setLogsPageSize}
+                    />
+                  </div>
                 </div>
               )}
             </TabsContent>
