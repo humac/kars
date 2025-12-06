@@ -98,9 +98,6 @@ const Dashboard = () => {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showBulkManagerModal, setShowBulkManagerModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
-  const [assetDetailsForm, setAssetDetailsForm] = useState(null);
-  const [detailsEditMode, setDetailsEditMode] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(false);
 
   // Form states
   const [formLoading, setFormLoading] = useState(false);
@@ -292,126 +289,31 @@ const Dashboard = () => {
     );
   };
 
-  const parseEmployeeName = (fullName = '') => {
-    const parts = fullName.trim().split(' ');
-    if (parts.length === 0) return { first: '', last: '' };
-    if (parts.length === 1) return { first: parts[0], last: '' };
-    const last = parts.pop();
-    const first = parts.join(' ');
-    return { first, last };
+  const formatDateTime = (value) => {
+    if (!value) return '—';
+    try {
+      return new Date(value).toLocaleString();
+    } catch (err) {
+      return '—';
+    }
   };
 
-  const canEditField = (field) => {
-    if (['registration_date', 'last_updated'].includes(field)) return false;
-    if (user?.role === 'admin') return true;
-    if (user?.role === 'employee') {
-      return ['status', 'notes'].includes(field);
-    }
-    return ['status', 'notes'].includes(field);
-  };
+  const DetailItem = ({ label, value, helper, mono = false }) => (
+    <div className="space-y-1">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={cn('text-sm font-semibold', mono && 'font-mono')}>{value || '—'}</p>
+      {helper && <p className="text-sm text-muted-foreground">{helper}</p>}
+    </div>
+  );
 
   const openAssetDetails = (asset) => {
-    const employeeName = parseEmployeeName(asset.employee_name || '');
     setSelectedAsset(asset);
-    setAssetDetailsForm({
-      employee_first_name: employeeName.first,
-      employee_last_name: employeeName.last,
-      employee_email: asset.employee_email || '',
-      manager_name: asset.manager_name || '',
-      manager_email: asset.manager_email || '',
-      company_name: asset.company_name || '',
-      laptop_make: asset.laptop_make || '',
-      laptop_model: asset.laptop_model || '',
-      laptop_serial_number: asset.laptop_serial_number || '',
-      laptop_asset_tag: asset.laptop_asset_tag || '',
-      status: asset.status || 'active',
-      notes: asset.notes || '',
-      registration_date: asset.registration_date || '',
-      last_updated: asset.last_updated || ''
-    });
-    setDetailsEditMode(false);
     setShowInfoModal(true);
-  };
-
-  const handleDetailsChange = (field, value) => {
-    if (!detailsEditMode || !canEditField(field)) return;
-    setAssetDetailsForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   const handleDetailsClose = () => {
     setShowInfoModal(false);
     setSelectedAsset(null);
-    setAssetDetailsForm(null);
-    setDetailsEditMode(false);
-    setDetailsLoading(false);
-  };
-
-  const handleDetailsEdit = async () => {
-    if (!detailsEditMode) {
-      setDetailsEditMode(true);
-      return;
-    }
-
-    if (!assetDetailsForm || !selectedAsset) return;
-
-    setDetailsLoading(true);
-    try {
-      const submitData = {
-        employee_first_name: assetDetailsForm.employee_first_name?.trim() || '',
-        employee_last_name: assetDetailsForm.employee_last_name?.trim() || '',
-        employee_email: assetDetailsForm.employee_email?.trim() || '',
-        manager_name: assetDetailsForm.manager_name?.trim() || '',
-        manager_email: assetDetailsForm.manager_email?.trim() || '',
-        company_name: assetDetailsForm.company_name?.trim() || '',
-        laptop_make: assetDetailsForm.laptop_make?.trim() || '',
-        laptop_model: assetDetailsForm.laptop_model?.trim() || '',
-        laptop_serial_number: assetDetailsForm.laptop_serial_number?.trim() || '',
-        laptop_asset_tag: assetDetailsForm.laptop_asset_tag?.trim() || '',
-        status: assetDetailsForm.status,
-        notes: assetDetailsForm.notes
-      };
-
-      const payload = {
-        ...submitData,
-        employee_name: `${submitData.employee_first_name} ${submitData.employee_last_name}`.trim(),
-      };
-
-      delete payload.employee_first_name;
-      delete payload.employee_last_name;
-
-      const response = await fetch(`/api/assets/${selectedAsset.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update asset');
-
-      toast({
-        title: "Success",
-        description: "Asset updated successfully",
-        variant: "success",
-      });
-
-      handleDetailsClose();
-      fetchAssets();
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setDetailsLoading(false);
-      setDetailsEditMode(false);
-    }
   };
 
   // Registration handlers
@@ -834,46 +736,44 @@ const Dashboard = () => {
       </div>
 
       {/* Filters and Actions */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-1">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by employee, serial, tag..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="returned">Returned</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="damaged">Damaged</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                </SelectContent>
-              </Select>
+      <div className="rounded-xl bg-card/60 p-4 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center flex-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by employee, serial, tag..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowImportModal(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Import
-              </Button>
-              <Button onClick={() => setShowRegistrationModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Asset
-              </Button>
-            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="returned">Returned</SelectItem>
+                <SelectItem value="lost">Lost</SelectItem>
+                <SelectItem value="damaged">Damaged</SelectItem>
+                <SelectItem value="retired">Retired</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowImportModal(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+            <Button onClick={() => setShowRegistrationModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Asset
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
@@ -949,8 +849,7 @@ const Dashboard = () => {
       )}
 
       {/* Data Table */}
-      <Card>
-        <CardContent className="pt-6">
+        <div className="rounded-xl bg-card/60 p-4 shadow-sm">
           {filteredAssets.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -964,7 +863,8 @@ const Dashboard = () => {
                   key={asset.id}
                   className={cn(
                     "border rounded-lg p-4 transition-colors",
-                    selectedIds.has(asset.id) && "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
+                    selectedIds.has(asset.id) &&
+                      "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -1034,25 +934,25 @@ const Dashboard = () => {
             /* Desktop Table View */
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/50">
                   <TableHead className="w-12">
-                      <Checkbox
-                        checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Employee Email</TableHead>
-                    <TableHead>Manager Email</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Serial Number</TableHead>
-                    <TableHead>Asset Tag</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedAssets.map((asset) => (
+                    <Checkbox
+                      checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Employee Email</TableHead>
+                  <TableHead>Manager Email</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Serial Number</TableHead>
+                  <TableHead>Asset Tag</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedAssets.map((asset) => (
                   <TableRow
                     key={asset.id}
                     data-state={selectedIds.has(asset.id) ? "selected" : undefined}
@@ -1060,57 +960,58 @@ const Dashboard = () => {
                       selectedIds.has(asset.id) && "bg-primary/5 border-primary/40"
                     )}
                   >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.has(asset.id)}
-                          onCheckedChange={() => toggleSelect(asset.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{asset.employee_name}</div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{asset.employee_email}</TableCell>
-                      <TableCell className="font-mono text-sm">{asset.manager_email || '—'}</TableCell>
-                      <TableCell>{asset.company_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{asset.laptop_serial_number}</TableCell>
-                      <TableCell className="font-mono text-sm">{asset.laptop_asset_tag}</TableCell>
-                      <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(asset.id)}
+                        onCheckedChange={() => toggleSelect(asset.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{asset.employee_name}</div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{asset.employee_email}</TableCell>
+                    <TableCell className="font-mono text-sm">{asset.manager_email || '—'}</TableCell>
+                    <TableCell>{asset.company_name}</TableCell>
+                    <TableCell className="font-mono text-sm">{asset.laptop_serial_number}</TableCell>
+                    <TableCell className="font-mono text-sm">{asset.laptop_asset_tag}</TableCell>
+                    <TableCell>{getStatusBadge(asset.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openAssetDetails(asset)}
+                          title="More Info"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleStatusUpdate(asset)}
+                          title="Update Status"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {user?.role === 'admin' && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openAssetDetails(asset)}
-                            title="More Info"
+                            onClick={() => handleDelete(asset)}
+                            title="Delete Asset"
+                            className="text-destructive hover:text-destructive"
                           >
-                            <Info className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleStatusUpdate(asset)}
-                            title="Update Status"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {user?.role === 'admin' && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(asset)}
-                              title="Delete Asset"
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
             </Table>
           )}
+
           {filteredAssets.length > 0 && (
             <TablePaginationControls
               className="mt-4"
@@ -1121,8 +1022,8 @@ const Dashboard = () => {
               onPageSizeChange={setAssetPageSize}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Bulk Status Update Modal */}
       <Dialog open={showBulkStatusModal} onOpenChange={setShowBulkStatusModal}>
@@ -1298,155 +1199,60 @@ const Dashboard = () => {
           <DialogHeader>
             <DialogTitle>Asset Details</DialogTitle>
             <DialogDescription>
-              View complete asset information. Click Edit to update allowed fields.
+              View complete asset information.
             </DialogDescription>
           </DialogHeader>
 
-          {assetDetailsForm && (
+          {selectedAsset && (
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Employee First Name</Label>
-                  <Input
-                    value={assetDetailsForm.employee_first_name}
-                    onChange={(e) => handleDetailsChange('employee_first_name', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('employee_first_name')}
-                  />
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Employee</p>
+                  <p className="text-lg font-semibold leading-tight">{selectedAsset.employee_name || '—'}</p>
+                  {selectedAsset.employee_email && (
+                    <p className="text-sm text-muted-foreground">{selectedAsset.employee_email}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Employee Last Name</Label>
-                  <Input
-                    value={assetDetailsForm.employee_last_name}
-                    onChange={(e) => handleDetailsChange('employee_last_name', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('employee_last_name')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Employee Email</Label>
-                  <Input
-                    type="email"
-                    value={assetDetailsForm.employee_email}
-                    onChange={(e) => handleDetailsChange('employee_email', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('employee_email')}
-                  />
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  {getStatusBadge(selectedAsset.status)}
+                  <span>Updated {formatDateTime(selectedAsset.last_updated)}</span>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Manager Name</Label>
-                  <Input
-                    value={assetDetailsForm.manager_name}
-                    onChange={(e) => handleDetailsChange('manager_name', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('manager_name')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Manager Email</Label>
-                  <Input
-                    type="email"
-                    value={assetDetailsForm.manager_email}
-                    onChange={(e) => handleDetailsChange('manager_email', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('manager_email')}
-                  />
-                </div>
+                <DetailItem
+                  label="Manager"
+                  value={selectedAsset.manager_name || '—'}
+                  helper={selectedAsset.manager_email}
+                />
+                <DetailItem label="Company" value={selectedAsset.company_name || '—'} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Company</Label>
-                  <Input
-                    value={assetDetailsForm.company_name}
-                    onChange={(e) => handleDetailsChange('company_name', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('company_name')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={assetDetailsForm.status}
-                    onValueChange={(value) => handleDetailsChange('status', value)}
-                    disabled={!detailsEditMode || !canEditField('status')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="returned">Returned</SelectItem>
-                      <SelectItem value="lost">Lost</SelectItem>
-                      <SelectItem value="damaged">Damaged</SelectItem>
-                      <SelectItem value="retired">Retired</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <DetailItem label="Serial Number" value={selectedAsset.laptop_serial_number} mono />
+                <DetailItem label="Asset Tag" value={selectedAsset.laptop_asset_tag} mono />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Laptop Make</Label>
-                  <Input
-                    value={assetDetailsForm.laptop_make}
-                    onChange={(e) => handleDetailsChange('laptop_make', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('laptop_make')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Laptop Model</Label>
-                  <Input
-                    value={assetDetailsForm.laptop_model}
-                    onChange={(e) => handleDetailsChange('laptop_model', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('laptop_model')}
-                  />
-                </div>
+                <DetailItem label="Laptop Make" value={selectedAsset.laptop_make} />
+                <DetailItem label="Laptop Model" value={selectedAsset.laptop_model} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Serial Number</Label>
-                  <Input
-                    value={assetDetailsForm.laptop_serial_number}
-                    onChange={(e) => handleDetailsChange('laptop_serial_number', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('laptop_serial_number')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Asset Tag</Label>
-                  <Input
-                    value={assetDetailsForm.laptop_asset_tag}
-                    onChange={(e) => handleDetailsChange('laptop_asset_tag', e.target.value)}
-                    disabled={!detailsEditMode || !canEditField('laptop_asset_tag')}
-                  />
-                </div>
+                <DetailItem label="Registered" value={formatDateTime(selectedAsset.registration_date)} />
+                <DetailItem label="Last Updated" value={formatDateTime(selectedAsset.last_updated)} />
               </div>
 
               <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea
-                  value={assetDetailsForm.notes}
-                  onChange={(e) => handleDetailsChange('notes', e.target.value)}
-                  disabled={!detailsEditMode || !canEditField('notes')}
-                  className="min-h-[120px]"
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Registered</Label>
-                  <Input value={assetDetailsForm.registration_date ? new Date(assetDetailsForm.registration_date).toLocaleString() : '—'} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label>Last Updated</Label>
-                  <Input value={assetDetailsForm.last_updated ? new Date(assetDetailsForm.last_updated).toLocaleString() : '—'} disabled />
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
+                <div className="rounded-lg bg-muted/50 p-3 text-sm leading-relaxed text-muted-foreground min-h-[60px]">
+                  {selectedAsset.notes || '—'}
                 </div>
               </div>
 
-              <DialogFooter>
-                <Button onClick={handleDetailsEdit} disabled={detailsLoading}>
-                  {detailsLoading ? 'Saving...' : 'Edit'}
-                </Button>
+              <DialogFooter className="justify-end pt-2">
                 <Button variant="outline" onClick={handleDetailsClose}>
-                  Ok
+                  Close
                 </Button>
               </DialogFooter>
             </div>
