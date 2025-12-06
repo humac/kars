@@ -849,24 +849,23 @@ const Dashboard = () => {
       )}
 
       {/* Data Table */}
-        <div className="rounded-xl bg-card/60 p-4 shadow-sm">
-          {filteredAssets.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No assets found matching your criteria.</p>
-            </div>
-          ) : isMobile ? (
-            /* Mobile Card View */
-            <div className="space-y-3">
-              {paginatedAssets.map((asset) => (
-                <div
-                  key={asset.id}
-                  className={cn(
-                    "border rounded-lg p-4 transition-colors",
-                    selectedIds.has(asset.id) &&
-                      "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
-                  )}
-                >
+      <div className="rounded-xl bg-card/60 p-4 shadow-sm">
+        {filteredAssets.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No assets found matching your criteria.</p>
+          </div>
+        ) : isMobile ? (
+          /* Mobile Card View */
+          <div className="space-y-3">
+            {paginatedAssets.map((asset) => (
+              <div
+                key={asset.id}
+                className={cn(
+                  "border rounded-lg p-4 transition-colors",
+                  selectedIds.has(asset.id) && "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
+                )}
+              >
                   <div className="flex items-start gap-3">
                     <Checkbox
                       checked={selectedIds.has(asset.id)}
