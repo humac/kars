@@ -44,7 +44,6 @@ import {
   Search,
   Plus,
   Upload,
-  Edit,
   Info,
   Trash2,
   Loader2,
@@ -694,178 +693,176 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assets</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.assetsCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Total registered assets
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.employeesCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Total registered users
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Companies</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.companiesCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Partner organizations
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+    <>
+      <Card className="border shadow-sm">
+        <CardHeader className="space-y-1 border-b bg-muted/30">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl">Asset Inventory</CardTitle>
+            <Badge variant="secondary" className="text-xs uppercase tracking-wide">
+              {filteredAssets.length} assets
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Search, filter, and review hardware at a glance.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Assets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{dashboardStats.assetsCount}</div>
+                <p className="text-xs text-muted-foreground">Total registered assets</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Employees</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{dashboardStats.employeesCount}</div>
+                <p className="text-xs text-muted-foreground">Total registered users</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Companies</CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{dashboardStats.companiesCount}</div>
+                <p className="text-xs text-muted-foreground">Partner organizations</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Filters and Actions */}
-      <div className="rounded-xl bg-card/60 p-4 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center flex-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by employee, serial, tag..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+          {/* Filters and Actions */}
+          <div className="rounded-xl border bg-card/60 p-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center flex-1">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by employee, serial, tag..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="returned">Returned</SelectItem>
+                    <SelectItem value="lost">Lost</SelectItem>
+                    <SelectItem value="damaged">Damaged</SelectItem>
+                    <SelectItem value="retired">Retired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowImportModal(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </Button>
+                <Button onClick={() => setShowRegistrationModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Asset
+                </Button>
+              </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="returned">Returned</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
-                <SelectItem value="damaged">Damaged</SelectItem>
-                <SelectItem value="retired">Retired</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowImportModal(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-            <Button onClick={() => setShowRegistrationModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Asset
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      {/* Bulk Action Bar */}
-      {selectedIds.size > 0 && (
-        <div className="sticky top-16 z-40 flex flex-wrap items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg backdrop-blur-sm">
-          <span className="text-sm font-medium">
-            {selectedIds.size} selected
-          </span>
+          {/* Bulk Action Bar */}
+          {selectedIds.size > 0 && (
+            <div className="sticky top-16 z-40 flex flex-wrap items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg backdrop-blur-sm">
+              <span className="text-sm font-medium">{selectedIds.size} selected</span>
 
-          <div className="flex-1" />
+              <div className="flex-1" />
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setBulkStatus('');
-              setBulkNote('');
-              setBulkError(null);
-              setShowBulkStatusModal(true);
-            }}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Update Status
-          </Button>
-
-          {user?.role === 'admin' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setBulkManagerName('');
-                setBulkManagerEmail('');
-                setBulkError(null);
-                setShowBulkManagerModal(true);
-              }}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Assign Manager
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportSelected}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-
-          {user?.role === 'admin' && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                setDeleteConfirmText('');
-                setBulkError(null);
-                setShowBulkDeleteModal(true);
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          )}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* Data Table */}
-      <div className="rounded-xl bg-card/60 p-4 shadow-sm">
-        {filteredAssets.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No assets found matching your criteria.</p>
-          </div>
-        ) : isMobile ? (
-          /* Mobile Card View */
-          <div className="space-y-3">
-            {paginatedAssets.map((asset) => (
-              <div
-                key={asset.id}
-                className={cn(
-                  "border rounded-lg p-4 transition-colors",
-                  selectedIds.has(asset.id) && "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
-                )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBulkStatus('');
+                  setBulkNote('');
+                  setBulkError(null);
+                  setShowBulkStatusModal(true);
+                }}
               >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Update Status
+              </Button>
+
+              {user?.role === 'admin' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkManagerName('');
+                    setBulkManagerEmail('');
+                    setBulkError(null);
+                    setShowBulkManagerModal(true);
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Assign Manager
+                </Button>
+              )}
+
+              <Button variant="outline" size="sm" onClick={handleExportSelected}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+
+              {user?.role === 'admin' && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setDeleteConfirmText('');
+                    setBulkError(null);
+                    setShowBulkDeleteModal(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Data Table */}
+          <div className="rounded-xl bg-card/60 p-4 shadow-sm">
+          {filteredAssets.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No assets found matching your criteria.</p>
+            </div>
+          ) : isMobile ? (
+            /* Mobile Card View */
+            <div className="space-y-3">
+              {paginatedAssets.map((asset) => (
+                <div
+                  key={asset.id}
+                  className={cn(
+                    "border rounded-lg p-4 transition-colors",
+                    selectedIds.has(asset.id) &&
+                      "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
+                  )}
+                >
                   <div className="flex items-start gap-3">
                     <Checkbox
                       checked={selectedIds.has(asset.id)}
@@ -873,7 +870,7 @@ const Dashboard = () => {
                       className="mt-1"
                     />
 
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <h4 className="font-medium truncate">{asset.employee_name}</h4>
                         {getStatusBadge(asset.status)}
@@ -883,74 +880,46 @@ const Dashboard = () => {
                         {asset.employee_email}
                       </p>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h4 className="font-medium truncate">{asset.employee_name}</h4>
-                            {getStatusBadge(asset.status)}
-                          </div>
-
-                          <p className="text-sm text-muted-foreground truncate">
-                            {asset.employee_email}
-                          </p>
-
-                          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Tag:</span>{' '}
-                              <span className="font-mono">{asset.laptop_asset_tag}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Serial:</span>{' '}
-                              <span className="font-mono text-xs">{asset.laptop_serial_number}</span>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">Company:</span>{' '}
-                              {asset.company_name}
-                            </div>
-                          </div>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openAssetDetails(asset)}
-                            >
-                              <Info className="h-4 w-4 mr-2" />
-                              More Info
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleStatusUpdate(asset)}
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Update Status
-                            </Button>
-                            {user?.role === 'admin' && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleDelete(asset)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </Button>
-                            )}
-                          </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Tag:</span>{' '}
+                          <span className="font-mono">{asset.laptop_asset_tag}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Serial:</span>{' '}
+                          <span className="font-mono text-xs">{asset.laptop_serial_number}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Company:</span>{' '}
+                          {asset.company_name}
                         </div>
                       </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAssetDetails(asset)}
+                        >
+                          <Info className="h-4 w-4 mr-2" />
+                          More Info
+                        </Button>
+                      </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
             /* Desktop Table View */
             <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
+              <TableHeader className="bg-muted/60">
+                <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                      checked={
+                        isAllSelected ? true : isSomeSelected ? "indeterminate" : false
+                      }
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -982,42 +951,29 @@ const Dashboard = () => {
                     <TableCell>
                       <div className="font-medium">{asset.employee_name}</div>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{asset.employee_email}</TableCell>
-                    <TableCell className="font-mono text-sm">{asset.manager_email || '—'}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {asset.employee_email}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {asset.manager_email || '—'}
+                    </TableCell>
                     <TableCell>{asset.company_name}</TableCell>
-                    <TableCell className="font-mono text-sm">{asset.laptop_serial_number}</TableCell>
-                    <TableCell className="font-mono text-sm">{asset.laptop_asset_tag}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {asset.laptop_serial_number}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {asset.laptop_asset_tag}
+                    </TableCell>
                     <TableCell>{getStatusBadge(asset.status)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openAssetDetails(asset)}
-                          title="More Info"
-                        >
-                          <Info className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleStatusUpdate(asset)}
-                          title="Update Status"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {user?.role === 'admin' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(asset)}
-                            title="Delete Asset"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openAssetDetails(asset)}
+                        title="More Info"
+                      >
+                        <Info className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1036,19 +992,9 @@ const Dashboard = () => {
             />
           )}
         </div>
-      </div>
+      </CardContent>
+    </Card>
 
-              <TablePaginationControls
-                className="mt-4"
-                page={assetPage}
-                pageSize={assetPageSize}
-                totalItems={filteredAssets.length}
-                onPageChange={setAssetPage}
-                onPageSizeChange={setAssetPageSize}
-              />
-            </>
-          )}
-        </div>
       {/* Bulk Status Update Modal */}
       <Dialog open={showBulkStatusModal} onOpenChange={setShowBulkStatusModal}>
         <DialogContent className="sm:max-w-md">
@@ -1228,11 +1174,11 @@ const Dashboard = () => {
           </DialogHeader>
 
           {selectedAsset && (
-            <div className="space-y-6">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Employee</p>
-                  <p className="text-lg font-semibold leading-tight">{selectedAsset.employee_name || '—'}</p>
+                  <p className="text-base font-semibold leading-tight">{selectedAsset.employee_name || '—'}</p>
                   {selectedAsset.employee_email && (
                     <p className="text-sm text-muted-foreground">{selectedAsset.employee_email}</p>
                   )}
@@ -1243,38 +1189,36 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-3">
                 <DetailItem
                   label="Manager"
                   value={selectedAsset.manager_name || '—'}
                   helper={selectedAsset.manager_email}
                 />
                 <DetailItem label="Company" value={selectedAsset.company_name || '—'} />
+                <DetailItem label="Status" value={selectedAsset.status?.toUpperCase()} />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-3">
                 <DetailItem label="Serial Number" value={selectedAsset.laptop_serial_number} mono />
                 <DetailItem label="Asset Tag" value={selectedAsset.laptop_asset_tag} mono />
+                <DetailItem label="Registered" value={formatDateTime(selectedAsset.registration_date)} />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-3">
                 <DetailItem label="Laptop Make" value={selectedAsset.laptop_make} />
                 <DetailItem label="Laptop Model" value={selectedAsset.laptop_model} />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <DetailItem label="Registered" value={formatDateTime(selectedAsset.registration_date)} />
                 <DetailItem label="Last Updated" value={formatDateTime(selectedAsset.last_updated)} />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
-                <div className="rounded-lg bg-muted/50 p-3 text-sm leading-relaxed text-muted-foreground min-h-[60px]">
+                <div className="rounded-md bg-muted/40 p-3 text-sm leading-relaxed text-muted-foreground min-h-[48px]">
                   {selectedAsset.notes || '—'}
                 </div>
               </div>
 
-              <DialogFooter className="justify-end pt-2">
+              <DialogFooter className="justify-end pt-1">
                 <Button variant="outline" onClick={handleDetailsClose}>
                   Close
                 </Button>
@@ -1603,7 +1547,7 @@ const Dashboard = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
