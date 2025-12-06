@@ -883,49 +883,63 @@ const Dashboard = () => {
                         {asset.employee_email}
                       </p>
 
-                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Tag:</span>{' '}
-                          <span className="font-mono">{asset.laptop_asset_tag}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Serial:</span>{' '}
-                          <span className="font-mono text-xs">{asset.laptop_serial_number}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Company:</span>{' '}
-                          {asset.company_name}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-medium truncate">{asset.employee_name}</h4>
+                            {getStatusBadge(asset.status)}
+                          </div>
+
+                          <p className="text-sm text-muted-foreground truncate">
+                            {asset.employee_email}
+                          </p>
+
+                          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Tag:</span>{' '}
+                              <span className="font-mono">{asset.laptop_asset_tag}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Serial:</span>{' '}
+                              <span className="font-mono text-xs">{asset.laptop_serial_number}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Company:</span>{' '}
+                              {asset.company_name}
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openAssetDetails(asset)}
+                            >
+                              <Info className="h-4 w-4 mr-2" />
+                              More Info
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStatusUpdate(asset)}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Update Status
+                            </Button>
+                            {user?.role === 'admin' && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(asset)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openAssetDetails(asset)}>
-                          <Info className="h-4 w-4 mr-2" />
-                          Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(asset)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Update Status
-                        </DropdownMenuItem>
-                        {user?.role === 'admin' && (
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(asset)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -1024,6 +1038,17 @@ const Dashboard = () => {
         </div>
       </div>
 
+              <TablePaginationControls
+                className="mt-4"
+                page={assetPage}
+                pageSize={assetPageSize}
+                totalItems={filteredAssets.length}
+                onPageChange={setAssetPage}
+                onPageSizeChange={setAssetPageSize}
+              />
+            </>
+          )}
+        </div>
       {/* Bulk Status Update Modal */}
       <Dialog open={showBulkStatusModal} onOpenChange={setShowBulkStatusModal}>
         <DialogContent className="sm:max-w-md">
