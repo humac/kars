@@ -321,7 +321,9 @@ function AppNew() {
         <Routes>
           <Route path="/" element={<Navigate to="/assets" replace />} />
           <Route path="/assets" element={<Dashboard />} />
-          <Route path="/team" element={<TeamManagement />} />
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <Route path="/team" element={<TeamManagement />} />
+          )}
           {user?.role === 'admin' && (
             <Route path="/companies" element={<CompanyManagementNew />} />
           )}

@@ -49,6 +49,9 @@ const TeamManagement = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
 
+  const isAdmin = user?.role === 'admin';
+  const managedEmail = user?.email?.toLowerCase();
+
   useEffect(() => {
     fetchUsers();
     fetchAssets();
@@ -178,18 +181,41 @@ const TeamManagement = () => {
     );
   };
 
+  const visibleUsers = useMemo(() => {
+    if (isAdmin) return users;
+    return users.filter((u) => u.manager_email?.toLowerCase() === managedEmail);
+  }, [isAdmin, managedEmail, users]);
+
+  const managedEmails = useMemo(
+    () => new Set(visibleUsers.map((u) => u.email?.toLowerCase()).filter(Boolean)),
+    [visibleUsers]
+  );
+
+  const visibleAssets = useMemo(() => {
+    const scopedAssets = isAdmin
+      ? assets
+      : assets.filter((asset) => managedEmails.has(asset.employee_email?.toLowerCase()));
+
+    return [...scopedAssets].sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+  }, [assets, isAdmin, managedEmails]);
+
   const enrichedEmployees = useMemo(
     () =>
-      users
+      visibleUsers
         .map((u) => {
-          const relatedAssets = assets.filter(
+          const relatedAssets = visibleAssets.filter(
             (asset) => asset.employee_email && asset.employee_email.toLowerCase() === u.email?.toLowerCase()
           );
           const companies = Array.from(new Set(relatedAssets.map((a) => a.company_name).filter(Boolean)));
           return { ...u, assets: relatedAssets, companies };
         })
         .sort((a, b) => formatDisplayName(a).localeCompare(formatDisplayName(b))),
-    [users, assets]
+    [visibleUsers, visibleAssets]
+  );
+
+  const employeeLookup = useMemo(
+    () => new Map(enrichedEmployees.map((emp) => [emp.email?.toLowerCase(), emp])),
+    [enrichedEmployees]
   );
 
   const managerGroups = useMemo(() => {
@@ -240,6 +266,73 @@ const TeamManagement = () => {
     [managerGroups]
   );
 
+  const assetEntries = useMemo(() => {
+    return visibleAssets
+      .map((asset) => ({
+        ...asset,
+        owner: employeeLookup.get(asset.employee_email?.toLowerCase()),
+        company: asset.company_name || 'Unassigned company',
+        status: asset.status || 'Active',
+      }))
+      .sort((a, b) => a.company.localeCompare(b.company));
+  }, [employeeLookup, visibleAssets]);
+
+  const filteredAssets = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    if (!term) return assetEntries;
+    return assetEntries.filter((asset) => {
+      const ownerName = asset.owner ? formatDisplayName(asset.owner).toLowerCase() : '';
+      return (
+        asset.laptop_asset_tag?.toLowerCase().includes(term) ||
+        asset.laptop_serial_number?.toLowerCase().includes(term) ||
+        asset.company.toLowerCase().includes(term) ||
+        ownerName.includes(term) ||
+        asset.employee_email?.toLowerCase().includes(term)
+      );
+    });
+  }, [assetEntries, searchTerm]);
+
+  const assetsByCompany = useMemo(() => {
+    const map = new Map();
+
+    assetEntries.forEach((entry) => {
+      if (!map.has(entry.company)) {
+        map.set(entry.company, { name: entry.company, assets: [], owners: new Set() });
+      }
+      const companyRow = map.get(entry.company);
+      companyRow.assets.push(entry);
+      if (entry.owner) {
+        companyRow.owners.add(entry.owner.first_name || entry.owner.last_name ? formatDisplayName(entry.owner) : entry.owner.email);
+      }
+    });
+
+    return Array.from(map.values()).map((company) => ({
+      ...company,
+      owners: Array.from(company.owners),
+    }));
+  }, [assetEntries]);
+
+  const filteredAssetsByCompany = useMemo(() => {
+    if (!searchTerm) return assetsByCompany;
+
+    const map = new Map();
+    filteredAssets.forEach((entry) => {
+      if (!map.has(entry.company)) {
+        map.set(entry.company, { name: entry.company, assets: [], owners: new Set() });
+      }
+      const companyRow = map.get(entry.company);
+      companyRow.assets.push(entry);
+      if (entry.owner) {
+        companyRow.owners.add(entry.owner.first_name || entry.owner.last_name ? formatDisplayName(entry.owner) : entry.owner.email);
+      }
+    });
+
+    return Array.from(map.values()).map((company) => ({
+      ...company,
+      owners: Array.from(company.owners),
+    }));
+  }, [assetsByCompany, filteredAssets, searchTerm]);
+
   const filteredManagerGroups = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return managerGroups
@@ -263,12 +356,12 @@ const TeamManagement = () => {
 
   const stats = useMemo(
     () => ({
-      employees: users.length,
+      employees: visibleUsers.length,
       managers: managerGroups.filter((group) => group.managerEmail !== 'Not provided').length,
       companies: companyGroups.length,
-      assets: assets.length,
+      assets: visibleAssets.length,
     }),
-    [users.length, managerGroups, companyGroups, assets.length]
+    [visibleUsers.length, managerGroups, companyGroups, visibleAssets.length]
   );
 
   if (!['admin', 'manager'].includes(user?.role)) {
@@ -298,6 +391,11 @@ const TeamManagement = () => {
             <p className="text-sm text-muted-foreground">Stay on top of managers, employees, and their device footprints.</p>
           </div>
         </div>
+        {!isAdmin && (
+          <p className="text-xs text-muted-foreground">
+            Showing direct reports mapped to <span className="font-semibold text-foreground">{user?.email}</span>. Ensure each employee record has your manager email assigned.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -376,6 +474,7 @@ const TeamManagement = () => {
               <TabsList className="self-start md:self-auto">
                 <TabsTrigger value="employees" className="gap-2"><Users className="h-4 w-4" />Employee view</TabsTrigger>
                 <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Company view</TabsTrigger>
+                <TabsTrigger value="assets" className="gap-2"><Laptop className="h-4 w-4" />Asset view</TabsTrigger>
                 <TabsTrigger value="guidance" className="gap-2"><Shield className="h-4 w-4" />Guidance</TabsTrigger>
               </TabsList>
             </div>
@@ -542,6 +641,81 @@ const TeamManagement = () => {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="assets" className="space-y-4">
+              {activeLoading ? (
+                <div className="flex items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="h-6 w-6 mr-2 animate-spin" /> Loading asset relationships
+                </div>
+              ) : filteredAssets.length === 0 ? (
+                <div className="text-center text-muted-foreground border rounded-md py-10">No assets match the current filters.</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {filteredAssetsByCompany.map((company) => (
+                      <Card key={company.name} className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <CardTitle className="text-base">{company.name}</CardTitle>
+                              <p className="text-sm text-muted-foreground">{company.assets.length} assets • {company.owners.length} owners</p>
+                            </div>
+                            <Badge variant="secondary" className="gap-1"><Laptop className="h-4 w-4" />Mapped</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {company.owners.length ? (
+                              company.owners.map((owner) => <Badge key={owner} variant="outline">{owner}</Badge>)
+                            ) : (
+                              <Badge variant="outline">No owners listed</Badge>
+                            )}
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {company.assets.slice(0, 4).map((asset) => (
+                              <div key={asset.id || `${asset.laptop_asset_tag}-${asset.employee_email}`} className="rounded-lg border bg-background px-3 py-2">
+                                <div className="font-medium leading-tight">{asset.laptop_asset_tag || asset.laptop_serial_number || 'Tracked asset'}</div>
+                                <p className="text-xs text-muted-foreground break-all">{asset.employee_email || 'Unassigned owner'}</p>
+                                <Badge variant="outline" className="mt-1 uppercase text-xs">{asset.status}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                          {company.assets.length > 4 && (
+                            <p className="text-xs text-muted-foreground">+{company.assets.length - 4} more devices connected to this company</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {filteredAssets.map((asset) => (
+                      <Card key={asset.id || `${asset.laptop_asset_tag}-${asset.employee_email}`} className="border-muted bg-muted/20">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase text-muted-foreground">Device</p>
+                              <div className="font-semibold leading-tight">{asset.laptop_asset_tag || asset.laptop_serial_number || 'Tracked asset'}</div>
+                              <p className="text-sm text-muted-foreground">{asset.company}</p>
+                            </div>
+                            <Badge variant="outline" className="uppercase text-xs">{asset.status}</Badge>
+                          </div>
+                          <div className="rounded-lg border bg-background px-3 py-2 space-y-1">
+                            <p className="text-xs text-muted-foreground">Owner</p>
+                            <div className="font-medium leading-tight">{asset.owner ? formatDisplayName(asset.owner) : 'Unassigned owner'}</div>
+                            <p className="text-xs text-muted-foreground break-all">{asset.employee_email || 'No email recorded'}</p>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                              <span>Manager</span>
+                              <span className="text-foreground font-medium">{asset.owner?.manager_name || 'Not provided'}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               )}
             </TabsContent>
