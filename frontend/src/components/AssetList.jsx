@@ -62,6 +62,7 @@ import {
   Loader2,
   UserCog,
   Users,
+  Sparkles,
 } from 'lucide-react';
 
 import AssetEditModal from './AssetEditModal';
@@ -652,74 +653,75 @@ const AssetList = ({ refresh, onAssetRegistered }) => {
 
           {/* Bulk Action Bar */}
           {selectedIds.size > 0 && (
-            <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
-              <span className="text-sm font-medium">
-                {selectedIds.size} selected
-              </span>
-
-              <div className="flex-1" />
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setBulkStatus('');
-                  setBulkNote('');
-                  setBulkError(null);
-                  setShowBulkStatusModal(true);
-                }}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Update Status
-              </Button>
-
-              {user?.role === 'admin' && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border px-3 py-2 bg-muted/50">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">{selectedIds.size} selected</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setBulkManagerName('');
-                    setBulkManagerEmail('');
+                    setBulkStatus('');
+                    setBulkNote('');
                     setBulkError(null);
-                    setShowBulkManagerModal(true);
+                    setShowBulkStatusModal(true);
                   }}
                 >
-                  <Users className="h-4 w-4 mr-2" />
-                  Assign Manager
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Update Status
                 </Button>
-              )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportSelected}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+                {user?.role === 'admin' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBulkManagerName('');
+                      setBulkManagerEmail('');
+                      setBulkError(null);
+                      setShowBulkManagerModal(true);
+                    }}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Assign Manager
+                  </Button>
+                )}
 
-              {user?.role === 'admin' && (
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setDeleteConfirmText('');
-                    setBulkError(null);
-                    setShowBulkDeleteModal(true);
-                  }}
+                  onClick={handleExportSelected}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
                 </Button>
-              )}
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+                {user?.role === 'admin' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setDeleteConfirmText('');
+                      setBulkError(null);
+                      setShowBulkDeleteModal(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              </div>
             </div>
           )}
 

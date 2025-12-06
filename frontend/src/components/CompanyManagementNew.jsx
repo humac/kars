@@ -241,15 +241,6 @@ const CompanyManagementNew = () => {
               <CardTitle>Company Management ({companies.length})</CardTitle>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {selectedIds.size > 0 && (
-                <div className="flex items-center gap-2 rounded-lg border px-3 py-1 bg-muted/50">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">{selectedIds.size} selected</span>
-                  <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleBulkDelete}>Delete</Button>
-                  <Button variant="ghost" size="sm" onClick={clearSelection}>Clear</Button>
-                </div>
-              )}
               <Button variant="outline" onClick={() => setShowImportModal(true)}>
                 <Upload className="h-4 w-4 mr-2" />Bulk Import
               </Button>
@@ -258,7 +249,7 @@ const CompanyManagementNew = () => {
               </Button>
             </div>
           </div>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative max-w-md w-full">
               <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
               <Input
@@ -268,6 +259,26 @@ const CompanyManagementNew = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            {selectedIds.size > 0 && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 rounded-lg border px-3 py-2 bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{selectedIds.size} selected</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleBulkDelete}
+                  >
+                    Delete
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
