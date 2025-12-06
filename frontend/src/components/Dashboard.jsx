@@ -964,7 +964,7 @@ const Dashboard = () => {
                   key={asset.id}
                   className={cn(
                     "border rounded-lg p-4 transition-colors",
-                    selectedIds.has(asset.id) && "bg-primary/5 border-primary/30"
+                    selectedIds.has(asset.id) && "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -1054,13 +1054,13 @@ const Dashboard = () => {
                 </TableHeader>
                 <TableBody>
                   {paginatedAssets.map((asset) => (
-                    <TableRow
-                      key={asset.id}
-                      data-state={selectedIds.has(asset.id) ? "selected" : undefined}
-                      className={cn(
-                        selectedIds.has(asset.id) && "bg-primary/5"
-                      )}
-                    >
+                  <TableRow
+                    key={asset.id}
+                    data-state={selectedIds.has(asset.id) ? "selected" : undefined}
+                    className={cn(
+                      selectedIds.has(asset.id) && "bg-primary/5 border-primary/40"
+                    )}
+                  >
                       <TableCell>
                         <Checkbox
                           checked={selectedIds.has(asset.id)}

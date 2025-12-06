@@ -295,7 +295,7 @@ const CompanyManagementNew = () => {
                     key={company.id}
                     className={cn(
                       "border rounded-lg p-4 flex gap-3",
-                      selectedIds.has(company.id) && "bg-primary/5 border-primary/30"
+                      selectedIds.has(company.id) && "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
                     )}
                   >
                     <Checkbox
@@ -341,7 +341,7 @@ const CompanyManagementNew = () => {
                       <TableRow
                         key={company.id}
                         data-state={selectedIds.has(company.id) ? "selected" : undefined}
-                        className={cn(selectedIds.has(company.id) && "bg-primary/5")}
+                        className={cn(selectedIds.has(company.id) && "bg-primary/5 border-primary/40")}
                       >
                         <TableCell>
                           <Checkbox
