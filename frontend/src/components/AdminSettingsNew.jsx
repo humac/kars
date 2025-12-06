@@ -532,7 +532,13 @@ const AdminSettingsNew = () => {
                                 <Button variant="ghost" size="icon" onClick={() => openEditDialog(u)}>
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog({ open: true, user: u })} disabled={u.id === user.id}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => setDeleteDialog({ open: true, user: u })}
+                                    disabled={u.id === user.id}
+                                  >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
