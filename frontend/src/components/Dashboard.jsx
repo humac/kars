@@ -274,6 +274,7 @@ const Dashboard = () => {
   );
 
   const getStatusBadge = (status) => {
+    const normalized = (status || '').toLowerCase();
     const variants = {
       active: 'success',
       returned: 'info',
@@ -281,9 +282,10 @@ const Dashboard = () => {
       damaged: 'warning',
       retired: 'secondary'
     };
+
     return (
-      <Badge variant={variants[status] || 'outline'}>
-        {status.toUpperCase()}
+      <Badge variant={variants[normalized] || 'outline'}>
+        {status ? normalized.toUpperCase() : 'UNKNOWN'}
       </Badge>
     );
   };
