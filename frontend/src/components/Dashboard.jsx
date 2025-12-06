@@ -994,7 +994,7 @@ const Dashboard = () => {
                           <span className="font-mono text-xs">{asset.laptop_serial_number}</span>
                         </div>
                         <div className="col-span-2">
-                          <span className="text-muted-foreground">Client:</span>{' '}
+                          <span className="text-muted-foreground">Company:</span>{' '}
                           {asset.company_name}
                         </div>
                       </div>
@@ -1045,7 +1045,7 @@ const Dashboard = () => {
                     <TableHead>Employee</TableHead>
                     <TableHead>Employee Email</TableHead>
                     <TableHead>Manager Email</TableHead>
-                    <TableHead>Client</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead>Serial Number</TableHead>
                     <TableHead>Asset Tag</TableHead>
                     <TableHead>Status</TableHead>
@@ -1357,7 +1357,7 @@ const Dashboard = () => {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Client</Label>
+                  <Label>Company</Label>
                   <Input
                     value={assetDetailsForm.company_name}
                     onChange={(e) => handleDetailsChange('company_name', e.target.value)}

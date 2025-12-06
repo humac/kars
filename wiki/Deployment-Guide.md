@@ -22,7 +22,7 @@ Complete production deployment guide for the KeyData Asset Registration System (
 **Best for:**
 - Production deployments
 - Automated CI/CD
-- Team environments
+- Collaborative environments
 
 **Features:**
 - Automated builds on git push
