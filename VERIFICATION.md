@@ -67,8 +67,8 @@ Checking: Database Module (backend/database.js)
 ## Critical Files Monitored
 
 1. **Backend Files**
-   - `backend/server.js` - Main server file (min 3000 lines)
-   - `backend/database.js` - Database abstraction layer (min 500 lines)
+   - `backend/server.js` - Main server file (min 2400 lines, currently ~3067)
+   - `backend/database.js` - Database abstraction layer (min 1200 lines, currently ~1538)
    - `backend/auth.js` - Authentication module (min 50 lines)
    - `backend/oidc.js` - OIDC integration (min 50 lines)
    - `backend/mfa.js` - Multi-factor authentication (min 50 lines)

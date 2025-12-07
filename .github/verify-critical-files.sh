@@ -48,11 +48,10 @@ verify_file() {
 }
 
 # Verify critical backend files
-# Note: Line count thresholds are intentionally conservative to catch major issues
-# while allowing for normal code evolution. Adjust as needed if legitimate changes
-# significantly reduce file sizes.
-verify_file "backend/server.js" 2500 "Backend Server"
-verify_file "backend/database.js" 400 "Database Module"
+# Note: Line count thresholds are set at ~80% of current size to catch major issues
+# (like file truncation) while allowing for normal code evolution and refactoring.
+verify_file "backend/server.js" 2400 "Backend Server"
+verify_file "backend/database.js" 1200 "Database Module"
 verify_file "backend/auth.js" 50 "Authentication Module"
 verify_file "backend/oidc.js" 50 "OIDC Module"
 verify_file "backend/mfa.js" 50 "MFA Module"
