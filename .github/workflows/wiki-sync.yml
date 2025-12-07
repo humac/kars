@@ -1,15 +1,30 @@
 name: Sync Wiki
+
+# Manual workflow to sync wiki from repository docs
+# Restricted to manual runs to avoid unnecessary syncs and save runner minutes
+# Recommended: Use GitHub repository permissions to restrict to maintainers
+
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Custom commit message for wiki sync'
+        required: false
+        default: 'Sync wiki from repository'
+        type: string
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: Andrew-Chen-Wang/github-wiki-action@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
         with:
           path: wiki
+          # Note: If your docs are in a different directory (e.g., 'docs/'),
+          # update the path parameter above accordingly

@@ -1,9 +1,13 @@
-name: Deploy to Portainer
+name: Deploy to Portainer (Staging)
+
+# Automatic staging deployment on develop branch
+# Triggers on push to develop (automatic staging) and manual runs
+# Main branch is reserved for production deploys (currently manual only)
 
 on:
   push:
     branches:
-      - main
+      - develop  # Automatic staging deployment
   workflow_dispatch:
 
 env:
@@ -81,11 +85,13 @@ jobs:
   deploy-to-portainer:
     needs: build-and-push
     runs-on: ubuntu-latest
+    # Deploy to staging environment - add protection rules in repository settings
+    environment: staging
 
     steps:
       - name: Deploy Stack via Portainer Webhook
         run: curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
-        
+
       - name: Wait for deployment
         run: sleep 15
 
@@ -93,3 +99,25 @@ jobs:
         run: |
           echo "Deployment triggered successfully with forced image pull"
           echo "Check Portainer for deployment status"
+
+  # Placeholder for future production deployment
+  # Uncomment and configure when ready to enable automatic production deploys
+  #
+  # deploy-to-production:
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   # Only deploy to production from main branch
+  #   if: github.ref == 'refs/heads/main'
+  #   environment: production
+  #
+  #   steps:
+  #     - name: Deploy Stack via Portainer Webhook (Production)
+  #       run: curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL_PROD }}"
+  #
+  #     - name: Wait for deployment
+  #       run: sleep 15
+  #
+  #     - name: Verify deployment
+  #       run: |
+  #         echo "Production deployment triggered successfully"
+  #         echo "Check Portainer for deployment status"
