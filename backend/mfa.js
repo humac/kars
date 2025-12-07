@@ -48,6 +48,8 @@ export function formatBackupCode(code) {
 
 // Verify backup code format
 export function isValidBackupCodeFormat(code) {
+  // Check if code is a string
+  if (typeof code !== 'string') return false;
   // Remove dashes and check if it's 8 hex characters
   const cleaned = code.replace(/-/g, '');
   return /^[0-9A-F]{8}$/i.test(cleaned);

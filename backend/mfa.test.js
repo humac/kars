@@ -113,5 +113,25 @@ describe('MFA Module', () => {
       const code = '';
       expect(isValidBackupCodeFormat(code)).toBe(false);
     });
+
+    it('should return false for null input', () => {
+      expect(isValidBackupCodeFormat(null)).toBe(false);
+    });
+
+    it('should return false for undefined input', () => {
+      expect(isValidBackupCodeFormat(undefined)).toBe(false);
+    });
+
+    it('should return false for number input', () => {
+      expect(isValidBackupCodeFormat(12345678)).toBe(false);
+    });
+
+    it('should return false for object input', () => {
+      expect(isValidBackupCodeFormat({ code: '12345678' })).toBe(false);
+    });
+
+    it('should return false for array input', () => {
+      expect(isValidBackupCodeFormat(['12345678'])).toBe(false);
+    });
   });
 });
