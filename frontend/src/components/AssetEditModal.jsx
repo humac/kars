@@ -68,50 +68,50 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
         <div className="p-6 space-y-4">
           {allowedFields.includes('employee_name') && (
             <div>
-              <label className="block text-sm text-gray-600">Employee Name</label>
-              <input name="employee_name" value={form.employee_name || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="employee_name" className="block text-sm text-gray-600">Employee Name</label>
+              <input id="employee_name" name="employee_name" value={form.employee_name || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('employee_email') && (
             <div>
-              <label className="block text-sm text-gray-600">Employee Email</label>
-              <input name="employee_email" value={form.employee_email || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="employee_email" className="block text-sm text-gray-600">Employee Email</label>
+              <input id="employee_email" name="employee_email" value={form.employee_email || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('company_name') && (
             <div>
-              <label className="block text-sm text-gray-600">Company</label>
-              <input name="company_name" value={form.company_name || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="company_name" className="block text-sm text-gray-600">Company</label>
+              <input id="company_name" name="company_name" value={form.company_name || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('laptop_make') && (
             <div>
-              <label className="block text-sm text-gray-600">Laptop Make</label>
-              <input name="laptop_make" value={form.laptop_make || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="laptop_make" className="block text-sm text-gray-600">Laptop Make</label>
+              <input id="laptop_make" name="laptop_make" value={form.laptop_make || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('laptop_model') && (
             <div>
-              <label className="block text-sm text-gray-600">Laptop Model</label>
-              <input name="laptop_model" value={form.laptop_model || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="laptop_model" className="block text-sm text-gray-600">Laptop Model</label>
+              <input id="laptop_model" name="laptop_model" value={form.laptop_model || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('laptop_serial_number') && (
             <div>
-              <label className="block text-sm text-gray-600">Serial Number</label>
-              <input name="laptop_serial_number" value={form.laptop_serial_number || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="laptop_serial_number" className="block text-sm text-gray-600">Serial Number</label>
+              <input id="laptop_serial_number" name="laptop_serial_number" value={form.laptop_serial_number || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('laptop_asset_tag') && (
             <div>
-              <label className="block text-sm text-gray-600">Asset Tag</label>
-              <input name="laptop_asset_tag" value={form.laptop_asset_tag || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
+              <label htmlFor="laptop_asset_tag" className="block text-sm text-gray-600">Asset Tag</label>
+              <input id="laptop_asset_tag" name="laptop_asset_tag" value={form.laptop_asset_tag || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" />
             </div>
           )}
           {allowedFields.includes('status') && (
             <div>
-              <label className="block text-sm text-gray-600">Status</label>
-              <select name="status" value={form.status || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2">
+              <label htmlFor="status" className="block text-sm text-gray-600">Status</label>
+              <select id="status" name="status" value={form.status || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2">
                 <option value="">Select</option>
                 <option value="active">Active</option>
                 <option value="returned">Returned</option>
@@ -123,8 +123,8 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
           )}
           {allowedFields.includes('notes') && (
             <div>
-              <label className="block text-sm text-gray-600">Notes</label>
-              <textarea name="notes" value={form.notes || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" rows={4} />
+              <label htmlFor="notes" className="block text-sm text-gray-600">Notes</label>
+              <textarea id="notes" name="notes" value={form.notes || ''} onChange={onChange} className="mt-1 block w-full border rounded px-3 py-2" rows={4} />
             </div>
           )}
 
