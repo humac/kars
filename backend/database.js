@@ -1173,7 +1173,14 @@ export const userDb = {
     const user = await userDb.getMFAStatus(userId);
     if (!user || !user.mfa_backup_codes) return false;
 
-    const backupCodes = JSON.parse(user.mfa_backup_codes);
+    let backupCodes;
+    try {
+      backupCodes = JSON.parse(user.mfa_backup_codes);
+    } catch (error) {
+      console.error('Failed to parse MFA backup codes for user', userId, ':', error.message);
+      return false;
+    }
+
     const codeIndex = backupCodes.indexOf(code);
 
     if (codeIndex === -1) return false;
