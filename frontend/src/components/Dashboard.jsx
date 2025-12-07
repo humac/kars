@@ -697,89 +697,134 @@ const Dashboard = () => {
 
   return (
     <>
-      <Card className="border shadow-sm overflow-hidden">
-        <CardHeader className="space-y-1 border-b bg-muted/30">
+      <div className="space-y-6 animate-fade-in">
+        {/* Hero Header */}
+        <div className="bg-gradient-subtle rounded-2xl p-6 md:p-8 border border-border/50">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl">Asset Inventory</CardTitle>
-            <Badge variant="secondary" className="text-xs uppercase tracking-wide">
-              {filteredAssets.length} assets
+            <div>
+              <h2 className="text-h2 mb-2">🎯 Asset Inventory</h2>
+              <p className="text-muted-foreground text-base">
+                Your complete hardware tracking dashboard
+              </p>
+            </div>
+            <Badge variant="default" className="text-base px-4 py-2 shadow-md">
+              {filteredAssets.length} Assets
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Search, filter, and review hardware at a glance.
-          </p>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="p-6 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Assets</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.assetsCount}</div>
-                  <p className="text-xs text-muted-foreground">Total registered assets</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Employees</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.employeesCount}</div>
-                  <p className="text-xs text-muted-foreground">Total registered users</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Companies</CardTitle>
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.companiesCount}</div>
-                  <p className="text-xs text-muted-foreground">Partner organizations</p>
-                </CardContent>
-              </Card>
-            </div>
+        </div>
 
-            <Separator />
+        {/* Stats Cards */}
+        <div className="grid gap-6 md:grid-cols-3 animate-slide-up">
+          <Card className="stat-card group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Package className="h-6 w-6 text-primary-foreground" />
+                </div>
+              </div>
+              <div className="text-4xl font-bold text-gradient mb-1">{dashboardStats.assetsCount}</div>
+              <p className="text-sm text-muted-foreground font-medium">Total Assets</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="stat-card group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-xl bg-gradient-success flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Users className="h-6 w-6 text-success-foreground" />
+                </div>
+              </div>
+              <div className="text-4xl font-bold text-gradient mb-1">{dashboardStats.employeesCount}</div>
+              <p className="text-sm text-muted-foreground font-medium">Team Members</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="stat-card group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-warning/80 to-warning flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Building2 className="h-6 w-6 text-warning-foreground" />
+                </div>
+              </div>
+              <div className="text-4xl font-bold text-gradient mb-1">{dashboardStats.companiesCount}</div>
+              <p className="text-sm text-muted-foreground font-medium">Partners</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border shadow-md overflow-hidden">
+          <CardContent className="p-6 space-y-6">
+
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="🔍 Search by employee, serial, tag..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 shadow-sm"
+              />
+            </div>
 
             {/* Filters and Actions */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center flex-1">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by employee, serial, tag..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="returned">Returned</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                    <SelectItem value="damaged">Damaged</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('all')}
+                  className="rounded-full"
+                >
+                  All
+                </Button>
+                <Button
+                  variant={statusFilter === 'active' ? 'success' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('active')}
+                  className="rounded-full"
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={statusFilter === 'returned' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('returned')}
+                  className="rounded-full"
+                >
+                  Returned
+                </Button>
+                <Button
+                  variant={statusFilter === 'lost' ? 'destructive' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('lost')}
+                  className="rounded-full"
+                >
+                  Lost
+                </Button>
+                <Button
+                  variant={statusFilter === 'damaged' ? 'warning' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('damaged')}
+                  className="rounded-full"
+                >
+                  Damaged
+                </Button>
+                <Button
+                  variant={statusFilter === 'retired' ? 'outline' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('retired')}
+                  className="rounded-full"
+                >
+                  Retired
+                </Button>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowImportModal(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
+                <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)}>
+                  <Upload className="h-4 w-4" />
                   Import
                 </Button>
-                <Button onClick={() => setShowRegistrationModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="sm" onClick={() => setShowRegistrationModal(true)}>
+                  <Plus className="h-4 w-4" />
                   New Asset
                 </Button>
               </div>
@@ -851,11 +896,24 @@ const Dashboard = () => {
             <Separator />
 
             {/* Data Table */}
-            <div className="rounded-lg border bg-card/70 shadow-sm">
+            <div className="rounded-lg border bg-card shadow-sm">
             {filteredAssets.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No assets found matching your criteria.</p>
+              <div className="text-center py-16 animate-fade-in">
+                <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-subtle">
+                  <Laptop className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="text-h4 mb-2">No assets found</h3>
+                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                  {searchQuery || statusFilter !== 'all' 
+                    ? 'Try adjusting your filters or search query.' 
+                    : 'Start by registering your first asset.'}
+                </p>
+                {!searchQuery && statusFilter === 'all' && (
+                  <Button onClick={() => setShowRegistrationModal(true)} className="shadow-lg">
+                    <Plus className="h-4 w-4" />
+                    Register Asset
+                  </Button>
+                )}
               </div>
             ) : isMobile ? (
               /* Mobile Card View */
@@ -1000,9 +1058,9 @@ const Dashboard = () => {
               />
             )}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      </div>
 
       {/* Bulk Status Update Modal */}
       <Dialog open={showBulkStatusModal} onOpenChange={setShowBulkStatusModal}>
