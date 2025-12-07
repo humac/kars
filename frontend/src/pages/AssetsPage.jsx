@@ -33,23 +33,24 @@ export default function AssetsPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/assets', {
-          headers: { ...getAuthHeaders() }
-        });
-        if (!res.ok) throw new Error('Failed to load assets');
-        const data = await res.json();
-        setAssets(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+  const loadAssets = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/assets', {
+        headers: { ...getAuthHeaders() }
+      });
+      if (!res.ok) throw new Error('Failed to load assets');
+      const data = await res.json();
+      setAssets(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadAssets();
   }, [getAuthHeaders]);
 
   function onEdit(asset) {
@@ -97,6 +98,7 @@ export default function AssetsPage() {
                 onEdit={onEdit}
                 onDelete={onDelete}
                 currentUser={currentUser}
+                onRefresh={loadAssets}
               />
             </TabsContent>
             <TabsContent value="dashboard" className="mt-6">
