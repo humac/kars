@@ -20,61 +20,97 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 
-const ROLE_ALLOWED_FIELDS = {
-  admin: ['employee_name', 'employee_email', 'company_name', 'laptop_make', 'laptop_model', 'laptop_serial_number', 'laptop_asset_tag', 'status', 'notes'],
-  editor: ['employee_name', 'company_name', 'laptop_make', 'laptop_model', 'notes', 'status'],
-  user: ['notes'],
-};
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'returned', label: 'Returned' },
+  { value: 'lost', label: 'Lost' },
+  { value: 'damaged', label: 'Damaged' },
+  { value: 'retired', label: 'Retired' },
+];
 
-function getAllowedFieldsForUser(user) {
-  const roles = user?.roles || [];
-  const allowed = new Set();
-  roles.forEach(r => {
-    (ROLE_ALLOWED_FIELDS[r] || []).forEach(f => allowed.add(f));
-  });
-  return Array.from(allowed);
-}
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AssetEditModal({ asset, currentUser, onClose, onSaved }) {
   const { getAuthHeaders } = useAuth();
   const { toast } = useToast();
-  const allowedFields = getAllowedFieldsForUser(currentUser);
+  
+  // Initialize form with only editable fields
   const [form, setForm] = useState({ 
-    ...asset, 
+    status: asset.status || 'active',
+    manager_name: asset.manager_name || '',
+    manager_email: asset.manager_email || '',
     notes: asset.notes || '',
-    laptop_make: asset.laptop_make || '',
-    laptop_model: asset.laptop_model || ''
   });
+  
   const [saving, setSaving] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   function onChange(e) {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    
+    // Apply max length constraints
+    let finalValue = value;
+    if (name === 'manager_name' && value.length > 100) {
+      finalValue = value.slice(0, 100);
+    } else if (name === 'notes' && value.length > 1000) {
+      finalValue = value.slice(0, 1000);
+    }
+    
+    setForm(prev => ({ ...prev, [name]: finalValue }));
+    
+    // Validate email on change
+    if (name === 'manager_email') {
+      if (finalValue && !EMAIL_REGEX.test(finalValue)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError('');
+      }
+    }
   }
 
   async function save() {
+    // Validate email before saving
+    if (form.manager_email && !EMAIL_REGEX.test(form.manager_email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
     setSaving(true);
     try {
+      // Merge editable fields with existing asset data to satisfy backend validation
+      // The backend requires all fields, but we only want to update these 4
+      const payload = {
+        ...asset, // Include all existing fields
+        status: form.status,
+        manager_name: form.manager_name,
+        manager_email: form.manager_email,
+        notes: form.notes,
+      };
+
       const res = await fetch(`/api/assets/${asset.id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           ...getAuthHeaders()
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
+      
       if (!res.ok) {
         const err = await res.text();
         throw new Error(err || 'Save failed');
       }
+      
       const updated = await res.json();
       toast({
         title: "Success",
         description: "Asset updated successfully",
         variant: "success",
       });
+      
       // The API returns { message, asset }, extract the asset
       onSaved(updated.asset || updated);
     } catch (err) {
@@ -89,92 +125,139 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
     }
   }
 
+  // Format date for display
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString();
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Edit Asset</DialogTitle>
           <DialogDescription>
-            Update the asset information. Only fields you have permission to edit are shown.
+            Update manager information, status, and notes for this asset.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          {allowedFields.includes('employee_name') && (
-            <div className="space-y-2">
-              <Label htmlFor="employee_name">Employee Name</Label>
-              <Input id="employee_name" name="employee_name" value={form.employee_name || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('employee_email') && (
-            <div className="space-y-2">
-              <Label htmlFor="employee_email">Employee Email</Label>
-              <Input id="employee_email" name="employee_email" type="email" value={form.employee_email || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('company_name') && (
-            <div className="space-y-2">
-              <Label htmlFor="company_name">Company</Label>
-              <Input id="company_name" name="company_name" value={form.company_name || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('laptop_make') && (
-            <div className="space-y-2">
-              <Label htmlFor="laptop_make">Laptop Make</Label>
-              <Input id="laptop_make" name="laptop_make" value={form.laptop_make || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('laptop_model') && (
-            <div className="space-y-2">
-              <Label htmlFor="laptop_model">Laptop Model</Label>
-              <Input id="laptop_model" name="laptop_model" value={form.laptop_model || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('laptop_serial_number') && (
-            <div className="space-y-2">
-              <Label htmlFor="laptop_serial_number">Serial Number</Label>
-              <Input id="laptop_serial_number" name="laptop_serial_number" value={form.laptop_serial_number || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('laptop_asset_tag') && (
-            <div className="space-y-2">
-              <Label htmlFor="laptop_asset_tag">Asset Tag</Label>
-              <Input id="laptop_asset_tag" name="laptop_asset_tag" value={form.laptop_asset_tag || ''} onChange={onChange} />
-            </div>
-          )}
-          {allowedFields.includes('status') && (
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={form.status || ''} onValueChange={(value) => setForm(prev => ({ ...prev, status: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="returned">Returned</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="damaged">Damaged</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {allowedFields.includes('notes') && (
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" name="notes" value={form.notes || ''} onChange={onChange} rows={4} />
-            </div>
-          )}
 
-          {allowedFields.length === 0 && (
-            <div className="text-sm text-muted-foreground">You do not have permissions to edit any fields for this asset.</div>
-          )}
+        {/* Read-only Summary Section */}
+        <div className="rounded-md bg-muted/50 p-3 space-y-2 text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="font-medium text-muted-foreground">Asset Tag:</span>
+              <div className="font-semibold">{asset.laptop_asset_tag || 'N/A'}</div>
+            </div>
+            <div>
+              <span className="font-medium text-muted-foreground">Serial Number:</span>
+              <div className="font-semibold">{asset.laptop_serial_number || 'N/A'}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="font-medium text-muted-foreground">Type:</span>
+              <div>{asset.laptop_make || 'N/A'} {asset.laptop_model || ''}</div>
+            </div>
+            <div>
+              <span className="font-medium text-muted-foreground">Location:</span>
+              <div>{asset.company_name || 'N/A'}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="font-medium text-muted-foreground">Employee:</span>
+              <div>{asset.employee_name || 'N/A'}</div>
+            </div>
+            <div>
+              <span className="font-medium text-muted-foreground">Registered:</span>
+              <div>{formatDate(asset.registration_date)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Editable Fields */}
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select 
+              value={form.status} 
+              onValueChange={(value) => setForm(prev => ({ ...prev, status: value }))}
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="manager_name">Manager Name</Label>
+            <Input 
+              id="manager_name" 
+              name="manager_name" 
+              value={form.manager_name} 
+              onChange={onChange}
+              maxLength={100}
+              placeholder="Enter manager name"
+            />
+            <div className="text-xs text-muted-foreground text-right">
+              {form.manager_name.length}/100
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="manager_email">Manager Email</Label>
+            <Input 
+              id="manager_email" 
+              name="manager_email" 
+              type="email"
+              value={form.manager_email} 
+              onChange={onChange}
+              placeholder="manager@example.com"
+              className={emailError ? 'border-destructive' : ''}
+            />
+            {emailError && (
+              <div className="flex items-center gap-1 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span>{emailError}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea 
+              id="notes" 
+              name="notes" 
+              value={form.notes} 
+              onChange={onChange}
+              rows={4}
+              maxLength={1000}
+              placeholder="Add any additional notes..."
+            />
+            <div className="text-xs text-muted-foreground text-right">
+              {form.notes.length}/1000
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
           <Button
             onClick={save}
-            disabled={saving || allowedFields.length === 0}
+            disabled={saving || !!emailError}
           >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {saving ? 'Saving...' : 'Save'}
