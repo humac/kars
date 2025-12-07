@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import AssetTable from '../components/AssetTable';
-import AssetsSubmenu from '../components/AssetsSubmenu';
 import AssetEditModal from '../components/AssetEditModal';
+import Dashboard from '../components/Dashboard';
 import { useAuth } from '../contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Laptop, Loader2 } from 'lucide-react';
 
 export default function AssetsPage() {
   const { getAuthHeaders, user } = useAuth();
@@ -64,29 +67,44 @@ export default function AssetsPage() {
     setSelectedAsset(null);
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Loading assets...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex items-center space-x-3 mb-4">
-        <svg className="w-7 h-7 text-sky-600" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-        <h1 className="text-2xl font-semibold">Asset Management</h1>
-      </div>
-
-      <AssetsSubmenu />
-
-      <div className="mt-4">
-        {loading ? (
-          <div className="text-sm text-gray-500">Loading assets...</div>
-        ) : (
-          <AssetTable
-            assets={assets}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            currentUser={currentUser}
-          />
-        )}
-      </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Laptop className="h-5 w-5 text-primary" />
+            <CardTitle>Asset Management</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="assets" className="w-full">
+            <TabsList>
+              <TabsTrigger value="assets">Assets</TabsTrigger>
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            </TabsList>
+            <TabsContent value="assets" className="mt-6">
+              <AssetTable
+                assets={assets}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                currentUser={currentUser}
+              />
+            </TabsContent>
+            <TabsContent value="dashboard" className="mt-6">
+              <Dashboard />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {showEditModal && selectedAsset && (
         <AssetEditModal

@@ -1,25 +1,62 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { MoreHorizontal, Edit, Trash2, Laptop } from 'lucide-react';
 
 export default function AssetTable({ assets = [], onEdit, onDelete, currentUser }) {
   const { getAuthHeaders } = useAuth();
+  const { toast } = useToast();
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, asset: null });
 
-  async function handleDelete(asset) {
-    if (!canDelete(asset)) {
-      alert('You do not have permission to delete this asset.');
-      return;
-    }
-    if (!confirm(`Delete asset "${asset.employee_name}"? This action cannot be undone.`)) return;
+  async function handleDeleteConfirm() {
+    const asset = deleteDialog.asset;
+    setDeleteDialog({ open: false, asset: null });
+    
     try {
       const res = await fetch(`/api/assets/${asset.id}`, { 
         method: 'DELETE',
         headers: { ...getAuthHeaders() }
       });
       if (!res.ok) throw new Error('Delete failed');
+      
+      toast({
+        title: "Success",
+        description: "Asset deleted successfully",
+        variant: "success",
+      });
       onDelete(asset.id);
     } catch (err) {
       console.error(err);
-      alert('Unable to delete asset.');
+      toast({
+        title: "Error",
+        description: 'Unable to delete asset.',
+        variant: "destructive",
+      });
     }
   }
 
@@ -37,50 +74,83 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser 
     return false;
   };
 
+  if (assets.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Laptop className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p>No assets found</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="shadow-sm border rounded-md overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Name</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Type</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Owner</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Status</th>
-            <th className="px-4 py-2 text-right text-sm font-medium text-gray-600">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-100">
-          {assets.length === 0 && (
-            <tr>
-              <td className="px-4 py-6 text-sm text-gray-500" colSpan={5}>No assets found</td>
-            </tr>
-          )}
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50">
+            <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Owner</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {assets.map(asset => (
-            <tr key={asset.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm text-gray-800">{asset.employee_name || 'N/A'}</td>
-              <td className="px-4 py-3 text-sm text-gray-600">{asset.laptop_make && asset.laptop_model ? `${asset.laptop_make} ${asset.laptop_model}` : 'N/A'}</td>
-              <td className="px-4 py-3 text-sm text-gray-600">{asset.employee_email || 'N/A'}</td>
-              <td className="px-4 py-3 text-sm text-gray-600">{asset.status || 'unknown'}</td>
-              <td className="px-4 py-3 text-right text-sm space-x-2">
-                <button
-                  onClick={() => onEdit(asset)}
-                  disabled={!canEdit(asset)}
-                  className={`px-2 py-1 rounded text-sm ${canEdit(asset) ? 'text-sky-600 hover:bg-sky-50' : 'text-gray-300 cursor-not-allowed'}`}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(asset)}
-                  disabled={!canDelete(asset)}
-                  className={`px-2 py-1 rounded text-sm ${canDelete(asset) ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
+            <TableRow key={asset.id}>
+              <TableCell className="font-medium">{asset.employee_name || 'N/A'}</TableCell>
+              <TableCell>{asset.laptop_make && asset.laptop_model ? `${asset.laptop_make} ${asset.laptop_model}` : 'N/A'}</TableCell>
+              <TableCell>{asset.employee_email || 'N/A'}</TableCell>
+              <TableCell>
+                <span className="capitalize">{asset.status || 'unknown'}</span>
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => onEdit(asset)}
+                      disabled={!canEdit(asset)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setDeleteDialog({ open: true, asset })}
+                      disabled={!canDelete(asset)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, asset: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteDialog.asset?.employee_name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
