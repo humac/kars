@@ -68,6 +68,10 @@ export default function AssetsPage() {
     setSelectedAsset(null);
   }
 
+  function onAssetAdded(newAsset) {
+    setAssets(prev => [...prev, newAsset]);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -99,6 +103,7 @@ export default function AssetsPage() {
                 onDelete={onDelete}
                 currentUser={currentUser}
                 onRefresh={loadAssets}
+                onAssetAdded={onAssetAdded}
               />
             </TabsContent>
             <TabsContent value="dashboard" className="mt-6">

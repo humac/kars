@@ -173,8 +173,18 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
               <div>{asset.employee_name || 'N/A'}</div>
             </div>
             <div>
+              <span className="font-medium text-muted-foreground">Employee Email:</span>
+              <div className="text-xs">{asset.employee_email || 'N/A'}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
               <span className="font-medium text-muted-foreground">Registered:</span>
               <div>{formatDate(asset.registration_date)}</div>
+            </div>
+            <div>
+              <span className="font-medium text-muted-foreground">Last Updated:</span>
+              <div>{formatDate(asset.last_updated)}</div>
             </div>
           </div>
         </div>

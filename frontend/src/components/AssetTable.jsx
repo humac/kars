@@ -32,9 +32,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TablePaginationControls from '@/components/TablePaginationControls';
+import AssetRegisterModal from '@/components/AssetRegisterModal';
+import AssetBulkImportModal from '@/components/AssetBulkImportModal';
 import { Laptop, Search, Edit, Trash2, Sparkles, Loader2, Plus, Upload, Download } from 'lucide-react';
 
-export default function AssetTable({ assets = [], onEdit, onDelete, currentUser, onRefresh }) {
+export default function AssetTable({ assets = [], onEdit, onDelete, currentUser, onRefresh, onAssetAdded }) {
   const { getAuthHeaders } = useAuth();
   const { toast } = useToast();
   const [deleteDialog, setDeleteDialog] = useState({ open: false, asset: null });
@@ -47,6 +49,8 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const [formLoading, setFormLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
 
   async function handleDeleteConfirm() {
     const asset = deleteDialog.asset;
@@ -258,10 +262,31 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     );
   }
 
+  const canRegister = () => {
+    if (currentUser?.roles?.includes('admin')) return true;
+    if (currentUser?.roles?.includes('editor')) return true;
+    return false;
+  };
+
+  const handleAssetRegistered = (newAsset) => {
+    if (onAssetAdded) {
+      onAssetAdded(newAsset);
+    }
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  const handleBulkImported = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
   return (
     <>
       <div className="space-y-4">
-        {/* Search and Status Filters */}
+        {/* Action Buttons and Search */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-md w-full">
             <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -273,42 +298,65 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('all')}
-            >
-              All
-            </Button>
-            <Button
-              variant={statusFilter === 'active' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('active')}
-            >
-              Active
-            </Button>
-            <Button
-              variant={statusFilter === 'returned' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('returned')}
-            >
-              Returned
-            </Button>
-            <Button
-              variant={statusFilter === 'lost' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('lost')}
-            >
-              Lost
-            </Button>
-            <Button
-              variant={statusFilter === 'damaged' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('damaged')}
-            >
-              Damaged
-            </Button>
+            {canRegister() && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBulkImportModal(true)}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Bulk Import
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowRegisterModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Register Asset
+                </Button>
+              </>
+            )}
           </div>
+        </div>
+
+        {/* Status Filters */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={statusFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('all')}
+          >
+            All
+          </Button>
+          <Button
+            variant={statusFilter === 'active' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('active')}
+          >
+            Active
+          </Button>
+          <Button
+            variant={statusFilter === 'returned' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('returned')}
+          >
+            Returned
+          </Button>
+          <Button
+            variant={statusFilter === 'lost' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('lost')}
+          >
+            Lost
+          </Button>
+          <Button
+            variant={statusFilter === 'damaged' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('damaged')}
+          >
+            Damaged
+          </Button>
         </div>
 
         {/* Bulk Actions Bar */}
@@ -521,6 +569,22 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Register Asset Modal */}
+      {showRegisterModal && (
+        <AssetRegisterModal
+          onClose={() => setShowRegisterModal(false)}
+          onRegistered={handleAssetRegistered}
+        />
+      )}
+
+      {/* Bulk Import Modal */}
+      {showBulkImportModal && (
+        <AssetBulkImportModal
+          onClose={() => setShowBulkImportModal(false)}
+          onImported={handleBulkImported}
+        />
+      )}
     </>
   );
 }
