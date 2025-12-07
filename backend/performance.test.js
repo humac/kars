@@ -15,7 +15,13 @@ describe('Performance Optimizations', () => {
 
   beforeEach(async () => {
     // Clean up test data
-    const testEmails = ['perf1@example.com', 'perf2@example.com', 'perf3@example.com'];
+    const testEmails = [
+      'perf1@example.com', 
+      'perf2@example.com', 
+      'perf3@example.com',
+      'MixedCase@example.com',
+      'indexed@example.com'
+    ];
     const users = await userDb.getByEmails(testEmails);
     for (const user of users) {
       await userDb.delete(user.id);
@@ -57,15 +63,20 @@ describe('Performance Optimizations', () => {
     });
 
     test('getByEmails should be case-insensitive', async () => {
-      await userDb.create({
+      const user = await userDb.create({
         email: 'MixedCase@example.com',
         password_hash: 'test_hash',
         name: 'Test User',
         role: 'employee'
       });
 
+      // Query with different case variations
       const users = await userDb.getByEmails(['mixedcase@example.com', 'MIXEDCASE@EXAMPLE.COM']);
-      expect(users.length).toBeGreaterThan(0);
+      expect(users.length).toBe(1);  // Should return only 1 user (deduplicated)
+      expect(users[0].email.toLowerCase()).toBe('mixedcase@example.com');
+
+      // Cleanup
+      await userDb.delete(user.id);
     });
   });
 

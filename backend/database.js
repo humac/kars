@@ -1094,10 +1094,21 @@ export const userDb = {
   },
   getByEmails: async (emails) => {
     if (!emails || emails.length === 0) return [];
-    // Use LOWER() for case-insensitive matching
-    const placeholders = emails.map(() => 'LOWER(?)').join(',');
+    // Case-insensitive matching using OR conditions to leverage indexes
+    // Build multiple OR conditions for case-insensitive matching
+    const normalizedEmails = [...new Set(emails.map(e => e.toLowerCase()))];
+    
+    if (normalizedEmails.length === 1) {
+      // Single email - use existing indexed getByEmail logic
+      return [await userDb.getByEmail(normalizedEmails[0])].filter(Boolean);
+    }
+    
+    // Multiple emails - use IN clause with LOWER on both sides
+    // Note: In production, consider adding a functional index on LOWER(email)
+    // or storing emails in lowercase for optimal index usage
+    const placeholders = normalizedEmails.map(() => '?').join(',');
     const query = `SELECT * FROM users WHERE LOWER(email) IN (${placeholders})`;
-    return dbAll(query, emails.map(e => e.toLowerCase()));
+    return dbAll(query, normalizedEmails);
   }
 };
 

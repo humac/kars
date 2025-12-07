@@ -2308,7 +2308,8 @@ app.patch('/api/assets/bulk/status', authenticate, async (req, res) => {
     if (allowedIds.length > 0) {
       await assetDb.bulkUpdateStatus(allowedIds, status, notes);
 
-      // Log audit entries (could be further optimized with batch insert)
+      // Log audit entries with original status from assetMap (fetched before update)
+      // Note: Could be further optimized with batch insert
       for (const id of allowedIds) {
         const asset = assetMap.get(id);
         await auditDb.log(
@@ -2317,7 +2318,7 @@ app.patch('/api/assets/bulk/status', authenticate, async (req, res) => {
           asset.id,
           `${asset.laptop_serial_number} - ${asset.employee_name}`,
           {
-            old_status: asset.status,
+            old_status: asset.status,  // Original status from pre-update fetch
             new_status: status,
             notes: notes || '',
             bulk_operation: true
