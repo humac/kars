@@ -15,6 +15,11 @@ describe('Login Component', () => {
       ok: true,
       json: async () => ({ enabled: false }),
     });
+    // Mock passkey config check
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    });
     // Mock branding fetch
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -32,13 +37,13 @@ describe('Login Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('KARS - KeyData Asset Registration System')).toBeInTheDocument();
+      expect(screen.getByText('KARS')).toBeInTheDocument();
     });
 
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in with passkey/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /use passkey/i })).toBeInTheDocument();
   });
 
   it('updates form fields on user input', async () => {
@@ -52,11 +57,11 @@ describe('Login Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
     });
 
-    const emailInput = screen.getByLabelText(/email address/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const emailInput = screen.getByLabelText(/^email$/i);
+    const passwordInput = screen.getByLabelText(/^password$/i);
 
     await user.type(emailInput, 'test@example.com');
     await user.type(passwordInput, 'password123');

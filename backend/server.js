@@ -2082,6 +2082,11 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
     let imported = 0;
     const errors = [];
 
+    // Batch fetch all users by email in one query (performance optimization)
+    const employeeEmails = [...new Set(records.map(row => row.employee_email?.trim()).filter(Boolean))];
+    const users = await userDb.getByEmails(employeeEmails);
+    const userMap = new Map(users.map(user => [user.email.toLowerCase(), user]));
+
     for (let index = 0; index < records.length; index++) {
       const row = records[index];
       const normalizedRow = Object.fromEntries(
@@ -2100,8 +2105,8 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
         continue;
       }
 
-      // Get manager data from employee's user record if they exist
-      const employeeUser = await userDb.getByEmail(normalizedRow.employee_email);
+      // Get manager data from employee's user record if they exist (using cached userMap)
+      const employeeUser = userMap.get(normalizedRow.employee_email.toLowerCase());
       let manager_name = normalizedRow.manager_name || null;
       let manager_email = normalizedRow.manager_email || null;
 
@@ -2131,12 +2136,12 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
 
       try {
         const result = await assetDb.create(assetData);
-        const newAsset = await assetDb.getById(result.id);
-
+        
+        // Use result.id directly instead of fetching the asset again
         await auditDb.log(
           'CREATE',
           'asset',
-          newAsset.id,
+          result.id,
           `${assetData.laptop_serial_number} - ${assetData.employee_name}`,
           {
             employee_name: assetData.employee_name,
@@ -2269,47 +2274,57 @@ app.patch('/api/assets/bulk/status', authenticate, async (req, res) => {
     }
 
     const user = await userDb.getById(req.user.id);
+    
+    // Fetch all assets in one query
+    const assets = await assetDb.getByIds(ids);
+    const assetMap = new Map(assets.map(asset => [asset.id, asset]));
+    
     const results = { updated: [], failed: [] };
+    const allowedIds = [];
 
+    // Check permissions and build list of allowed IDs
     for (const id of ids) {
-      try {
-        const asset = await assetDb.getById(id);
-        if (!asset) {
-          results.failed.push({ id, reason: 'Asset not found' });
-          continue;
-        }
+      const asset = assetMap.get(id);
+      if (!asset) {
+        results.failed.push({ id, reason: 'Asset not found' });
+        continue;
+      }
 
-        // Check permissions: admin can update any, others can only update their own
-        if (user.role !== 'admin' && asset.employee_email !== user.email) {
-          results.failed.push({ id, reason: 'Permission denied' });
-          continue;
-        }
+      // Check permissions: admin can update any, others can only update their own
+      if (user.role !== 'admin' && asset.employee_email !== user.email) {
+        results.failed.push({ id, reason: 'Permission denied' });
+        continue;
+      }
 
-        const oldStatus = asset.status;
-        await assetDb.updateStatus(id, status, notes);
+      allowedIds.push(id);
+      results.updated.push({
+        id,
+        serial: asset.laptop_serial_number,
+        employee: asset.employee_name
+      });
+    }
 
-        // Log audit
+    // Perform bulk update in a single query
+    if (allowedIds.length > 0) {
+      await assetDb.bulkUpdateStatus(allowedIds, status, notes);
+
+      // Log audit entries with original status from assetMap (fetched before update)
+      // Note: Could be further optimized with batch insert
+      for (const id of allowedIds) {
+        const asset = assetMap.get(id);
         await auditDb.log(
           'BULK_STATUS_CHANGE',
           'asset',
           asset.id,
           `${asset.laptop_serial_number} - ${asset.employee_name}`,
           {
-            old_status: oldStatus,
+            old_status: asset.status,  // Original status from pre-update fetch
             new_status: status,
             notes: notes || '',
             bulk_operation: true
           },
           req.user.email
         );
-
-        results.updated.push({
-          id,
-          serial: asset.laptop_serial_number,
-          employee: asset.employee_name
-        });
-      } catch (err) {
-        results.failed.push({ id, reason: err.message });
       }
     }
 
@@ -2333,47 +2348,53 @@ app.delete('/api/assets/bulk/delete', authenticate, authorize('admin'), async (r
       return res.status(400).json({ error: 'Asset IDs array is required' });
     }
 
+    // Fetch all assets in one query
+    const assets = await assetDb.getByIds(ids);
+    const assetMap = new Map(assets.map(asset => [asset.id, asset]));
+    
     const results = { deleted: [], failed: [] };
+    const validIds = [];
 
+    // Check which assets exist and log audit
     for (const id of ids) {
-      try {
-        const asset = await assetDb.getById(id);
-        if (!asset) {
-          results.failed.push({ id, reason: 'Asset not found' });
-          continue;
-        }
-
-        // Log audit before deletion
-        await auditDb.log(
-          'BULK_DELETE',
-          'asset',
-          asset.id,
-          `${asset.laptop_serial_number} - ${asset.employee_name}`,
-          {
-            employee_name: asset.employee_name,
-            employee_email: asset.employee_email,
-            manager_name: asset.manager_name,
-            manager_email: asset.manager_email,
-            company_name: asset.company_name,
-            laptop_serial_number: asset.laptop_serial_number,
-            laptop_asset_tag: asset.laptop_asset_tag,
-            status: asset.status,
-            deleted_by: req.user.email,
-            bulk_operation: true
-          },
-          req.user.email
-        );
-
-        await assetDb.delete(id);
-
-        results.deleted.push({
-          id,
-          serial: asset.laptop_serial_number,
-          employee: asset.employee_name
-        });
-      } catch (err) {
-        results.failed.push({ id, reason: err.message });
+      const asset = assetMap.get(id);
+      if (!asset) {
+        results.failed.push({ id, reason: 'Asset not found' });
+        continue;
       }
+
+      validIds.push(id);
+      results.deleted.push({
+        id,
+        serial: asset.laptop_serial_number,
+        employee: asset.employee_name
+      });
+
+      // Log audit before deletion
+      await auditDb.log(
+        'BULK_DELETE',
+        'asset',
+        asset.id,
+        `${asset.laptop_serial_number} - ${asset.employee_name}`,
+        {
+          employee_name: asset.employee_name,
+          employee_email: asset.employee_email,
+          manager_name: asset.manager_name,
+          manager_email: asset.manager_email,
+          company_name: asset.company_name,
+          laptop_serial_number: asset.laptop_serial_number,
+          laptop_asset_tag: asset.laptop_asset_tag,
+          status: asset.status,
+          deleted_by: req.user.email,
+          bulk_operation: true
+        },
+        req.user.email
+      );
+    }
+
+    // Perform bulk delete in a single query
+    if (validIds.length > 0) {
+      await assetDb.bulkDelete(validIds);
     }
 
     res.json({
@@ -2406,50 +2427,48 @@ app.patch('/api/assets/bulk/manager', authenticate, authorize('admin'), async (r
       return res.status(400).json({ error: 'Invalid manager email format' });
     }
 
+    // Fetch all assets in one query
+    const assets = await assetDb.getByIds(ids);
+    const assetMap = new Map(assets.map(asset => [asset.id, asset]));
+    
     const results = { updated: [], failed: [] };
+    const validIds = [];
 
+    // Check which assets exist and log audit
     for (const id of ids) {
-      try {
-        const asset = await assetDb.getById(id);
-        if (!asset) {
-          results.failed.push({ id, reason: 'Asset not found' });
-          continue;
-        }
-
-        const oldManagerName = asset.manager_name;
-        const oldManagerEmail = asset.manager_email;
-
-        // Update the asset with new manager info
-        await assetDb.update(id, {
-          ...asset,
-          manager_name,
-          manager_email
-        });
-
-        // Log audit
-        await auditDb.log(
-          'BULK_MANAGER_ASSIGN',
-          'asset',
-          asset.id,
-          `${asset.laptop_serial_number} - ${asset.employee_name}`,
-          {
-            old_manager_name: oldManagerName,
-            old_manager_email: oldManagerEmail,
-            new_manager_name: manager_name,
-            new_manager_email: manager_email,
-            bulk_operation: true
-          },
-          req.user.email
-        );
-
-        results.updated.push({
-          id,
-          serial: asset.laptop_serial_number,
-          employee: asset.employee_name
-        });
-      } catch (err) {
-        results.failed.push({ id, reason: err.message });
+      const asset = assetMap.get(id);
+      if (!asset) {
+        results.failed.push({ id, reason: 'Asset not found' });
+        continue;
       }
+
+      validIds.push(id);
+      results.updated.push({
+        id,
+        serial: asset.laptop_serial_number,
+        employee: asset.employee_name
+      });
+
+      // Log audit
+      await auditDb.log(
+        'BULK_MANAGER_ASSIGN',
+        'asset',
+        asset.id,
+        `${asset.laptop_serial_number} - ${asset.employee_name}`,
+        {
+          old_manager_name: asset.manager_name,
+          old_manager_email: asset.manager_email,
+          new_manager_name: manager_name,
+          new_manager_email: manager_email,
+          bulk_operation: true
+        },
+        req.user.email
+      );
+    }
+
+    // Perform bulk update in a single query
+    if (validIds.length > 0) {
+      await assetDb.bulkUpdateManager(validIds, manager_name, manager_email);
     }
 
     res.json({
@@ -2872,19 +2891,12 @@ app.get('/api/audit/logs', authenticate, async (req, res) => {
       logs = logs.filter(log => log.user_email === user.email);
     } else if (user.role === 'manager') {
       // Managers see their own logs + their employees' logs
-      // Get all assets where user is manager to find their employees
-      const allAssets = await assetDb.getAll();
-      const employeeEmails = new Set();
-      employeeEmails.add(user.email); // Add manager's own email
-
-      allAssets.forEach(asset => {
-        if (asset.manager_email === user.email) {
-          employeeEmails.add(asset.employee_email);
-        }
-      });
+      // Optimized: Query only employee emails from assets instead of all asset data
+      const employeeEmails = await assetDb.getEmployeeEmailsByManager(user.email);
+      const allowedEmails = new Set([user.email, ...employeeEmails]);
 
       logs = logs.filter(log =>
-        !log.user_email || employeeEmails.has(log.user_email)
+        !log.user_email || allowedEmails.has(log.user_email)
       );
     }
     // Admin sees all logs (no filtering)
@@ -2951,19 +2963,12 @@ app.get('/api/audit/export', authenticate, async (req, res) => {
       logs = logs.filter(log => log.user_email === user.email);
     } else if (user.role === 'manager') {
       // Managers see their own logs + their employees' logs
-      // Get all assets where user is manager to find their employees
-      const allAssets = await assetDb.getAll();
-      const employeeEmails = new Set();
-      employeeEmails.add(user.email); // Add manager's own email
-
-      allAssets.forEach(asset => {
-        if (asset.manager_email === user.email) {
-          employeeEmails.add(asset.employee_email);
-        }
-      });
+      // Optimized: Query only employee emails from assets instead of all asset data
+      const employeeEmails = await assetDb.getEmployeeEmailsByManager(user.email);
+      const allowedEmails = new Set([user.email, ...employeeEmails]);
 
       logs = logs.filter(log =>
-        !log.user_email || employeeEmails.has(log.user_email)
+        !log.user_email || allowedEmails.has(log.user_email)
       );
     }
     // Admin sees all logs (no filtering)
