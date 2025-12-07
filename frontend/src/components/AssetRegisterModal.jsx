@@ -37,15 +37,34 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
   const { getAuthHeaders, user } = useAuth();
   const { toast } = useToast();
   
-  // Check if user is an employee (not admin or editor)
+  // Check user role
   const isEmployee = user && user.role === 'employee';
+  const isAdmin = user && user.role === 'admin';
+  const isManager = user && user.role === 'manager';
+  
+  // Parse manager name into first and last if available
+  const getManagerNames = () => {
+    if (user?.manager_name) {
+      const parts = user.manager_name.split(' ');
+      return {
+        first: parts[0] || '',
+        last: parts.slice(1).join(' ') || ''
+      };
+    }
+    return { first: '', last: '' };
+  };
+  
+  const managerNames = getManagerNames();
   
   // Initialize form with required fields
-  // For employees, prepopulate their information
+  // For employees, prepopulate their information and manager information
   const [form, setForm] = useState({ 
     employee_first_name: isEmployee ? (user.first_name || '') : '',
     employee_last_name: isEmployee ? (user.last_name || '') : '',
     employee_email: isEmployee ? user.email : '',
+    manager_first_name: isEmployee ? managerNames.first : '',
+    manager_last_name: isEmployee ? managerNames.last : '',
+    manager_email: isEmployee ? (user.manager_email || '') : '',
     company_name: '',
     laptop_make: '',
     laptop_model: '',
@@ -62,6 +81,8 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
   const MAX_LENGTHS = {
     employee_first_name: 100,
     employee_last_name: 100,
+    manager_first_name: 100,
+    manager_last_name: 100,
     company_name: 255,
     laptop_make: 100,
     laptop_model: 100,
@@ -113,10 +134,15 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
     try {
       // Combine first and last name for backend compatibility
       const employee_name = `${form.employee_first_name} ${form.employee_last_name}`.trim();
+      const manager_name = form.manager_first_name || form.manager_last_name 
+        ? `${form.manager_first_name} ${form.manager_last_name}`.trim() 
+        : null;
       
       const payload = {
         employee_name,
         employee_email: form.employee_email,
+        manager_name,
+        manager_email: form.manager_email || null,
         company_name: form.company_name,
         laptop_make: form.laptop_make,
         laptop_model: form.laptop_model,
@@ -248,6 +274,63 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                 placeholder="Acme Corporation"
                 required
               />
+            </div>
+          </div>
+
+          {/* Manager Information */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-muted-foreground">Manager Information</h4>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="manager_first_name">Manager First Name</Label>
+                <Input 
+                  id="manager_first_name" 
+                  name="manager_first_name" 
+                  value={form.manager_first_name} 
+                  onChange={onChange}
+                  maxLength={100}
+                  placeholder="Sarah"
+                  readOnly={isEmployee}
+                  disabled={isEmployee}
+                  className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager_last_name">Manager Last Name</Label>
+                <Input 
+                  id="manager_last_name" 
+                  name="manager_last_name" 
+                  value={form.manager_last_name} 
+                  onChange={onChange}
+                  maxLength={100}
+                  placeholder="Manager"
+                  readOnly={isEmployee}
+                  disabled={isEmployee}
+                  className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manager_email">Manager Email</Label>
+              <Input 
+                id="manager_email" 
+                name="manager_email" 
+                type="email"
+                value={form.manager_email} 
+                onChange={onChange}
+                placeholder="manager@example.com"
+                className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                readOnly={isEmployee}
+                disabled={isEmployee}
+              />
+              {isEmployee && form.manager_email && (
+                <p className="text-xs text-muted-foreground">
+                  Manager information from your profile
+                </p>
+              )}
             </div>
           </div>
 
