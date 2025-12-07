@@ -81,6 +81,21 @@ describe('MFA Module', () => {
 
       expect(formatted).toBe('ABCD-EF01');
     });
+
+    it('should return empty string for null input', () => {
+      const formatted = formatBackupCode(null);
+      expect(formatted).toBe('');
+    });
+
+    it('should return empty string for undefined input', () => {
+      const formatted = formatBackupCode(undefined);
+      expect(formatted).toBe('');
+    });
+
+    it('should return empty string for empty string input', () => {
+      const formatted = formatBackupCode('');
+      expect(formatted).toBe('');
+    });
   });
 
   describe('isValidBackupCodeFormat', () => {

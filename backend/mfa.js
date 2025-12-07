@@ -43,6 +43,7 @@ export function generateBackupCodes(count = 10) {
 
 // Format backup codes for display (add dashes for readability)
 export function formatBackupCode(code) {
+  if (!code) return '';
   return code.match(/.{1,4}/g).join('-');
 }
 
