@@ -1,5 +1,5 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { PKCE_VERIFIER_TIMEOUT_MS } from './oidc.js';
+import { PKCE_VERIFIER_TIMEOUT_MS, MAX_VERIFIER_STORE_SIZE, LRUCache } from './oidc.js';
 
 /**
  * Tests for OIDC PKCE Verifier Store - Timeout Management
@@ -266,6 +266,251 @@ describe('OIDC Module - PKCE Verifier Store Timeout Management', () => {
       // Verify cleanup happened despite error
       expect(clearedTimeouts).toContain(timeoutId);
       expect(timeoutStore.has(state)).toBe(false);
+    });
+  });
+});
+
+/**
+ * Tests for LRU Cache Implementation
+ * 
+ * This test suite validates the LRU cache used to prevent unbounded memory growth
+ * in the OIDC code verifier store.
+ * 
+ * Key behaviors tested:
+ * - Basic get/set/delete operations work correctly
+ * - LRU eviction happens when size limit is reached
+ * - Most recently used items are kept, oldest are evicted
+ * - Cache respects configured maximum size
+ */
+describe('LRUCache - Memory Leak Prevention', () => {
+  describe('Basic operations', () => {
+    it('should store and retrieve values', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      cache.set('key2', 'value2');
+      
+      expect(cache.get('key1')).toBe('value1');
+      expect(cache.get('key2')).toBe('value2');
+      expect(cache.size).toBe(2);
+    });
+
+    it('should return undefined for non-existent keys', () => {
+      const cache = new LRUCache(3);
+      expect(cache.get('nonexistent')).toBeUndefined();
+    });
+
+    it('should delete values correctly', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      expect(cache.has('key1')).toBe(true);
+      
+      cache.delete('key1');
+      expect(cache.has('key1')).toBe(false);
+      expect(cache.get('key1')).toBeUndefined();
+      expect(cache.size).toBe(0);
+    });
+
+    it('should update existing keys without increasing size', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      expect(cache.size).toBe(1);
+      
+      cache.set('key1', 'value2');
+      expect(cache.size).toBe(1);
+      expect(cache.get('key1')).toBe('value2');
+    });
+  });
+
+  describe('LRU eviction behavior', () => {
+    it('should evict oldest entry when size limit is reached', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      cache.set('key2', 'value2');
+      cache.set('key3', 'value3');
+      expect(cache.size).toBe(3);
+      
+      // Adding 4th item should evict key1 (oldest)
+      cache.set('key4', 'value4');
+      expect(cache.size).toBe(3);
+      expect(cache.has('key1')).toBe(false);
+      expect(cache.has('key2')).toBe(true);
+      expect(cache.has('key3')).toBe(true);
+      expect(cache.has('key4')).toBe(true);
+    });
+
+    it('should refresh item position on access', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      cache.set('key2', 'value2');
+      cache.set('key3', 'value3');
+      
+      // Access key1 to make it most recently used
+      cache.get('key1');
+      
+      // Add new item - should evict key2 (now oldest)
+      cache.set('key4', 'value4');
+      expect(cache.has('key1')).toBe(true); // Still there (was accessed)
+      expect(cache.has('key2')).toBe(false); // Evicted
+      expect(cache.has('key3')).toBe(true);
+      expect(cache.has('key4')).toBe(true);
+    });
+
+    it('should refresh item position on update', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      cache.set('key2', 'value2');
+      cache.set('key3', 'value3');
+      
+      // Update key1 to make it most recently used
+      cache.set('key1', 'newvalue1');
+      
+      // Add new item - should evict key2 (now oldest)
+      cache.set('key4', 'value4');
+      expect(cache.has('key1')).toBe(true); // Still there (was updated)
+      expect(cache.has('key2')).toBe(false); // Evicted
+      expect(cache.has('key3')).toBe(true);
+      expect(cache.has('key4')).toBe(true);
+    });
+  });
+
+  describe('Heavy load scenarios', () => {
+    it('should handle many entries without exceeding size limit', () => {
+      const maxSize = 100;
+      const cache = new LRUCache(maxSize);
+      
+      // Add 1000 entries
+      for (let i = 0; i < 1000; i++) {
+        cache.set(`key${i}`, `value${i}`);
+        expect(cache.size).toBeLessThanOrEqual(maxSize);
+      }
+      
+      // Final size should be exactly maxSize
+      expect(cache.size).toBe(maxSize);
+      
+      // Only the last 100 entries should remain
+      expect(cache.has('key0')).toBe(false);
+      expect(cache.has('key899')).toBe(false);
+      expect(cache.has('key900')).toBe(true);
+      expect(cache.has('key999')).toBe(true);
+    });
+
+    it('should handle default size configuration', () => {
+      const cache = new LRUCache(); // Default should be 1000
+      
+      // Add entries up to default limit
+      for (let i = 0; i < 1500; i++) {
+        cache.set(`key${i}`, `value${i}`);
+      }
+      
+      // Should not exceed 1000
+      expect(cache.size).toBe(1000);
+    });
+
+    it('should work correctly with OIDC verifier store size', () => {
+      const cache = new LRUCache(MAX_VERIFIER_STORE_SIZE);
+      
+      // Simulate heavy OIDC load
+      for (let i = 0; i < MAX_VERIFIER_STORE_SIZE * 2; i++) {
+        cache.set(`state${i}`, `verifier${i}`);
+      }
+      
+      // Should be capped at MAX_VERIFIER_STORE_SIZE
+      expect(cache.size).toBe(MAX_VERIFIER_STORE_SIZE);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle size limit of 1', () => {
+      const cache = new LRUCache(1);
+      cache.set('key1', 'value1');
+      expect(cache.size).toBe(1);
+      
+      cache.set('key2', 'value2');
+      expect(cache.size).toBe(1);
+      expect(cache.has('key1')).toBe(false);
+      expect(cache.has('key2')).toBe(true);
+    });
+
+    it('should handle clear operation', () => {
+      const cache = new LRUCache(10);
+      for (let i = 0; i < 5; i++) {
+        cache.set(`key${i}`, `value${i}`);
+      }
+      expect(cache.size).toBe(5);
+      
+      cache.clear();
+      expect(cache.size).toBe(0);
+      expect(cache.has('key0')).toBe(false);
+    });
+
+    it('should handle repeated access patterns', () => {
+      const cache = new LRUCache(3);
+      cache.set('key1', 'value1');
+      cache.set('key2', 'value2');
+      cache.set('key3', 'value3');
+      
+      // Repeatedly access key1
+      for (let i = 0; i < 10; i++) {
+        cache.get('key1');
+      }
+      
+      // Add new entries - key1 should still be there
+      cache.set('key4', 'value4');
+      cache.set('key5', 'value5');
+      
+      expect(cache.has('key1')).toBe(true);
+      expect(cache.has('key2')).toBe(false);
+      expect(cache.has('key3')).toBe(false);
+    });
+  });
+
+  describe('Integration with OIDC pattern', () => {
+    it('should work with codeVerifierStore pattern', () => {
+      const codeVerifierStore = new LRUCache(10);
+      const timeoutStore = new Map();
+      
+      // Simulate storing multiple verifiers
+      for (let i = 0; i < 15; i++) {
+        const state = `state${i}`;
+        const verifier = `verifier${i}`;
+        
+        codeVerifierStore.set(state, verifier);
+        const timeoutId = setTimeout(() => {
+          codeVerifierStore.delete(state);
+          timeoutStore.delete(state);
+        }, 1000);
+        timeoutStore.set(state, timeoutId);
+      }
+      
+      // Store size should be capped at 10
+      expect(codeVerifierStore.size).toBe(10);
+      
+      // Cleanup
+      for (const [state, timeoutId] of timeoutStore.entries()) {
+        clearTimeout(timeoutId);
+      }
+    });
+
+    it('should maintain LRU ordering with callback cleanup', () => {
+      const codeVerifierStore = new LRUCache(5);
+      
+      // Add verifiers
+      for (let i = 0; i < 5; i++) {
+        codeVerifierStore.set(`state${i}`, `verifier${i}`);
+      }
+      
+      // Simulate callback accessing state2 (making it most recent)
+      const verifier = codeVerifierStore.get('state2');
+      expect(verifier).toBe('verifier2');
+      
+      // Add new verifier - should evict state0 (oldest)
+      codeVerifierStore.set('state5', 'verifier5');
+      expect(codeVerifierStore.has('state0')).toBe(false);
+      expect(codeVerifierStore.has('state2')).toBe(true);
+      
+      // Cleanup accessed verifier
+      codeVerifierStore.delete('state2');
+      expect(codeVerifierStore.has('state2')).toBe(false);
     });
   });
 });

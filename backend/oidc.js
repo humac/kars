@@ -1,5 +1,56 @@
 import * as client from 'openid-client';
 
+/**
+ * Simple LRU Cache implementation for PKCE code verifiers
+ * Prevents unbounded memory growth by limiting the number of stored entries
+ */
+class LRUCache {
+  constructor(maxSize = 1000) {
+    this.maxSize = maxSize;
+    this.cache = new Map();
+  }
+
+  get(key) {
+    if (!this.cache.has(key)) {
+      return undefined;
+    }
+    // Move to end (most recently used)
+    const value = this.cache.get(key);
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+
+  set(key, value) {
+    // Remove if already exists (to move to end)
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+    // Evict oldest entry if at capacity
+    else if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    this.cache.set(key, value);
+  }
+
+  delete(key) {
+    return this.cache.delete(key);
+  }
+
+  has(key) {
+    return this.cache.has(key);
+  }
+
+  get size() {
+    return this.cache.size;
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+}
+
 // OIDC Configuration - will be loaded from database
 let OIDC_CONFIG = {
   enabled: false,
@@ -18,11 +69,14 @@ let OIDC_CONFIG = {
 };
 
 let config = null;
-let codeVerifierStore = new Map(); // Store PKCE code verifiers temporarily
+// Use LRU cache to prevent unbounded memory growth under heavy load
+let codeVerifierStore = new LRUCache(1000); // Max 1000 concurrent OIDC flows
 let timeoutStore = new Map(); // Store timeout IDs to prevent memory leaks
 
 // Timeout duration for PKCE code verifiers (10 minutes)
 const PKCE_VERIFIER_TIMEOUT_MS = 10 * 60 * 1000;
+// Maximum number of concurrent OIDC flows (prevents memory exhaustion)
+const MAX_VERIFIER_STORE_SIZE = 1000;
 
 /**
  * Initialize OIDC client with settings from database
@@ -93,6 +147,7 @@ async function getAuthorizationUrl(state) {
   }
 
   // Store code verifier for later use in callback
+  // LRU cache automatically evicts oldest entries if size exceeds MAX_VERIFIER_STORE_SIZE
   codeVerifierStore.set(state, code_verifier);
 
   // Clean up old verifiers after timeout period
@@ -277,4 +332,6 @@ export {
   isOIDCEnabled,
   OIDC_CONFIG,
   PKCE_VERIFIER_TIMEOUT_MS,
+  MAX_VERIFIER_STORE_SIZE,
+  LRUCache,
 };
