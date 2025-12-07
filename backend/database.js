@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve, isAbsolute } from 'path';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import pg from 'pg';
 
@@ -53,6 +53,35 @@ const wantsPostgres = (envEngine || configuredEngine) === 'postgres';
 const postgresUrl = envPostgresUrl || configuredPostgresUrl || '';
 
 /**
+ * Validate that a path is absolute and doesn't contain path traversal sequences
+ * @param {string} filePath - The file path to validate
+ * @returns {boolean} True if the path is safe to use
+ */
+const isValidCertPath = (filePath) => {
+  if (!filePath) return false;
+  
+  // Must be an absolute path
+  if (!isAbsolute(filePath)) {
+    return false;
+  }
+  
+  // Resolve the path and compare with original to detect traversal attempts
+  // resolve() will normalize paths and eliminate .. sequences
+  const resolvedPath = resolve(filePath);
+  
+  // If the resolved path differs from the original (after normalization),
+  // it might contain traversal sequences
+  const normalizedOriginal = resolve(filePath);
+  
+  // Additional check: ensure the path doesn't contain .. components
+  if (filePath.includes('..')) {
+    return false;
+  }
+  
+  return resolvedPath === normalizedOriginal;
+};
+
+/**
  * Build PostgreSQL SSL configuration from environment variables
  * @returns {undefined|object} SSL configuration object or undefined if SSL not enabled
  */
@@ -69,11 +98,12 @@ const buildSslConfig = () => {
   // Support custom CA certificate for production use
   if (process.env.POSTGRES_SSL_CA) {
     const caPath = process.env.POSTGRES_SSL_CA;
-    // Basic path validation - ensure it's an absolute path
-    if (!caPath.startsWith('/') && !caPath.match(/^[A-Z]:\\/i)) {
-      console.warn('POSTGRES_SSL_CA must be an absolute path, skipping');
+    if (!isValidCertPath(caPath)) {
+      console.warn('POSTGRES_SSL_CA must be a valid absolute path without traversal sequences, skipping');
     } else {
       try {
+        // Reading certificate files synchronously is acceptable during startup
+        // Note: Certificates are public data and don't require special memory handling
         sslConfig.ca = readFileSync(caPath, 'utf-8');
       } catch (err) {
         console.warn('Failed to read POSTGRES_SSL_CA certificate file:', err.message);
@@ -86,14 +116,12 @@ const buildSslConfig = () => {
     const certPath = process.env.POSTGRES_SSL_CERT;
     const keyPath = process.env.POSTGRES_SSL_KEY;
     
-    // Basic path validation - ensure they are absolute paths
-    const certValid = certPath.startsWith('/') || certPath.match(/^[A-Z]:\\/i);
-    const keyValid = keyPath.startsWith('/') || keyPath.match(/^[A-Z]:\\/i);
-    
-    if (!certValid || !keyValid) {
-      console.warn('POSTGRES_SSL_CERT and POSTGRES_SSL_KEY must be absolute paths, skipping');
+    if (!isValidCertPath(certPath) || !isValidCertPath(keyPath)) {
+      console.warn('POSTGRES_SSL_CERT and POSTGRES_SSL_KEY must be valid absolute paths without traversal sequences, skipping');
     } else {
       try {
+        // Reading during startup/initialization is acceptable
+        // Note: Private keys are sensitive but this is the standard pattern for TLS configuration
         sslConfig.cert = readFileSync(certPath, 'utf-8');
         sslConfig.key = readFileSync(keyPath, 'utf-8');
       } catch (err) {

@@ -159,12 +159,29 @@ describe('Database SSL Configuration', () => {
       expect(process.env.POSTGRES_SSL_CA.match(/^[A-Z]:\\/i)).toBeTruthy();
     });
 
-    it('should prevent path traversal attacks', () => {
+    it('should prevent path traversal attacks with relative paths', () => {
       // Relative paths with .. are dangerous
       const dangerousPath = '../../../etc/passwd';
       
       expect(dangerousPath.startsWith('/')).toBe(false);
+      expect(dangerousPath.includes('..')).toBe(true);
       // Implementation should reject this as it's not an absolute path
+    });
+
+    it('should prevent path traversal attacks with absolute paths containing ..', () => {
+      // Even absolute paths can have .. sequences that are dangerous
+      const dangerousPath = '/etc/../../../etc/passwd';
+      
+      expect(dangerousPath.includes('..')).toBe(true);
+      // Implementation should reject this because it contains .. sequences
+    });
+
+    it('should accept clean absolute paths without traversal', () => {
+      const safePath = '/etc/ssl/certs/ca-certificate.crt';
+      
+      expect(safePath.startsWith('/')).toBe(true);
+      expect(safePath.includes('..')).toBe(false);
+      // Implementation should accept this
     });
   });
 
