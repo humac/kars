@@ -1,0 +1,24 @@
+name: Verify Critical Files
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Verify critical files are complete
+      run: |
+        chmod +x .github/verify-critical-files.sh
+        .github/verify-critical-files.sh
+        
+    - name: Report status
+      if: success()
+      run: echo "✅ All critical files verified successfully"
