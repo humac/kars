@@ -65,36 +65,38 @@ const RegisterNew = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4 relative overflow-hidden bg-dot-pattern">
+      <div className="w-full max-w-lg relative z-10 animate-fade-in">
         {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary mb-4">
-            <Laptop className="h-8 w-8 text-primary-foreground" />
+        <div className="text-center mb-8 animate-slide-up">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary mb-4 shadow-lg hover:scale-105 transition-transform">
+            <Laptop className="h-10 w-10 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">KARS</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">KARS</h1>
           <p className="text-muted-foreground">KeyData Asset Registration System</p>
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Create an account</CardTitle>
-            <CardDescription className="text-center">
+        <Card className="shadow-xl backdrop-blur-sm bg-card/95 border-border/50 animate-scale-in">
+          <CardHeader className="space-y-2 pb-4">
+            <CardTitle className="text-2xl text-center">✨ Create an account</CardTitle>
+            <CardDescription className="text-center text-base">
               Enter your information to get started
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20 animate-slide-up">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Personal Information */}
               <div className="space-y-4">
-                <h4 className="font-medium text-sm text-muted-foreground">Your Information</h4>
+                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                  <span className="text-lg">👤</span> Your Information
+                </h4>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="first_name">First Name</Label>
@@ -136,11 +138,13 @@ const RegisterNew = ({ onSwitchToLogin }) => {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-6" />
 
               {/* Manager Information */}
               <div className="space-y-4">
-                <h4 className="font-medium text-sm text-muted-foreground">Manager Information</h4>
+                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                  <span className="text-lg">👔</span> Manager Information
+                </h4>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="manager_first_name">Manager First Name</Label>
@@ -179,11 +183,13 @@ const RegisterNew = ({ onSwitchToLogin }) => {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-6" />
 
               {/* Password */}
               <div className="space-y-4">
-                <h4 className="font-medium text-sm text-muted-foreground">Set Password</h4>
+                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                  <span className="text-lg">🔒</span> Set Password
+                </h4>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <Input
@@ -214,38 +220,38 @@ const RegisterNew = ({ onSwitchToLogin }) => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full mt-2" disabled={loading}>
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Creating account...
                   </>
                 ) : (
                   <>
-                    <UserPlus className="h-4 w-4 mr-2" />
+                    <UserPlus className="h-4 w-4" />
                     Create Account
                   </>
                 )}
               </Button>
             </form>
 
-            <Separator />
-
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToLogin}
-                className="font-semibold text-primary hover:underline"
-              >
-                Sign in here
-              </button>
-            </p>
+            <div className="pt-4 border-t">
+              <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={onSwitchToLogin}
+                  className="font-semibold text-gradient hover:opacity-80 transition-opacity"
+                >
+                  Sign in here
+                </button>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          SOC2 Compliance - Track and manage company assets
+          SOC2 Compliance • Secure Asset Management
         </p>
       </div>
     </div>

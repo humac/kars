@@ -274,15 +274,15 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const isLoading = loading || oidcLoading || passkeyLoading;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4 relative overflow-hidden bg-dot-pattern">
+      <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Dark Mode Toggle */}
         <div className="flex justify-end mb-4">
           <Button
             variant="outline"
             size="icon"
             onClick={toggleTheme}
-            className="rounded-full"
+            className="rounded-full shadow-sm hover:shadow-md"
           >
             {theme === 'dark' ? (
               <Sun className="h-5 w-5" />
@@ -291,37 +291,38 @@ const LoginNew = ({ onSwitchToRegister }) => {
             )}
           </Button>
         </div>
+        
         {/* Logo/Brand */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-slide-up">
           {brandingLogo ? (
             <div className="mb-4">
               <img
                 src={brandingLogo}
                 alt="Company Logo"
-                className="max-w-full h-auto max-h-32 object-contain mx-auto"
+                className="max-w-full h-auto max-h-32 object-contain mx-auto drop-shadow-lg"
               />
             </div>
           ) : (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary mb-4">
-                <Laptop className="h-8 w-8 text-primary-foreground" />
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary mb-4 shadow-lg hover:scale-105 transition-transform">
+                <Laptop className="h-10 w-10 text-primary-foreground" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground">KARS</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">KARS</h1>
               <p className="text-muted-foreground">KeyData Asset Registration System</p>
             </>
           )}
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-            <CardDescription className="text-center">
-              Sign in to manage company assets
+        <Card className="shadow-xl backdrop-blur-sm bg-card/95 border-border/50 animate-scale-in">
+          <CardHeader className="space-y-2 pb-4">
+            <CardTitle className="text-2xl text-center">🎯 Welcome back</CardTitle>
+            <CardDescription className="text-center text-base">
+              Sign in to your workspace
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20 animate-slide-up">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -329,7 +330,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   name="email"
@@ -339,11 +340,12 @@ const LoginNew = ({ onSwitchToRegister }) => {
                   placeholder="you@company.com"
                   autoComplete="email"
                   required
+                  className="transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <Input
                   id="password"
                   name="password"
@@ -353,18 +355,19 @@ const LoginNew = ({ onSwitchToRegister }) => {
                   placeholder="Enter your password"
                   autoComplete="current-password"
                   required
+                  className="transition-all"
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full mt-2" disabled={isLoading}>
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Signing in...
                   </>
                 ) : (
                   <>
-                    <LogIn className="h-4 w-4 mr-2" />
+                    <LogIn className="h-4 w-4" />
                     Sign In
                   </>
                 )}
@@ -399,12 +402,12 @@ const LoginNew = ({ onSwitchToRegister }) => {
 
             {oidcEnabled && (
               <>
-                <div className="relative">
+                <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
                     <Separator className="w-full" />
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or</span>
+                  <div className="relative flex justify-center text-xs font-medium uppercase">
+                    <span className="bg-card px-3 text-muted-foreground">or continue with</span>
                   </div>
                 </div>
 
@@ -416,34 +419,34 @@ const LoginNew = ({ onSwitchToRegister }) => {
                 >
                   {oidcLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Redirecting...
                     </>
                     ) : (
                       <>
-                        <Key className="h-4 w-4 mr-2" />
+                        <Key className="h-4 w-4" />
                         {ssoButtonConfig.text}
                       </>
                     )}
                 </Button>
                 {ssoButtonConfig.helpText && (
-                  <p className="text-xs text-muted-foreground text-center">{ssoButtonConfig.helpText}</p>
+                  <p className="text-xs text-muted-foreground text-center mt-2">{ssoButtonConfig.helpText}</p>
                 )}
               </>
             )}
 
-            <Separator />
-
-            <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToRegister}
-                className="font-semibold text-primary hover:underline"
-              >
-                Register here
-              </button>
-            </p>
+            <div className="pt-4 border-t">
+              <p className="text-center text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={onSwitchToRegister}
+                  className="font-semibold text-gradient hover:opacity-80 transition-opacity"
+                >
+                  Register here
+                </button>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
