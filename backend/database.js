@@ -657,13 +657,16 @@ const initDb = async () => {
 
   // Indexes
   await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_name ON assets(employee_name)');
+  await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_email ON assets(employee_email)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_name ON assets(manager_name)');
+  await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_email ON assets(manager_email)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON assets(company_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_status ON assets(status)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON companies(name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_user_email ON users(email)');
+  await dbRun('CREATE INDEX IF NOT EXISTS idx_user_manager_email ON users(manager_email)');
   // Only create oidc_sub index if the column exists (older DBs may not have oidc_sub)
   try {
     const userCols = await dbAll("PRAGMA table_info(users)");
@@ -819,6 +822,49 @@ export const assetDb = {
       SET manager_name = ?, manager_email = ?, last_updated = ?
       WHERE employee_email = ?
     `, [managerName, managerEmail, now, employeeEmail]);
+  },
+  getByIds: async (ids) => {
+    if (!ids || ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const query = `SELECT * FROM assets WHERE id IN (${placeholders})`;
+    const rows = await dbAll(query, ids);
+    return rows.map((row) => ({
+      ...row,
+      registration_date: normalizeDates(row.registration_date),
+      last_updated: normalizeDates(row.last_updated)
+    }));
+  },
+  bulkUpdateStatus: async (ids, status, notes) => {
+    if (!ids || ids.length === 0) return { changes: 0 };
+    const now = new Date().toISOString();
+    const placeholders = ids.map(() => '?').join(',');
+    const query = `
+      UPDATE assets
+      SET status = ?, last_updated = ?, notes = ?
+      WHERE id IN (${placeholders})
+    `;
+    return dbRun(query, [status, now, notes || '', ...ids]);
+  },
+  bulkDelete: async (ids) => {
+    if (!ids || ids.length === 0) return { changes: 0 };
+    const placeholders = ids.map(() => '?').join(',');
+    const query = `DELETE FROM assets WHERE id IN (${placeholders})`;
+    return dbRun(query, ids);
+  },
+  bulkUpdateManager: async (ids, managerName, managerEmail) => {
+    if (!ids || ids.length === 0) return { changes: 0 };
+    const now = new Date().toISOString();
+    const placeholders = ids.map(() => '?').join(',');
+    const query = `
+      UPDATE assets
+      SET manager_name = ?, manager_email = ?, last_updated = ?
+      WHERE id IN (${placeholders})
+    `;
+    return dbRun(query, [managerName, managerEmail, now, ...ids]);
+  },
+  getEmployeeEmailsByManager: async (managerEmail) => {
+    const rows = await dbAll('SELECT DISTINCT employee_email FROM assets WHERE manager_email = ?', [managerEmail]);
+    return rows.map(row => row.employee_email);
   }
 };
 
@@ -1045,6 +1091,24 @@ export const userDb = {
     backupCodes.splice(codeIndex, 1);
     await dbRun('UPDATE users SET mfa_backup_codes = ? WHERE id = ?', [JSON.stringify(backupCodes), userId]);
     return true;
+  },
+  getByEmails: async (emails) => {
+    if (!emails || emails.length === 0) return [];
+    // Case-insensitive matching using OR conditions to leverage indexes
+    // Build multiple OR conditions for case-insensitive matching
+    const normalizedEmails = [...new Set(emails.map(e => e.toLowerCase()))];
+    
+    if (normalizedEmails.length === 1) {
+      // Single email - use existing indexed getByEmail logic
+      return [await userDb.getByEmail(normalizedEmails[0])].filter(Boolean);
+    }
+    
+    // Multiple emails - use IN clause with LOWER on both sides
+    // Note: In production, consider adding a functional index on LOWER(email)
+    // or storing emails in lowercase for optimal index usage
+    const placeholders = normalizedEmails.map(() => '?').join(',');
+    const query = `SELECT * FROM users WHERE LOWER(email) IN (${placeholders})`;
+    return dbAll(query, normalizedEmails);
   }
 };
 
