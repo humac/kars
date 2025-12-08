@@ -76,6 +76,32 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
   
   const [saving, setSaving] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [companies, setCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+
+  // Fetch companies on mount
+  React.useEffect(() => {
+    async function fetchCompanies() {
+      try {
+        const response = await fetch('/api/companies/names', {
+          headers: getAuthHeaders(),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCompanies(data);
+        } else {
+          console.error('Failed to fetch companies');
+          setCompanies([]);
+        }
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+        setCompanies([]);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    }
+    fetchCompanies();
+  }, [getAuthHeaders]);
 
   // Field max length configuration
   const MAX_LENGTHS = {
@@ -262,15 +288,33 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
 
             <div className="space-y-2">
               <Label htmlFor="company_name">Company Name *</Label>
-              <Input 
-                id="company_name" 
-                name="company_name" 
-                value={form.company_name} 
-                onChange={onChange}
-                maxLength={255}
-                placeholder="Acme Corporation"
-                required
-              />
+              {loadingCompanies ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading companies...
+                </div>
+              ) : companies.length > 0 ? (
+                <Select
+                  value={form.company_name}
+                  onValueChange={(value) => setForm(prev => ({ ...prev, company_name: value }))}
+                  required
+                >
+                  <SelectTrigger id="company_name">
+                    <SelectValue placeholder="Select a company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.name}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No companies available. Please contact an administrator to add companies.
+                </div>
+              )}
             </div>
           </div>
 
