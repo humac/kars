@@ -522,6 +522,58 @@ const initDb = async () => {
     )
   `;
 
+  const hubspotSettingsTable = isPostgres ? `
+    CREATE TABLE IF NOT EXISTS hubspot_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER DEFAULT 0,
+      access_token TEXT,
+      auto_sync_enabled INTEGER DEFAULT 0,
+      sync_interval TEXT DEFAULT 'daily',
+      last_sync TIMESTAMP,
+      last_sync_status TEXT,
+      companies_synced INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS hubspot_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER DEFAULT 0,
+      access_token TEXT,
+      auto_sync_enabled INTEGER DEFAULT 0,
+      sync_interval TEXT DEFAULT 'daily',
+      last_sync TEXT,
+      last_sync_status TEXT,
+      companies_synced INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+
+  const hubspotSyncLogTable = isPostgres ? `
+    CREATE TABLE IF NOT EXISTS hubspot_sync_log (
+      id SERIAL PRIMARY KEY,
+      sync_started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      sync_completed_at TIMESTAMP,
+      status TEXT,
+      companies_found INTEGER,
+      companies_created INTEGER,
+      companies_updated INTEGER,
+      error_message TEXT
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS hubspot_sync_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sync_started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      sync_completed_at TEXT,
+      status TEXT,
+      companies_found INTEGER,
+      companies_created INTEGER,
+      companies_updated INTEGER,
+      error_message TEXT
+    )
+  `;
+
   await dbRun(assetsTable);
   await dbRun(companiesTable);
   await dbRun(auditLogsTable);
@@ -530,6 +582,8 @@ const initDb = async () => {
   await dbRun(brandingSettingsTable);
   await dbRun(passkeySettingsTable);
   await dbRun(passkeysTable);
+  await dbRun(hubspotSettingsTable);
+  await dbRun(hubspotSyncLogTable);
 
   // Migrate existing databases to add manager fields to users table
   try {
@@ -893,6 +947,57 @@ const initDb = async () => {
       INSERT INTO branding_settings (id, updated_at)
       VALUES (1, ?)
     `, [now]);
+  }
+
+  // Insert default HubSpot settings if not exists
+  const checkHubSpot = await dbGet('SELECT id FROM hubspot_settings WHERE id = 1');
+  if (!checkHubSpot) {
+    const now = new Date().toISOString();
+    await dbRun(`
+      INSERT INTO hubspot_settings (id, enabled, auto_sync_enabled, sync_interval, created_at, updated_at)
+      VALUES (1, 0, 0, 'daily', ?, ?)
+    `, [now, now]);
+  }
+
+  // Migrate companies table to add HubSpot columns
+  try {
+    if (isPostgres) {
+      await dbRun('ALTER TABLE companies ADD COLUMN IF NOT EXISTS hubspot_id TEXT UNIQUE');
+      await dbRun('ALTER TABLE companies ADD COLUMN IF NOT EXISTS hubspot_synced_at TIMESTAMP');
+      console.log('PostgreSQL: Added hubspot_id and hubspot_synced_at columns to companies table');
+    } else {
+      // SQLite: Check if columns exist before adding
+      const companyColumns = await dbAll("PRAGMA table_info(companies)");
+      const hasHubspotId = companyColumns.some(col => col.name === 'hubspot_id');
+      const hasHubspotSyncedAt = companyColumns.some(col => col.name === 'hubspot_synced_at');
+
+      if (!hasHubspotId) {
+        await dbRun('ALTER TABLE companies ADD COLUMN hubspot_id TEXT');
+        console.log('SQLite: Added hubspot_id column to companies table');
+      }
+      if (!hasHubspotSyncedAt) {
+        await dbRun('ALTER TABLE companies ADD COLUMN hubspot_synced_at TEXT');
+        console.log('SQLite: Added hubspot_synced_at column to companies table');
+      }
+
+      // Add unique index for hubspot_id if column was just created
+      if (!hasHubspotId) {
+        await dbRun('CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_hubspot_id ON companies(hubspot_id) WHERE hubspot_id IS NOT NULL');
+      }
+    }
+  } catch (err) {
+    const isDuplicateColumn = 
+      err.message?.toLowerCase().includes('duplicate column') ||
+      err.message?.toLowerCase().includes('already exists') ||
+      err.code === '42701';
+    
+    if (isDuplicateColumn) {
+      console.warn('HubSpot columns already exist in companies table (ignored):', err.message);
+    } else {
+      console.error('Migration FAILED for companies HubSpot columns:', err.message);
+      console.error('Stack trace:', err.stack);
+      throw new Error(`Failed to add HubSpot columns to companies: ${err.message}`);
+    }
   }
 
   // Migrate existing assets table to add owner_id and manager_id columns
@@ -1409,23 +1514,76 @@ export const companyDb = {
     const id = isPostgres ? result.rows?.[0]?.id : result.lastInsertRowid;
     return { id };
   },
+  createWithHubSpotId: async (company) => {
+    const now = new Date().toISOString();
+    const insertQuery = `
+      INSERT INTO companies (name, description, created_date, hubspot_id, hubspot_synced_at)
+      VALUES (?, ?, ?, ?, ?)
+      ${isPostgres ? 'RETURNING id' : ''}
+    `;
+    const result = await dbRun(insertQuery, [
+      company.name,
+      company.description || '',
+      now,
+      company.hubspot_id,
+      now
+    ]);
+    const id = isPostgres ? result.rows?.[0]?.id : result.lastInsertRowid;
+    return { id };
+  },
   getAll: async () => {
     const rows = await dbAll('SELECT * FROM companies ORDER BY name ASC');
-    return rows.map((row) => ({ ...row, created_date: normalizeDates(row.created_date) }));
+    return rows.map((row) => ({ 
+      ...row, 
+      created_date: normalizeDates(row.created_date),
+      hubspot_synced_at: normalizeDates(row.hubspot_synced_at)
+    }));
   },
   getById: async (id) => {
     const row = await dbGet('SELECT * FROM companies WHERE id = ?', [id]);
-    return row ? { ...row, created_date: normalizeDates(row.created_date) } : null;
+    return row ? { 
+      ...row, 
+      created_date: normalizeDates(row.created_date),
+      hubspot_synced_at: normalizeDates(row.hubspot_synced_at)
+    } : null;
   },
   getByName: async (name) => {
     const row = await dbGet('SELECT * FROM companies WHERE name = ?', [name]);
-    return row ? { ...row, created_date: normalizeDates(row.created_date) } : null;
+    return row ? { 
+      ...row, 
+      created_date: normalizeDates(row.created_date),
+      hubspot_synced_at: normalizeDates(row.hubspot_synced_at)
+    } : null;
+  },
+  getByHubSpotId: async (hubspotId) => {
+    const row = await dbGet('SELECT * FROM companies WHERE hubspot_id = ?', [hubspotId]);
+    return row ? { 
+      ...row, 
+      created_date: normalizeDates(row.created_date),
+      hubspot_synced_at: normalizeDates(row.hubspot_synced_at)
+    } : null;
   },
   update: async (id, company) => dbRun(`
     UPDATE companies
     SET name = ?, description = ?
     WHERE id = ?
   `, [company.name, company.description || '', id]),
+  updateByHubSpotId: async (hubspotId, company) => {
+    const now = new Date().toISOString();
+    return dbRun(`
+      UPDATE companies
+      SET name = ?, description = ?, hubspot_synced_at = ?
+      WHERE hubspot_id = ?
+    `, [company.name, company.description || '', now, hubspotId]);
+  },
+  setHubSpotId: async (id, hubspotId) => {
+    const now = new Date().toISOString();
+    return dbRun(`
+      UPDATE companies
+      SET hubspot_id = ?, hubspot_synced_at = ?
+      WHERE id = ?
+    `, [hubspotId, now, id]);
+  },
   delete: async (id) => dbRun('DELETE FROM companies WHERE id = ?', [id]),
   hasAssets: async (companyName) => {
     const row = await dbGet('SELECT COUNT(*) as count FROM assets WHERE company_name = ?', [companyName]);
@@ -1879,6 +2037,119 @@ export const passkeySettingsDb = {
         userEmail
       ]);
     }
+  }
+};
+
+export const hubspotSettingsDb = {
+  get: async () => {
+    let settings = await dbGet('SELECT * FROM hubspot_settings WHERE id = 1');
+
+    // If no settings exist, create default row
+    if (!settings) {
+      const now = new Date().toISOString();
+      await dbRun(`
+        INSERT INTO hubspot_settings (id, enabled, auto_sync_enabled, sync_interval, created_at, updated_at)
+        VALUES (1, 0, 0, 'daily', ?, ?)
+      `, [now, now]);
+      settings = await dbGet('SELECT * FROM hubspot_settings WHERE id = 1');
+    }
+
+    return {
+      ...settings,
+      enabled: settings.enabled ?? 0,
+      auto_sync_enabled: settings.auto_sync_enabled ?? 0,
+      has_access_token: !!settings.access_token,
+      // Don't return the actual access token for security
+      access_token: undefined,
+      last_sync: normalizeDates(settings.last_sync),
+      created_at: normalizeDates(settings.created_at),
+      updated_at: normalizeDates(settings.updated_at)
+    };
+  },
+  getAccessToken: async () => {
+    const settings = await dbGet('SELECT access_token FROM hubspot_settings WHERE id = 1');
+    return settings?.access_token || null;
+  },
+  update: async (settings) => {
+    const now = new Date().toISOString();
+
+    // Build update fields dynamically
+    const updates = [];
+    const params = [];
+
+    if (settings.enabled !== undefined) {
+      updates.push('enabled = ?');
+      params.push(settings.enabled ? 1 : 0);
+    }
+    if (settings.access_token !== undefined && settings.access_token !== '') {
+      updates.push('access_token = ?');
+      params.push(settings.access_token);
+    }
+    if (settings.auto_sync_enabled !== undefined) {
+      updates.push('auto_sync_enabled = ?');
+      params.push(settings.auto_sync_enabled ? 1 : 0);
+    }
+    if (settings.sync_interval !== undefined) {
+      updates.push('sync_interval = ?');
+      params.push(settings.sync_interval);
+    }
+
+    updates.push('updated_at = ?');
+    params.push(now);
+
+    if (updates.length === 0) {
+      return;
+    }
+
+    await dbRun(`
+      UPDATE hubspot_settings
+      SET ${updates.join(', ')}
+      WHERE id = 1
+    `, params);
+  },
+  updateSyncStatus: async (status, companiesSynced) => {
+    const now = new Date().toISOString();
+    await dbRun(`
+      UPDATE hubspot_settings
+      SET last_sync = ?,
+          last_sync_status = ?,
+          companies_synced = ?,
+          updated_at = ?
+      WHERE id = 1
+    `, [now, status, companiesSynced, now]);
+  }
+};
+
+export const hubspotSyncLogDb = {
+  log: async (syncData) => {
+    const insertQuery = `
+      INSERT INTO hubspot_sync_log (sync_started_at, sync_completed_at, status, companies_found, companies_created, companies_updated, error_message)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ${isPostgres ? 'RETURNING id' : ''}
+    `;
+    const result = await dbRun(insertQuery, [
+      syncData.sync_started_at,
+      syncData.sync_completed_at,
+      syncData.status,
+      syncData.companies_found || 0,
+      syncData.companies_created || 0,
+      syncData.companies_updated || 0,
+      syncData.error_message || null
+    ]);
+    const id = isPostgres ? result.rows?.[0]?.id : result.lastInsertRowid;
+    return { id };
+  },
+  getHistory: async (limit = 10) => {
+    const rows = await dbAll(`
+      SELECT * FROM hubspot_sync_log
+      ORDER BY sync_started_at DESC
+      LIMIT ?
+    `, [limit]);
+    return rows.map(row => ({
+      ...row,
+      sync_started_at: normalizeDates(row.sync_started_at),
+      sync_completed_at: normalizeDates(row.sync_completed_at)
+    }));
   }
 };
 
