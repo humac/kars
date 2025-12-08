@@ -9,39 +9,39 @@ export const UsersProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchUsers = async () => {
+  useEffect(() => {
     if (!isAuthenticated) {
       setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch('/api/auth/users', {
-        headers: getAuthHeaders()
-      });
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('/api/auth/users', {
+          headers: getAuthHeaders()
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      } else {
-        // If we can't fetch users (e.g., not admin), just set empty array
-        // This is defensive - we don't want to break the UI
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data);
+        } else {
+          // If we can't fetch users (e.g., not admin), just set empty array
+          // This is defensive - we don't want to break the UI
+          setUsers([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
+        setError(err.message);
         setUsers([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to fetch users:', err);
-      setError(err.message);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchUsers();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, getAuthHeaders]);
 
   // Build a map for efficient lookups
   const usersById = useMemo(() => {
@@ -74,8 +74,29 @@ export const UsersProvider = ({ children }) => {
   };
 
   // Refresh function for manual updates
-  const refresh = () => {
-    fetchUsers();
+  const refresh = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/auth/users', {
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      } else {
+        setUsers([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setError(err.message);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value = {

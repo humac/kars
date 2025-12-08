@@ -138,17 +138,26 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     return null;
   };
 
+  // Enhance assets with computed manager data for efficient rendering
+  const assetsWithManagerData = useMemo(() => {
+    return assets.map(asset => ({
+      ...asset,
+      _managerDisplayName: getManagerDisplayName(asset),
+      _managerEmail: getManagerEmail(asset)
+    }));
+  }, [assets, getFullName, getEmail]);
+
   // Filter assets based on search term and status
   const filteredAssets = useMemo(() => {
-    let filtered = [...assets];
+    let filtered = [...assetsWithManagerData];
     
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter((asset) => {
         const fullName = `${asset.employee_first_name || ''} ${asset.employee_last_name || ''}`.toLowerCase();
-        const managerName = (getManagerDisplayName(asset) || '').toLowerCase();
-        const managerEmail = (getManagerEmail(asset) || '').toLowerCase();
+        const managerName = (asset._managerDisplayName || '').toLowerCase();
+        const managerEmail = (asset._managerEmail || '').toLowerCase();
         return fullName.includes(term) ||
           asset.employee_email?.toLowerCase().includes(term) ||
           managerName.includes(term) ||
@@ -167,7 +176,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     }
 
     return filtered;
-  }, [assets, searchTerm, statusFilter]);
+  }, [assetsWithManagerData, searchTerm, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize) || 1);
   
@@ -463,14 +472,14 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                       </div>
                       {getStatusBadge(asset.status)}
                     </div>
-                    {(getManagerDisplayName(asset) || getManagerEmail(asset)) && (
+                    {(asset._managerDisplayName || asset._managerEmail) && (
                       <div className="mt-2">
                         <p className="text-xs text-muted-foreground">Manager:</p>
-                        {getManagerDisplayName(asset) && (
-                          <p className="text-sm font-medium">{getManagerDisplayName(asset)}</p>
+                        {asset._managerDisplayName && (
+                          <p className="text-sm font-medium">{asset._managerDisplayName}</p>
                         )}
-                        {getManagerEmail(asset) && (
-                          <p className="text-sm text-muted-foreground">{getManagerEmail(asset)}</p>
+                        {asset._managerEmail && (
+                          <p className="text-sm text-muted-foreground">{asset._managerEmail}</p>
                         )}
                       </div>
                     )}
@@ -529,8 +538,8 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                     </TableCell>
                     <TableCell className="font-medium">{asset.employee_first_name && asset.employee_last_name ? `${asset.employee_first_name} ${asset.employee_last_name}` : 'N/A'}</TableCell>
                     <TableCell className="text-muted-foreground">{asset.employee_email || 'N/A'}</TableCell>
-                    <TableCell className="hidden xl:table-cell">{getManagerDisplayName(asset) || '-'}</TableCell>
-                    <TableCell className="hidden xl:table-cell text-muted-foreground">{getManagerEmail(asset) || '-'}</TableCell>
+                    <TableCell className="hidden xl:table-cell">{asset._managerDisplayName || '-'}</TableCell>
+                    <TableCell className="hidden xl:table-cell text-muted-foreground">{asset._managerEmail || '-'}</TableCell>
                     <TableCell className="hidden lg:table-cell">{asset.company_name || '-'}</TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {asset.laptop_make && asset.laptop_model ? `${asset.laptop_make} ${asset.laptop_model}` : '-'}
