@@ -24,19 +24,15 @@ const RegisterNew = ({ onSwitchToLogin }) => {
   const [brandingLogo, setBrandingLogo] = useState(null);
 
   useEffect(() => {
-    const loadBranding = async () => {
-      try {
-        const response = await fetch('/api/branding');
-        if (!response.ok) return;
-        const data = await response.json();
+    // Fetch branding settings
+    fetch('/api/branding')
+      .then(res => res.json())
+      .then(data => {
         if (data.logo_data) {
           setBrandingLogo(data.logo_data);
         }
-      } catch (error) {
-        console.error('Failed to load branding logo:', error);
-      }
-    };
-    loadBranding();
+      })
+      .catch(err => console.error('Failed to fetch branding:', err));
   }, []);
 
   const handleChange = (e) => {

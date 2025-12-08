@@ -83,7 +83,7 @@ describe('Register Component', () => {
     // Should still show default logo on error
     expect(screen.getByText('KeyData Asset Registration System')).toBeInTheDocument();
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to load branding logo:',
+      'Failed to fetch branding:',
       expect.any(Error)
     );
 
