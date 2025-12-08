@@ -1054,14 +1054,16 @@ export const assetDb = {
       ${isPostgres ? 'RETURNING id' : ''}
     `;
 
+    // Use empty strings for denormalized fields - they will be fetched via JOINs
+    // This maintains backward compatibility while ensuring JOINs are the source of truth
     const result = await dbRun(insertQuery, [
-      asset.employee_first_name,
-      asset.employee_last_name,
-      asset.employee_email,
+      '', // employee_first_name - fetched via JOIN
+      '', // employee_last_name - fetched via JOIN  
+      asset.employee_email || '', // keep email for backward compat lookups
       ownerId,
-      asset.manager_first_name || null,
-      asset.manager_last_name || null,
-      asset.manager_email || null,
+      '', // manager_first_name - fetched via JOIN
+      '', // manager_last_name - fetched via JOIN
+      asset.manager_email || '', // keep email for backward compat lookups
       managerId,
       asset.company_name,
       asset.laptop_make || '',
@@ -1078,7 +1080,21 @@ export const assetDb = {
     return { id: newId };
   },
   getAll: async () => {
-    const rows = await dbAll('SELECT * FROM assets ORDER BY registration_date DESC');
+    const query = `
+      SELECT 
+        assets.*,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+      ORDER BY assets.registration_date DESC
+    `;
+    const rows = await dbAll(query);
     return rows.map((row) => ({
       ...row,
       registration_date: normalizeDates(row.registration_date),
@@ -1086,7 +1102,21 @@ export const assetDb = {
     }));
   },
   getById: async (id) => {
-    const row = await dbGet('SELECT * FROM assets WHERE id = ?', [id]);
+    const query = `
+      SELECT 
+        assets.*,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+      WHERE assets.id = ?
+    `;
+    const row = await dbGet(query, [id]);
     if (!row) return null;
     return {
       ...row,
@@ -1095,30 +1125,44 @@ export const assetDb = {
     };
   },
   search: async (filters) => {
-    let query = 'SELECT * FROM assets WHERE 1=1';
+    let query = `
+      SELECT 
+        assets.*,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+      WHERE 1=1
+    `;
     const params = [];
 
+    // TODO: Performance optimization - Consider using full-text search or computed columns for name searches on large datasets
     if (filters.employee_name) {
-      query += ' AND employee_name LIKE ?';
-      params.push(`%${filters.employee_name}%`);
+      query += ` AND (COALESCE(owner.first_name, assets.employee_first_name) LIKE ? OR COALESCE(owner.last_name, assets.employee_last_name) LIKE ? OR (COALESCE(owner.first_name, assets.employee_first_name) || ' ' || COALESCE(owner.last_name, assets.employee_last_name)) LIKE ?)`;
+      params.push(`%${filters.employee_name}%`, `%${filters.employee_name}%`, `%${filters.employee_name}%`);
     }
 
     if (filters.manager_name) {
-      query += ' AND manager_name LIKE ?';
-      params.push(`%${filters.manager_name}%`);
+      query += ` AND (COALESCE(manager.first_name, assets.manager_first_name) LIKE ? OR COALESCE(manager.last_name, assets.manager_last_name) LIKE ? OR (COALESCE(manager.first_name, assets.manager_first_name) || ' ' || COALESCE(manager.last_name, assets.manager_last_name)) LIKE ?)`;
+      params.push(`%${filters.manager_name}%`, `%${filters.manager_name}%`, `%${filters.manager_name}%`);
     }
 
     if (filters.company_name) {
-      query += ' AND company_name LIKE ?';
+      query += ' AND assets.company_name LIKE ?';
       params.push(`%${filters.company_name}%`);
     }
 
     if (filters.status) {
-      query += ' AND status = ?';
+      query += ' AND assets.status = ?';
       params.push(filters.status);
     }
 
-    query += ' ORDER BY registration_date DESC';
+    query += ' ORDER BY assets.registration_date DESC';
 
     const rows = await dbAll(query, params);
     return rows.map((row) => ({
@@ -1152,6 +1196,8 @@ export const assetDb = {
       managerId = manager?.id || null;
     }
 
+    // Use empty strings for denormalized fields - they will be fetched via JOINs
+    // This maintains backward compatibility while ensuring JOINs are the source of truth
     return dbRun(`
       UPDATE assets
       SET employee_first_name = ?, employee_last_name = ?, employee_email = ?, owner_id = ?,
@@ -1160,13 +1206,13 @@ export const assetDb = {
           status = ?, last_updated = ?, notes = ?
       WHERE id = ?
     `, [
-      asset.employee_first_name,
-      asset.employee_last_name,
-      asset.employee_email,
+      '', // employee_first_name - fetched via JOIN
+      '', // employee_last_name - fetched via JOIN
+      asset.employee_email || '', // keep email for backward compat lookups
       ownerId,
-      asset.manager_first_name || null,
-      asset.manager_last_name || null,
-      asset.manager_email || null,
+      '', // manager_first_name - fetched via JOIN
+      '', // manager_last_name - fetched via JOIN
+      asset.manager_email || '', // keep email for backward compat lookups
       managerId,
       asset.company_name,
       asset.laptop_serial_number,
@@ -1179,7 +1225,21 @@ export const assetDb = {
   },
   delete: async (id) => dbRun('DELETE FROM assets WHERE id = ?', [id]),
   getByEmployeeEmail: async (email) => {
-    const rows = await dbAll('SELECT * FROM assets WHERE employee_email = ?', [email]);
+    const query = `
+      SELECT 
+        assets.*,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+      WHERE COALESCE(owner.email, assets.employee_email) = ?
+    `;
+    const rows = await dbAll(query, [email]);
     return rows.map((row) => ({
       ...row,
       registration_date: normalizeDates(row.registration_date),
@@ -1188,11 +1248,20 @@ export const assetDb = {
   },
   linkAssetsToUser: async (employeeEmail, managerFirstName, managerLastName, managerEmail) => {
     const now = new Date().toISOString();
+    
+    // Look up manager_id from manager_email
+    let managerId = null;
+    if (managerEmail) {
+      const manager = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [managerEmail]);
+      managerId = manager?.id || null;
+    }
+    
+    // Update only manager_id and email - names will be fetched via JOIN
     return dbRun(`
       UPDATE assets
-      SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, last_updated = ?
+      SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?, last_updated = ?
       WHERE employee_email = ?
-    `, [managerFirstName, managerLastName, managerEmail, now, employeeEmail]);
+    `, ['', '', managerEmail || '', managerId, now, employeeEmail]);
   },
   updateManagerForEmployee: async (employeeEmail, managerName, managerEmail) => {
     const now = new Date().toISOString();
@@ -1204,25 +1273,13 @@ export const assetDb = {
       managerId = manager?.id || null;
     }
 
-    // Split manager name into first and last (best effort)
-    let managerFirstName = null;
-    let managerLastName = null;
-    if (managerName) {
-      const nameParts = managerName.trim().split(/\s+/);
-      if (nameParts.length === 1) {
-        managerFirstName = nameParts[0];
-        managerLastName = '';
-      } else {
-        managerFirstName = nameParts[0];
-        managerLastName = nameParts.slice(1).join(' ');
-      }
-    }
-
+    // Update only manager_id and email - names will be fetched via JOIN
+    // The managerName parameter is ignored as it will come from the user record via JOIN
     return dbRun(`
       UPDATE assets
       SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?, last_updated = ?
       WHERE employee_email = ?
-    `, [managerFirstName, managerLastName, managerEmail, managerId, now, employeeEmail]);
+    `, ['', '', managerEmail || '', managerId, now, employeeEmail]);
   },
   updateManagerIdForOwner: async (ownerId, managerId) => {
     const now = new Date().toISOString();
@@ -1235,7 +1292,20 @@ export const assetDb = {
   getByIds: async (ids) => {
     if (!ids || ids.length === 0) return [];
     const placeholders = ids.map(() => '?').join(',');
-    const query = `SELECT * FROM assets WHERE id IN (${placeholders})`;
+    const query = `
+      SELECT 
+        assets.*,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+      WHERE assets.id IN (${placeholders})
+    `;
     const rows = await dbAll(query, ids);
     return rows.map((row) => ({
       ...row,
@@ -1263,13 +1333,22 @@ export const assetDb = {
   bulkUpdateManager: async (ids, managerFirstName, managerLastName, managerEmail) => {
     if (!ids || ids.length === 0) return { changes: 0 };
     const now = new Date().toISOString();
+    
+    // Look up manager_id from manager_email
+    let managerId = null;
+    if (managerEmail) {
+      const manager = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [managerEmail]);
+      managerId = manager?.id || null;
+    }
+    
     const placeholders = ids.map(() => '?').join(',');
     const query = `
       UPDATE assets
-      SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, last_updated = ?
+      SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?, last_updated = ?
       WHERE id IN (${placeholders})
     `;
-    return dbRun(query, [managerFirstName, managerLastName, managerEmail, now, ...ids]);
+    // Store email but use empty strings for name fields - names will be fetched via JOINs
+    return dbRun(query, ['', '', managerEmail || '', managerId, now, ...ids]);
   },
   getEmployeeEmailsByManager: async (managerEmail) => {
     const rows = await dbAll('SELECT DISTINCT employee_email FROM assets WHERE manager_email = ?', [managerEmail]);
@@ -1281,24 +1360,35 @@ export const assetDb = {
     // Manager: own assets + direct reports' assets
     // Employee: only own assets
     
-    let query = 'SELECT * FROM assets';
+    let baseQuery = `
+      SELECT 
+        assets.*,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+    `;
     let params = [];
     
     if (user.role === 'admin') {
       // Admin sees all
-      query += ' ORDER BY registration_date DESC';
+      baseQuery += ' ORDER BY assets.registration_date DESC';
     } else if (user.role === 'manager') {
       // Manager sees own + direct reports
-      // Use owner_id if available, fall back to email matching
-      query += ' WHERE owner_id = ? OR manager_id = ? OR employee_email = ? OR manager_email = ? ORDER BY registration_date DESC';
-      params = [user.id, user.id, user.email, user.email];
+      baseQuery += ' WHERE assets.owner_id = ? OR assets.manager_id = ? ORDER BY assets.registration_date DESC';
+      params = [user.id, user.id];
     } else {
       // Employee sees only own
-      query += ' WHERE owner_id = ? OR employee_email = ? ORDER BY registration_date DESC';
-      params = [user.id, user.email];
+      baseQuery += ' WHERE assets.owner_id = ? ORDER BY assets.registration_date DESC';
+      params = [user.id];
     }
     
-    const rows = await dbAll(query, params);
+    const rows = await dbAll(baseQuery, params);
     return rows.map((row) => ({
       ...row,
       registration_date: normalizeDates(row.registration_date),

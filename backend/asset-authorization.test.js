@@ -149,24 +149,19 @@ describe('Asset Authorization and Manager Sync', () => {
       );
     });
 
-    it('should handle manager name splitting correctly', async () => {
-      // Update with a combined manager name
+    it('should get manager name from user record via JOIN', async () => {
+      // Update manager for employee
       await assetDb.updateManagerForEmployee(
         employeeUser.email,
-        'John Doe Smith',
+        'John Doe Smith', // This parameter is now ignored
         'manager@test.com'
       );
 
       const updatedAsset = await assetDb.getById(asset.id);
-      expect(updatedAsset.manager_first_name).toBe('John');
-      expect(updatedAsset.manager_last_name).toBe('Doe Smith');
-
-      // Restore
-      await assetDb.updateManagerForEmployee(
-        employeeUser.email,
-        'Test Manager',
-        'manager@test.com'
-      );
+      // Manager names should come from the user record via JOIN, not from denormalized fields
+      expect(updatedAsset.manager_first_name).toBe('Test'); // From managerUser.first_name
+      expect(updatedAsset.manager_last_name).toBe('Manager'); // From managerUser.last_name
+      expect(updatedAsset.manager_email).toBe('manager@test.com');
     });
   });
 
