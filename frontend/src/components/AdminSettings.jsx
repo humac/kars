@@ -358,17 +358,17 @@ const AdminSettingsNew = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-primary" />
             <CardTitle>Admin Settings</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="pt-3">
+        <CardContent className="pt-2">
           <Tabs value={activeView} onValueChange={setActiveView}>
-            <TabsList className="mb-4">
+            <TabsList className="mb-3">
               <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" />Users</TabsTrigger>
               <TabsTrigger value="overview" className="gap-2"><LayoutDashboard className="h-4 w-4" />Overview</TabsTrigger>
               <TabsTrigger value="settings" className="gap-2"><Database className="h-4 w-4" />Database</TabsTrigger>
@@ -376,7 +376,7 @@ const AdminSettingsNew = () => {
               <TabsTrigger value="security" className="gap-2"><Shield className="h-4 w-4" />Security</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="users" className="space-y-3">
+            <TabsContent value="users" className="space-y-2">
               <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold">User Management</h3>
                 <span className="text-sm text-muted-foreground">Total: {users.length}</span>
@@ -563,8 +563,8 @@ const AdminSettingsNew = () => {
                 </div>
               )}
               <Card className="bg-muted/50">
-                <CardHeader className="pb-3"><CardTitle className="text-base">Role Descriptions</CardTitle></CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-3 pt-3">
+                <CardHeader className="pb-2"><CardTitle className="text-base">Role Descriptions</CardTitle></CardHeader>
+                <CardContent className="grid gap-2 md:grid-cols-3 pt-2">
                   <div><Badge variant="destructive">Admin</Badge><p className="text-sm text-muted-foreground mt-1">Full system access, can manage all users and settings.</p></div>
                   <div><Badge variant="success">Manager</Badge><p className="text-sm text-muted-foreground mt-1">View own + team assets, access team audit reports.</p></div>
                   <div><Badge variant="secondary">Employee</Badge><p className="text-sm text-muted-foreground mt-1">Can only view and manage own asset registrations.</p></div>
@@ -572,16 +572,16 @@ const AdminSettingsNew = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="overview">
-              <div className="grid gap-3 md:grid-cols-4 mb-4">
-                <Card className="bg-primary text-primary-foreground"><CardContent className="pt-4 pb-4"><div className="text-2xl font-bold">{users.length}</div><p className="text-sm opacity-80">Total Users</p></CardContent></Card>
-                <Card className="bg-red-500 text-white"><CardContent className="pt-4 pb-4"><div className="text-2xl font-bold">{users.filter(u => u.role === 'admin').length}</div><p className="text-sm opacity-80">Administrators</p></CardContent></Card>
-                <Card className="bg-green-500 text-white"><CardContent className="pt-4 pb-4"><div className="text-2xl font-bold">{users.filter(u => u.role === 'manager').length}</div><p className="text-sm opacity-80">Managers</p></CardContent></Card>
-                <Card className="bg-blue-500 text-white"><CardContent className="pt-4 pb-4"><div className="text-2xl font-bold">{users.filter(u => u.role === 'employee').length}</div><p className="text-sm opacity-80">Employees</p></CardContent></Card>
+            <TabsContent value="overview" className="space-y-3">
+              <div className="grid gap-2 md:grid-cols-4">
+                <Card className="bg-primary text-primary-foreground"><CardContent className="pt-3 pb-3"><div className="text-2xl font-bold">{users.length}</div><p className="text-sm opacity-80">Total Users</p></CardContent></Card>
+                <Card className="bg-red-500 text-white"><CardContent className="pt-3 pb-3"><div className="text-2xl font-bold">{users.filter(u => u.role === 'admin').length}</div><p className="text-sm opacity-80">Administrators</p></CardContent></Card>
+                <Card className="bg-green-500 text-white"><CardContent className="pt-3 pb-3"><div className="text-2xl font-bold">{users.filter(u => u.role === 'manager').length}</div><p className="text-sm opacity-80">Managers</p></CardContent></Card>
+                <Card className="bg-blue-500 text-white"><CardContent className="pt-3 pb-3"><div className="text-2xl font-bold">{users.filter(u => u.role === 'employee').length}</div><p className="text-sm opacity-80">Employees</p></CardContent></Card>
               </div>
               <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">System Information</CardTitle></CardHeader>
-                <CardContent className="space-y-1.5 text-sm text-muted-foreground pt-3">
+                <CardHeader className="pb-2"><CardTitle className="text-base">System Information</CardTitle></CardHeader>
+                <CardContent className="space-y-1 text-sm text-muted-foreground pt-2">
                   <p><strong>Application:</strong> KARS - KeyData Asset Registration System</p>
                   <p><strong>Purpose:</strong> SOC2 Compliance - Track and manage company assets</p>
                   <p><strong>Features:</strong> Role-based access, Asset tracking, Company management, Audit logging, CSV exports</p>
@@ -589,13 +589,13 @@ const AdminSettingsNew = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings" className="space-y-3">
+            <TabsContent value="settings" className="space-y-2">
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-base">Database Configuration</CardTitle>
-                  <CardDescription>Choose SQLite (default) or PostgreSQL for production.</CardDescription>
+                  <CardDescription className="text-sm">Choose SQLite (default) or PostgreSQL for production.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-3">
+                <CardContent className="space-y-2 pt-2">
                   <div className="flex items-center gap-2">
                     <Badge variant={dbSettings.effectiveEngine === 'postgres' ? 'success' : 'secondary'}>{dbSettings.effectiveEngine.toUpperCase()}</Badge>
                     {dbSettings.managedByEnv && <Badge variant="warning">Managed by ENV</Badge>}
@@ -610,7 +610,7 @@ const AdminSettingsNew = () => {
                   {dbSettings.engine === 'postgres' && (
                     <Input placeholder="postgresql://user:pass@host:5432/database" value={dbSettings.postgresUrl} onChange={(e) => setDbSettings({ ...dbSettings, postgresUrl: e.target.value })} disabled={dbSettings.managedByEnv || dbLoading} />
                   )}
-                  <Button onClick={handleDatabaseSave} disabled={dbSettings.managedByEnv || dbLoading}>
+                  <Button onClick={handleDatabaseSave} disabled={dbSettings.managedByEnv || dbLoading} size="sm">
                     {dbLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Database Settings
                   </Button>
                   <p className="text-xs text-muted-foreground">Restart the backend after changing database settings.</p>
@@ -621,7 +621,7 @@ const AdminSettingsNew = () => {
                   <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-yellow-600" /><CardTitle className="text-sm text-yellow-800">Security Best Practices</CardTitle></div>
                 </CardHeader>
                 <CardContent className="pt-2">
-                  <ul className="text-sm text-yellow-800 space-y-1">
+                  <ul className="text-xs text-yellow-800 space-y-0.5 list-disc list-inside">
                     <li>Regularly review user roles and permissions</li>
                     <li>Remove inactive user accounts</li>
                     <li>Monitor audit logs for suspicious activity</li>
@@ -631,31 +631,32 @@ const AdminSettingsNew = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="branding" className="space-y-3">
+            <TabsContent value="branding" className="space-y-2">
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-base">Company Logo</CardTitle>
-                  <CardDescription>Upload a custom logo to replace the default KARS branding on the login page.</CardDescription>
+                  <CardDescription className="text-sm">Upload a custom logo to replace the default KARS branding on the login page.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-3">
+                <CardContent className="space-y-2 pt-2">
                   {brandingLoading ? (
-                    <div className="flex items-center justify-center py-12">
+                    <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : (
                     <>
                       {logoPreview && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-center p-6 border rounded-lg bg-muted/50">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center p-4 border rounded-lg bg-muted/50">
                             <img
                               src={logoPreview}
                               alt="Company Logo"
-                              className="max-h-32 object-contain"
+                              className="max-h-24 object-contain"
                             />
                           </div>
                           <div className="flex gap-2">
                             <Button
                               variant="destructive"
+                              size="sm"
                               onClick={handleLogoRemove}
                               disabled={brandingLoading}
                             >
@@ -666,7 +667,7 @@ const AdminSettingsNew = () => {
                         </div>
                       )}
 
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Input
                           type="file"
                           accept="image/*"
