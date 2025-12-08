@@ -41,7 +41,8 @@ export const UsersProvider = ({ children }) => {
     };
 
     fetchUsers();
-  }, [isAuthenticated, getAuthHeaders]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]); // getAuthHeaders intentionally omitted - only fetch once on authentication
 
   // Build a map for efficient lookups
   const usersById = useMemo(() => {

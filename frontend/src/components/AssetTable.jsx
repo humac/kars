@@ -102,7 +102,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const getManagerDisplayName = useCallback((asset) => {
     // Case 1: Prefer denormalized fields if present
     if (asset.manager_first_name && asset.manager_last_name) {
-      return `${asset.manager_first_name} ${asset.manager_last_name}`;
+      return `${asset.manager_first_name.trim()} ${asset.manager_last_name.trim()}`.trim();
     }
     if (asset.manager_first_name || asset.manager_last_name) {
       return (asset.manager_first_name || asset.manager_last_name).trim();
