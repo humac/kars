@@ -2002,26 +2002,10 @@ app.get('/api/stats', authenticate, async (req, res) => {
 // Get all assets (with role-based filtering)
 app.get('/api/assets', authenticate, async (req, res) => {
   try {
-    const allAssets = await assetDb.getAll();
     const user = await userDb.getById(req.user.id);
-
-    // Role-based filtering
-    let filteredAssets;
-    if (user.role === 'admin') {
-      // Admin sees all assets
-      filteredAssets = allAssets;
-    } else if (user.role === 'manager') {
-      // Manager sees their own assets + their employees' assets
-      filteredAssets = allAssets.filter(asset =>
-        asset.employee_email === user.email ||
-        asset.manager_email === user.email
-      );
-    } else {
-      // Employee sees only their own assets
-      filteredAssets = allAssets.filter(asset =>
-        asset.employee_email === user.email
-      );
-    }
+    
+    // Use scoped query for role-based filtering
+    const filteredAssets = await assetDb.getScopedForUser(user);
 
     res.json(filteredAssets);
   } catch (error) {
@@ -2523,7 +2507,18 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
     }
 
     const user = await userDb.getById(req.user.id);
-    const isEmployeeOwner = user.role === 'employee' && asset.employee_email === user.email;
+    
+    // Authorization: Only owner or admin can edit
+    // Use owner_id if available, fall back to email matching
+    const isOwner = (asset.owner_id && asset.owner_id === user.id) || 
+                    (asset.employee_email && asset.employee_email.toLowerCase() === user.email.toLowerCase());
+    const isAdmin = user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ 
+        error: 'Forbidden: Only the asset owner or an admin can edit this asset' 
+      });
+    }
 
     let { 
       employee_first_name, 
@@ -2540,7 +2535,7 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
     } = req.body;
 
     // Employees can update the asset but cannot change their own name/email
-    if (isEmployeeOwner) {
+    if (isOwner && user.role === 'employee') {
       employee_first_name = asset.employee_first_name;
       employee_last_name = asset.employee_last_name;
       employee_email = asset.employee_email;

@@ -35,23 +35,29 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
   - Database-backed configuration (admin UI)
 - **Password Security** - bcrypt hashing (10 rounds)
 - **Password Management** - Change password from profile settings
-- **Role-Based Access Control** - Three roles: Employee, Manager, Admin
+- **Role-Based Access Control** - Three roles with distinct permissions:
+  - **Employee**: View/edit own assets and audit logs only
+  - **Manager**: View own + direct reports' assets and audit logs; cannot edit employee assets
+  - **Admin**: Full access to all resources
 - **Automatic Manager Promotion** - Users listed as a manager are auto-promoted to manager with audit logging
 - **First Admin Setup** - Automatic admin promotion for first user
 - **Profile Management** - Update first/last name, password, MFA settings, passkeys, and manager details
+- **Manager Change Propagation** - When a user's manager is updated (by admin or self), all assets owned by that user automatically update to reference the new manager
 - **Branding Controls** - Admins can upload a custom logo and branding name from the UI
 
 ### 📦 Asset Management
 - **Self-Service Registration** - Consultants register client laptops with separated name fields for better data quality
   - Employee first/last name, email (prepopulated and readonly for employees)
   - Manager first/last name, email (prepopulated from employee profile for employees)
-  - Company, laptop details, serial number, asset tag, status, notes
+  - Company dropdown (populated from system companies)
+  - Laptop details, serial number, asset tag, status, notes
 - **Status Tracking** - Active, Returned, Lost, Damaged, Retired
 - **Advanced Search** - Filter by employee, manager, client, status
-- **Role-Based Visibility**:
-  - Employees: Own assets only (register for themselves with prepopulated info)
-  - Managers: Own + team assets (can register for others with full editing)
-  - Admins: All assets (can register for anyone with full editing)
+- **Role-Based Visibility & Authorization**:
+  - Employees: View only their own assets; can edit only their own assets
+  - Managers: View own + team assets (direct reports); cannot edit employee assets
+  - Admins: View and edit all assets
+- **Automatic Manager Sync** - When an employee's manager changes, all their assets are automatically updated with the new manager reference
 - **Bulk Import/Export** - CSV importers for assets (with separated name fields) and companies plus CSV audit export
 
 ### 🏢 Company Management (Admin Only)

@@ -226,9 +226,11 @@ const initDb = async () => {
       employee_first_name TEXT NOT NULL,
       employee_last_name TEXT NOT NULL,
       employee_email TEXT NOT NULL,
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       manager_first_name TEXT,
       manager_last_name TEXT,
       manager_email TEXT,
+      manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       company_name TEXT NOT NULL,
       laptop_serial_number TEXT NOT NULL UNIQUE,
       laptop_asset_tag TEXT NOT NULL UNIQUE,
@@ -245,9 +247,11 @@ const initDb = async () => {
       employee_first_name TEXT NOT NULL,
       employee_last_name TEXT NOT NULL,
       employee_email TEXT NOT NULL,
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       manager_first_name TEXT,
       manager_last_name TEXT,
       manager_email TEXT,
+      manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       company_name TEXT NOT NULL,
       laptop_serial_number TEXT NOT NULL UNIQUE,
       laptop_asset_tag TEXT NOT NULL UNIQUE,
@@ -764,13 +768,75 @@ const initDb = async () => {
     `, [now]);
   }
 
+  // Migrate existing assets table to add owner_id and manager_id columns
+  try {
+    if (isPostgres) {
+      await dbRun('ALTER TABLE assets ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
+      await dbRun('ALTER TABLE assets ADD COLUMN IF NOT EXISTS manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
+      console.log('PostgreSQL: Added owner_id and manager_id columns to assets table');
+    } else {
+      // SQLite: Check if columns exist before adding
+      const assetColumns = await dbAll("PRAGMA table_info(assets)");
+      const hasOwnerId = assetColumns.some(col => col.name === 'owner_id');
+      const hasManagerId = assetColumns.some(col => col.name === 'manager_id');
+
+      if (!hasOwnerId) {
+        await dbRun('ALTER TABLE assets ADD COLUMN owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
+        console.log('SQLite: Added owner_id column to assets table');
+      }
+      if (!hasManagerId) {
+        await dbRun('ALTER TABLE assets ADD COLUMN manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
+        console.log('SQLite: Added manager_id column to assets table');
+      }
+    }
+
+    // Populate owner_id and manager_id from existing email fields
+    // This is done after columns are added to ensure data integrity
+    console.log('Populating owner_id and manager_id from existing data...');
+    
+    // Update owner_id based on employee_email
+    const updateOwnerIdSql = `
+      UPDATE assets 
+      SET owner_id = (SELECT id FROM users WHERE LOWER(users.email) = LOWER(assets.employee_email))
+      WHERE owner_id IS NULL AND employee_email IS NOT NULL
+    `;
+    const ownerResult = await dbRun(updateOwnerIdSql);
+    console.log(`Updated ${ownerResult.changes || 0} asset owner_id values`);
+
+    // Update manager_id based on manager_email
+    const updateManagerIdSql = `
+      UPDATE assets 
+      SET manager_id = (SELECT id FROM users WHERE LOWER(users.email) = LOWER(assets.manager_email))
+      WHERE manager_id IS NULL AND manager_email IS NOT NULL
+    `;
+    const managerResult = await dbRun(updateManagerIdSql);
+    console.log(`Updated ${managerResult.changes || 0} asset manager_id values`);
+
+  } catch (err) {
+    // Check if error is due to column already existing
+    const isDuplicateColumn = 
+      err.message?.toLowerCase().includes('duplicate column') ||
+      err.message?.toLowerCase().includes('already exists') ||
+      err.code === '42701';
+    
+    if (isDuplicateColumn) {
+      console.warn('owner_id/manager_id columns already exist (ignored):', err.message);
+    } else {
+      console.error('Migration FAILED for assets owner_id/manager_id:', err.message);
+      console.error('Stack trace:', err.stack);
+      throw new Error(`Failed to add owner_id/manager_id columns to assets: ${err.message}`);
+    }
+  }
+
   // Indexes
   await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_first_name ON assets(employee_first_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_last_name ON assets(employee_last_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_employee_email ON assets(employee_email)');
+  await dbRun('CREATE INDEX IF NOT EXISTS idx_owner_id ON assets(owner_id)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_first_name ON assets(manager_first_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_last_name ON assets(manager_last_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_email ON assets(manager_email)');
+  await dbRun('CREATE INDEX IF NOT EXISTS idx_manager_id ON assets(manager_id)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON assets(company_name)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_status ON assets(status)');
   await dbRun('CREATE INDEX IF NOT EXISTS idx_company_name ON companies(name)');
@@ -801,13 +867,28 @@ export const assetDb = {
   init: initDb,
   create: async (asset) => {
     const now = new Date().toISOString();
+    
+    // Look up owner_id from employee_email
+    let ownerId = null;
+    if (asset.employee_email) {
+      const owner = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [asset.employee_email]);
+      ownerId = owner?.id || null;
+    }
+
+    // Look up manager_id from manager_email
+    let managerId = null;
+    if (asset.manager_email) {
+      const manager = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [asset.manager_email]);
+      managerId = manager?.id || null;
+    }
+
     const insertQuery = `
       INSERT INTO assets (
-        employee_first_name, employee_last_name, employee_email, 
-        manager_first_name, manager_last_name, manager_email,
+        employee_first_name, employee_last_name, employee_email, owner_id,
+        manager_first_name, manager_last_name, manager_email, manager_id,
         company_name, laptop_make, laptop_model, laptop_serial_number, laptop_asset_tag,
         status, registration_date, last_updated, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ${isPostgres ? 'RETURNING id' : ''}
     `;
 
@@ -815,9 +896,11 @@ export const assetDb = {
       asset.employee_first_name,
       asset.employee_last_name,
       asset.employee_email,
+      ownerId,
       asset.manager_first_name || null,
       asset.manager_last_name || null,
       asset.manager_email || null,
+      managerId,
       asset.company_name,
       asset.laptop_make || '',
       asset.laptop_model || '',
@@ -892,10 +975,25 @@ export const assetDb = {
   },
   update: async (id, asset) => {
     const now = new Date().toISOString();
+    
+    // Look up owner_id from employee_email
+    let ownerId = null;
+    if (asset.employee_email) {
+      const owner = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [asset.employee_email]);
+      ownerId = owner?.id || null;
+    }
+
+    // Look up manager_id from manager_email
+    let managerId = null;
+    if (asset.manager_email) {
+      const manager = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [asset.manager_email]);
+      managerId = manager?.id || null;
+    }
+
     return dbRun(`
       UPDATE assets
-      SET employee_first_name = ?, employee_last_name = ?, employee_email = ?, 
-          manager_first_name = ?, manager_last_name = ?, manager_email = ?,
+      SET employee_first_name = ?, employee_last_name = ?, employee_email = ?, owner_id = ?,
+          manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?,
           company_name = ?, laptop_serial_number = ?, laptop_asset_tag = ?,
           status = ?, last_updated = ?, notes = ?
       WHERE id = ?
@@ -903,9 +1001,11 @@ export const assetDb = {
       asset.employee_first_name,
       asset.employee_last_name,
       asset.employee_email,
+      ownerId,
       asset.manager_first_name || null,
       asset.manager_last_name || null,
       asset.manager_email || null,
+      managerId,
       asset.company_name,
       asset.laptop_serial_number,
       asset.laptop_asset_tag,
@@ -934,11 +1034,41 @@ export const assetDb = {
   },
   updateManagerForEmployee: async (employeeEmail, managerName, managerEmail) => {
     const now = new Date().toISOString();
+    
+    // Look up manager_id from manager_email
+    let managerId = null;
+    if (managerEmail) {
+      const manager = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [managerEmail]);
+      managerId = manager?.id || null;
+    }
+
+    // Split manager name into first and last (best effort)
+    let managerFirstName = null;
+    let managerLastName = null;
+    if (managerName) {
+      const nameParts = managerName.trim().split(/\s+/);
+      if (nameParts.length === 1) {
+        managerFirstName = nameParts[0];
+        managerLastName = '';
+      } else {
+        managerFirstName = nameParts[0];
+        managerLastName = nameParts.slice(1).join(' ');
+      }
+    }
+
     return dbRun(`
       UPDATE assets
-      SET manager_name = ?, manager_email = ?, last_updated = ?
+      SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?, last_updated = ?
       WHERE employee_email = ?
-    `, [managerName, managerEmail, now, employeeEmail]);
+    `, [managerFirstName, managerLastName, managerEmail, managerId, now, employeeEmail]);
+  },
+  updateManagerIdForOwner: async (ownerId, managerId) => {
+    const now = new Date().toISOString();
+    return dbRun(`
+      UPDATE assets
+      SET manager_id = ?, last_updated = ?
+      WHERE owner_id = ?
+    `, [managerId, now, ownerId]);
   },
   getByIds: async (ids) => {
     if (!ids || ids.length === 0) return [];
@@ -982,6 +1112,36 @@ export const assetDb = {
   getEmployeeEmailsByManager: async (managerEmail) => {
     const rows = await dbAll('SELECT DISTINCT employee_email FROM assets WHERE manager_email = ?', [managerEmail]);
     return rows.map(row => row.employee_email);
+  },
+  getScopedForUser: async (user) => {
+    // Return assets scoped based on user role
+    // Admin: all assets
+    // Manager: own assets + direct reports' assets
+    // Employee: only own assets
+    
+    let query = 'SELECT * FROM assets';
+    let params = [];
+    
+    if (user.role === 'admin') {
+      // Admin sees all
+      query += ' ORDER BY registration_date DESC';
+    } else if (user.role === 'manager') {
+      // Manager sees own + direct reports
+      // Use owner_id if available, fall back to email matching
+      query += ' WHERE owner_id = ? OR manager_id = ? OR employee_email = ? OR manager_email = ? ORDER BY registration_date DESC';
+      params = [user.id, user.id, user.email, user.email];
+    } else {
+      // Employee sees only own
+      query += ' WHERE owner_id = ? OR employee_email = ? ORDER BY registration_date DESC';
+      params = [user.id, user.email];
+    }
+    
+    const rows = await dbAll(query, params);
+    return rows.map((row) => ({
+      ...row,
+      registration_date: normalizeDates(row.registration_date),
+      last_updated: normalizeDates(row.last_updated)
+    }));
   }
 };
 
