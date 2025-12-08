@@ -85,7 +85,7 @@ describe('AssetEditModal Component', () => {
     expect(screen.getByText('SN12345')).toBeInTheDocument();
     expect(screen.getByText('Type:')).toBeInTheDocument();
     expect(screen.getByText('Dell XPS 15')).toBeInTheDocument();
-    expect(screen.getByText('Location:')).toBeInTheDocument();
+    expect(screen.getByText('Company:')).toBeInTheDocument();
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
     expect(screen.getByText('Employee:')).toBeInTheDocument();
     expect(screen.getByText('John Doe')).toBeInTheDocument();
