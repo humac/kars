@@ -75,8 +75,12 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **Secure Exports** - Role-based access control on all exports
 
 ### ⚙️ Admin Features
-- **User Management** - View, edit roles, delete users
-- **System Overview** - User statistics and system info
+- **User Management** - Dedicated Users page accessible to managers (read-only) and admins (full access)
+  - Add new users with specified roles
+  - Edit roles and user attributes
+  - Bulk operations and user deletion
+  - Manager read-only access for viewing team members
+- **System Overview** - System information and admin navigation guide
 - **Application Settings** - Configuration and best practices
 - **OIDC/SSO Configuration** - Database-backed SSO settings with admin UI
 - **Passkey Settings** - Configure relying party name/ID and origin from the UI

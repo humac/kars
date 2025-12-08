@@ -234,30 +234,43 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 - Customizable export filters
 - Downloadable compliance reports
 
-### Admin Settings
+### Users Page
 
-**User Management**
+**Accessible to Managers and Admins** from the main navigation
+
+**Manager Access (Read-Only)**
 - View all registered users
 - See user details:
   - Name, email, role
+  - Manager information
   - Account creation date
   - Last login timestamp
-- Change user roles via dropdown:
-  - Promote to manager or admin
-  - Demote to employee
+- Search and filter users
+- Informational banner explaining read-only access
+
+**Admin Access (Full Management)**
+- All manager capabilities plus:
+- Add new users via modal:
+  - Set email, name, password
+  - Assign role (employee/manager/admin)
+  - Optional manager information
+- Change user roles via dropdown
+- Edit user attributes:
+  - First and last name
+  - Manager information
 - Delete user accounts
+- Bulk operations:
+  - Bulk role updates
+  - Bulk user deletion
 - Protection against self-modification
 - Total user statistics
 
+### Admin Settings
+
 **System Overview**
-- User count by role:
-  - Total administrators
-  - Total managers
-  - Total employees
-  - Total users
 - System information display
 - Feature highlights
-- Version information
+- Admin navigation guide
 
 **Application Settings**
 - Company management guidance

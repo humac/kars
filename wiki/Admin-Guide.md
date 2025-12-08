@@ -67,14 +67,16 @@ Creating admin user: your-admin@domain.com (admin email match)
 
 If you're already an admin, promote another user:
 
-1. Go to **Admin Settings** → **User Management**
+1. Go to the **Users** page from the main navigation
 2. Find the user in the table
 3. Change their role dropdown to "Admin"
 4. Role is updated immediately
 
 ## User Management
 
-Access: **Admin Settings** → **User Management**
+Access: **Users** page (main navigation - accessible to Managers and Admins)
+
+**Managers** have read-only access to view user information, while **Admins** have full access to manage users.
 
 ### Viewing Users
 
