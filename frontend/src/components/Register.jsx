@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,19 @@ const RegisterNew = ({ onSwitchToLogin }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [brandingLogo, setBrandingLogo] = useState(null);
+
+  useEffect(() => {
+    // Fetch branding settings
+    fetch('/api/branding')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo_data) {
+          setBrandingLogo(data.logo_data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch branding:', err));
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -68,11 +81,23 @@ const RegisterNew = ({ onSwitchToLogin }) => {
       <div className="w-full max-w-lg relative z-10 animate-fade-in">
         {/* Logo/Brand */}
         <div className="text-center mb-8 animate-slide-up">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary mb-4 shadow-lg hover:scale-105 transition-transform">
-            <Laptop className="h-10 w-10 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">KARS</h1>
-          <p className="text-muted-foreground">KeyData Asset Registration System</p>
+          {brandingLogo ? (
+            <div className="mb-4">
+              <img
+                src={brandingLogo}
+                alt="Company Logo"
+                className="max-w-full h-auto max-h-32 object-contain mx-auto drop-shadow-lg"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary mb-4 shadow-lg hover:scale-105 transition-transform">
+                <Laptop className="h-10 w-10 text-primary-foreground" />
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">KARS</h1>
+              <p className="text-muted-foreground">KeyData Asset Registration System</p>
+            </>
+          )}
         </div>
 
         <Card className="shadow-xl backdrop-blur-sm bg-card/95 border-border/50 animate-scale-in">
