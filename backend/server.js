@@ -2277,10 +2277,12 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
       'employee_last_name',
       'employee_email',
       'company_name',
-      'laptop_serial_number',
-      'laptop_asset_tag'
+      'asset_type',
+      'serial_number',
+      'asset_tag'
     ];
     const validStatuses = ['active', 'returned', 'lost', 'damaged', 'retired'];
+    const validAssetTypes = ['laptop', 'mobile_phone'];
 
     let imported = 0;
     const errors = [];
@@ -2303,6 +2305,12 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
         continue;
       }
 
+      const asset_type = normalizedRow.asset_type ? normalizedRow.asset_type.toLowerCase() : '';
+      if (!validAssetTypes.includes(asset_type)) {
+        errors.push(`Row ${index + 2}: Invalid asset_type '${normalizedRow.asset_type}'. Valid types: ${validAssetTypes.join(', ')}`);
+        continue;
+      }
+
       const assetData = {
         employee_first_name: normalizedRow.employee_first_name,
         employee_last_name: normalizedRow.employee_last_name,
@@ -2311,10 +2319,11 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
         manager_last_name: normalizedRow.manager_last_name || null,
         manager_email: normalizedRow.manager_email || null,
         company_name: normalizedRow.company_name,
-        laptop_make: normalizedRow.laptop_make || '',
-        laptop_model: normalizedRow.laptop_model || '',
-        laptop_serial_number: normalizedRow.laptop_serial_number,
-        laptop_asset_tag: normalizedRow.laptop_asset_tag,
+        asset_type: asset_type,
+        make: normalizedRow.make || '',
+        model: normalizedRow.model || '',
+        serial_number: normalizedRow.serial_number,
+        asset_tag: normalizedRow.asset_tag,
         status,
         notes: normalizedRow.notes || ''
       };
@@ -2328,14 +2337,15 @@ app.post('/api/assets/import', authenticate, upload.single('file'), async (req, 
           'CREATE',
           'asset',
           result.id,
-          `${assetData.laptop_serial_number} - ${employee_name}`,
+          `${assetData.serial_number} - ${employee_name}`,
           {
             employee_first_name: assetData.employee_first_name,
             employee_last_name: assetData.employee_last_name,
             employee_email: assetData.employee_email,
             company_name: assetData.company_name,
-            laptop_serial_number: assetData.laptop_serial_number,
-            laptop_asset_tag: assetData.laptop_asset_tag,
+            asset_type: assetData.asset_type,
+            serial_number: assetData.serial_number,
+            asset_tag: assetData.asset_tag,
             imported: true
           },
           assetData.employee_email
@@ -2377,17 +2387,25 @@ app.post('/api/assets', authenticate, async (req, res) => {
       manager_first_name,
       manager_last_name,
       manager_email,
-      company_name, 
-      laptop_serial_number, 
-      laptop_asset_tag, 
+      company_name,
+      asset_type,
+      serial_number, 
+      asset_tag, 
       notes 
     } = req.body;
 
     // Validation
-    if (!employee_first_name || !employee_last_name || !employee_email || !company_name || !laptop_serial_number || !laptop_asset_tag) {
+    if (!employee_first_name || !employee_last_name || !employee_email || !company_name || !asset_type || !serial_number || !asset_tag) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'laptop_serial_number', 'laptop_asset_tag']
+        required: ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'asset_type', 'serial_number', 'asset_tag']
+      });
+    }
+
+    // Validate asset_type
+    if (!['laptop', 'mobile_phone'].includes(asset_type)) {
+      return res.status(400).json({
+        error: 'Invalid asset_type. Must be either "laptop" or "mobile_phone"'
       });
     }
 
@@ -2400,7 +2418,7 @@ app.post('/api/assets', authenticate, async (req, res) => {
       'CREATE',
       'asset',
       newAsset.id,
-      `${laptop_serial_number} - ${employee_name}`,
+      `${serial_number} - ${employee_name}`,
       {
         employee_first_name,
         employee_last_name,
@@ -2409,8 +2427,9 @@ app.post('/api/assets', authenticate, async (req, res) => {
         manager_last_name,
         manager_email,
         company_name,
-        laptop_serial_number,
-        laptop_asset_tag
+        asset_type,
+        serial_number,
+        asset_tag
       },
       employee_email
     );
@@ -2481,10 +2500,11 @@ app.patch('/api/assets/bulk/status', authenticate, async (req, res) => {
       }
 
       allowedIds.push(id);
+      const employeeName = `${asset.employee_first_name} ${asset.employee_last_name}`;
       results.updated.push({
         id,
-        serial: asset.laptop_serial_number,
-        employee: asset.employee_name
+        serial: asset.serial_number,
+        employee: employeeName
       });
     }
 
@@ -2496,11 +2516,12 @@ app.patch('/api/assets/bulk/status', authenticate, async (req, res) => {
       // Note: Could be further optimized with batch insert
       for (const id of allowedIds) {
         const asset = assetMap.get(id);
+        const employeeName = `${asset.employee_first_name} ${asset.employee_last_name}`;
         await auditDb.log(
           'BULK_STATUS_CHANGE',
           'asset',
           asset.id,
-          `${asset.laptop_serial_number} - ${asset.employee_name}`,
+          `${asset.serial_number} - ${employeeName}`,
           {
             old_status: asset.status,  // Original status from pre-update fetch
             new_status: status,
@@ -2548,10 +2569,14 @@ app.delete('/api/assets/bulk/delete', authenticate, authorize('admin'), async (r
       }
 
       validIds.push(id);
+      const employeeName = `${asset.employee_first_name} ${asset.employee_last_name}`;
+      const managerName = asset.manager_first_name && asset.manager_last_name 
+        ? `${asset.manager_first_name} ${asset.manager_last_name}` 
+        : '';
       results.deleted.push({
         id,
-        serial: asset.laptop_serial_number,
-        employee: asset.employee_name
+        serial: asset.serial_number,
+        employee: employeeName
       });
 
       // Log audit before deletion
@@ -2559,15 +2584,16 @@ app.delete('/api/assets/bulk/delete', authenticate, authorize('admin'), async (r
         'BULK_DELETE',
         'asset',
         asset.id,
-        `${asset.laptop_serial_number} - ${asset.employee_name}`,
+        `${asset.serial_number} - ${employeeName}`,
         {
-          employee_name: asset.employee_name,
+          employee_name: employeeName,
           employee_email: asset.employee_email,
-          manager_name: asset.manager_name,
+          manager_name: managerName,
           manager_email: asset.manager_email,
           company_name: asset.company_name,
-          laptop_serial_number: asset.laptop_serial_number,
-          laptop_asset_tag: asset.laptop_asset_tag,
+          asset_type: asset.asset_type,
+          serial_number: asset.serial_number,
+          asset_tag: asset.asset_tag,
           status: asset.status,
           deleted_by: req.user.email,
           bulk_operation: true
@@ -2627,10 +2653,14 @@ app.patch('/api/assets/bulk/manager', authenticate, authorize('admin'), async (r
       }
 
       validIds.push(id);
+      const employeeName = `${asset.employee_first_name} ${asset.employee_last_name}`;
+      const oldManagerName = asset.manager_first_name && asset.manager_last_name 
+        ? `${asset.manager_first_name} ${asset.manager_last_name}` 
+        : '';
       results.updated.push({
         id,
-        serial: asset.laptop_serial_number,
-        employee: asset.employee_name
+        serial: asset.serial_number,
+        employee: employeeName
       });
 
       // Log audit
@@ -2638,9 +2668,9 @@ app.patch('/api/assets/bulk/manager', authenticate, authorize('admin'), async (r
         'BULK_MANAGER_ASSIGN',
         'asset',
         asset.id,
-        `${asset.laptop_serial_number} - ${asset.employee_name}`,
+        `${asset.serial_number} - ${employeeName}`,
         {
-          old_manager_name: asset.manager_name,
+          old_manager_name: oldManagerName,
           old_manager_email: asset.manager_email,
           new_manager_name: manager_name,
           new_manager_email: manager_email,
@@ -2693,11 +2723,12 @@ app.patch('/api/assets/:id/status', async (req, res) => {
     const updatedAsset = await assetDb.getById(req.params.id);
 
     // Log audit
+    const employeeName = `${asset.employee_first_name} ${asset.employee_last_name}`;
     await auditDb.log(
       'STATUS_CHANGE',
       'asset',
       asset.id,
-      `${asset.laptop_serial_number} - ${asset.employee_name}`,
+      `${asset.serial_number} - ${employeeName}`,
       {
         old_status: oldStatus,
         new_status: status,
@@ -2745,9 +2776,10 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       manager_first_name, 
       manager_last_name, 
       manager_email, 
-      company_name, 
-      laptop_serial_number, 
-      laptop_asset_tag, 
+      company_name,
+      asset_type,
+      serial_number, 
+      asset_tag, 
       status, 
       notes 
     } = req.body;
@@ -2759,10 +2791,17 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       employee_email = asset.employee_email;
     }
 
-    if (!employee_first_name || !employee_last_name || !employee_email || !company_name || !laptop_serial_number || !laptop_asset_tag) {
+    if (!employee_first_name || !employee_last_name || !employee_email || !company_name || !asset_type || !serial_number || !asset_tag) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'laptop_serial_number', 'laptop_asset_tag']
+        required: ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'asset_type', 'serial_number', 'asset_tag']
+      });
+    }
+
+    // Validate asset_type
+    if (!['laptop', 'mobile_phone'].includes(asset_type)) {
+      return res.status(400).json({
+        error: 'Invalid asset_type. Must be either "laptop" or "mobile_phone"'
       });
     }
 
@@ -2814,19 +2853,24 @@ app.delete('/api/assets/:id', authenticate, async (req, res) => {
     }
 
     // Log audit before deletion
+    const employeeName = `${asset.employee_first_name} ${asset.employee_last_name}`;
+    const managerName = asset.manager_first_name && asset.manager_last_name 
+      ? `${asset.manager_first_name} ${asset.manager_last_name}` 
+      : '';
     await auditDb.log(
       'DELETE',
       'asset',
       asset.id,
-      `${asset.laptop_serial_number} - ${asset.employee_name}`,
+      `${asset.serial_number} - ${employeeName}`,
       {
-        employee_name: asset.employee_name,
+        employee_name: employeeName,
         employee_email: asset.employee_email,
-        manager_name: asset.manager_name,
+        manager_name: managerName,
         manager_email: asset.manager_email,
         company_name: asset.company_name,
-        laptop_serial_number: asset.laptop_serial_number,
-        laptop_asset_tag: asset.laptop_asset_tag,
+        asset_type: asset.asset_type,
+        serial_number: asset.serial_number,
+        asset_tag: asset.asset_tag,
         status: asset.status,
         deleted_by: req.user.email
       },
@@ -2839,8 +2883,8 @@ app.delete('/api/assets/:id', authenticate, async (req, res) => {
       message: 'Asset deleted successfully',
       deletedAsset: {
         id: asset.id,
-        laptop_serial_number: asset.laptop_serial_number,
-        employee_name: asset.employee_name
+        serial_number: asset.serial_number,
+        employee_name: employeeName
       }
     });
   } catch (error) {
