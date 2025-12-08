@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUsers } from '../contexts/UsersContext';
 import { useToast } from '@/hooks/use-toast';
@@ -99,7 +99,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   // 1. manager_first_name/manager_last_name (preferred)
   // 2. manager_id resolved via UsersContext
   // 3. fallback to null
-  const getManagerDisplayName = (asset) => {
+  const getManagerDisplayName = useCallback((asset) => {
     // Case 1: Prefer denormalized fields if present
     if (asset.manager_first_name && asset.manager_last_name) {
       return `${asset.manager_first_name} ${asset.manager_last_name}`;
@@ -116,13 +116,13 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     
     // Case 3: No name available
     return null;
-  };
+  }, [getFullName]);
 
   // Helper to get manager email - handles three cases:
   // 1. manager_email (preferred)
   // 2. manager_id resolved via UsersContext
   // 3. fallback to null
-  const getManagerEmail = (asset) => {
+  const getManagerEmail = useCallback((asset) => {
     // Case 1: Prefer denormalized field if present
     if (asset.manager_email) {
       return asset.manager_email;
@@ -136,7 +136,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     
     // Case 3: No email available
     return null;
-  };
+  }, [getEmail]);
 
   // Enhance assets with computed manager data for efficient rendering
   const assetsWithManagerData = useMemo(() => {
@@ -145,7 +145,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
       _managerDisplayName: getManagerDisplayName(asset),
       _managerEmail: getManagerEmail(asset)
     }));
-  }, [assets, getFullName, getEmail]);
+  }, [assets, getManagerDisplayName, getManagerEmail]);
 
   // Filter assets based on search term and status
   const filteredAssets = useMemo(() => {
