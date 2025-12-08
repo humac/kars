@@ -8,9 +8,24 @@ import { AuthProvider } from '../contexts/AuthContext';
 global.fetch = vi.fn();
 global.confirm = vi.fn();
 
-// Mock useAuth and useToast hooks
+// Mock useAuth, useUsers, and useToast hooks
 const mockGetAuthHeaders = vi.fn(() => ({ Authorization: 'Bearer test-token' }));
 const mockToast = vi.fn();
+const mockGetFullName = vi.fn((id) => {
+  const users = {
+    10: 'Manager From Context',
+    20: 'Another Manager'
+  };
+  return users[id] || null;
+});
+const mockGetEmail = vi.fn((id) => {
+  const emails = {
+    10: 'context-manager@example.com',
+    20: 'another@example.com'
+  };
+  return emails[id] || null;
+});
+
 vi.mock('../contexts/AuthContext', async () => {
   const actual = await vi.importActual('../contexts/AuthContext');
   return {
@@ -20,6 +35,14 @@ vi.mock('../contexts/AuthContext', async () => {
     }),
   };
 });
+
+vi.mock('../contexts/UsersContext', () => ({
+  useUsers: () => ({
+    getFullName: mockGetFullName,
+    getEmail: mockGetEmail,
+    loading: false,
+  }),
+}));
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
@@ -276,6 +299,134 @@ describe('AssetTable Component', () => {
     await waitFor(() => {
       expect(screen.queryAllByText('John Doe').length).toBe(0);
       expect(screen.getAllByText('Jane Smith').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('displays manager name from manager_first_name and manager_last_name fields', () => {
+    const currentUser = { roles: ['admin'] };
+    const assetsWithDenormalizedManager = [
+      {
+        id: 1,
+        employee_first_name: 'Test',
+        employee_last_name: 'User',
+        employee_email: 'test@example.com',
+        manager_first_name: 'Direct',
+        manager_last_name: 'Manager',
+        manager_email: 'direct@example.com',
+        status: 'active',
+      }
+    ];
+    
+    render(
+      <AssetTable
+        assets={assetsWithDenormalizedManager}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // Manager name from denormalized fields should be displayed
+    expect(screen.getAllByText('Direct Manager')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('direct@example.com')[0]).toBeInTheDocument();
+  });
+
+  it('displays manager name resolved from manager_id via UsersContext', () => {
+    const currentUser = { roles: ['admin'] };
+    const assetsWithManagerId = [
+      {
+        id: 2,
+        employee_first_name: 'Test',
+        employee_last_name: 'User2',
+        employee_email: 'test2@example.com',
+        manager_id: 10, // This should resolve to 'Manager From Context'
+        status: 'active',
+      }
+    ];
+    
+    render(
+      <AssetTable
+        assets={assetsWithManagerId}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // Manager name from UsersContext should be displayed
+    expect(screen.getAllByText('Manager From Context')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('context-manager@example.com')[0]).toBeInTheDocument();
+  });
+
+  it('displays only manager_email when no name fields or manager_id available', () => {
+    const currentUser = { roles: ['admin'] };
+    const assetsWithEmailOnly = [
+      {
+        id: 3,
+        employee_first_name: 'Test',
+        employee_last_name: 'User3',
+        employee_email: 'test3@example.com',
+        manager_email: 'emailonly@example.com',
+        status: 'active',
+      }
+    ];
+    
+    render(
+      <AssetTable
+        assets={assetsWithEmailOnly}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // Only email should be displayed, no name
+    expect(screen.getAllByText('emailonly@example.com')[0]).toBeInTheDocument();
+    // The name column should show '-' for no name
+    const tableCells = screen.getAllByText('-');
+    expect(tableCells.length).toBeGreaterThan(0);
+  });
+
+  it('searches by manager name resolved from manager_id', async () => {
+    const user = userEvent.setup();
+    const currentUser = { roles: ['admin'] };
+    const assetsWithManagerId = [
+      {
+        id: 1,
+        employee_first_name: 'Employee',
+        employee_last_name: 'One',
+        employee_email: 'emp1@example.com',
+        manager_id: 10,
+        status: 'active',
+      },
+      {
+        id: 2,
+        employee_first_name: 'Employee',
+        employee_last_name: 'Two',
+        employee_email: 'emp2@example.com',
+        manager_first_name: 'Other',
+        manager_last_name: 'Manager',
+        status: 'active',
+      }
+    ];
+    
+    render(
+      <AssetTable
+        assets={assetsWithManagerId}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // Search for manager resolved from context
+    const searchInput = screen.getByPlaceholderText(/search assets/i);
+    await user.type(searchInput, 'Manager From Context');
+
+    // Only the first employee should be visible
+    await waitFor(() => {
+      expect(screen.getAllByText('Employee One').length).toBeGreaterThan(0);
+      expect(screen.queryAllByText('Employee Two').length).toBe(0);
     });
   });
 });
