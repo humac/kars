@@ -162,11 +162,12 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           asset.employee_email?.toLowerCase().includes(term) ||
           managerName.includes(term) ||
           managerEmail.includes(term) ||
-          asset.laptop_serial_number?.toLowerCase().includes(term) ||
-          asset.laptop_asset_tag?.toLowerCase().includes(term) ||
+          asset.serial_number?.toLowerCase().includes(term) ||
+          asset.asset_tag?.toLowerCase().includes(term) ||
           asset.company_name?.toLowerCase().includes(term) ||
-          asset.laptop_make?.toLowerCase().includes(term) ||
-          asset.laptop_model?.toLowerCase().includes(term);
+          asset.make?.toLowerCase().includes(term) ||
+          asset.model?.toLowerCase().includes(term) ||
+          asset.asset_type?.toLowerCase().includes(term);
       });
     }
 
@@ -273,10 +274,11 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
       'manager_last_name',
       'manager_email',
       'company_name',
-      'laptop_make',
-      'laptop_model',
-      'laptop_serial_number',
-      'laptop_asset_tag',
+      'asset_type',
+      'make',
+      'model',
+      'serial_number',
+      'asset_tag',
       'status',
       'registration_date',
       'notes',
@@ -483,7 +485,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                         )}
                       </div>
                     )}
-                    <p className="text-sm text-muted-foreground mt-2">{asset.laptop_serial_number}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{asset.serial_number}</p>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Button variant="ghost" size="icon" onClick={() => onEdit(asset)} disabled={!canEdit(asset)}>
@@ -517,7 +519,8 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                   <TableHead className="hidden xl:table-cell">Manager Name</TableHead>
                   <TableHead className="hidden xl:table-cell">Manager Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Company</TableHead>
-                  <TableHead className="hidden lg:table-cell">Laptop</TableHead>
+                  <TableHead className="hidden xl:table-cell">Type</TableHead>
+                  <TableHead className="hidden lg:table-cell">Make/Model</TableHead>
                   <TableHead className="hidden 2xl:table-cell">Serial Number</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -541,10 +544,13 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                     <TableCell className="hidden xl:table-cell">{asset._managerDisplayName || '-'}</TableCell>
                     <TableCell className="hidden xl:table-cell text-muted-foreground">{asset._managerEmail || '-'}</TableCell>
                     <TableCell className="hidden lg:table-cell">{asset.company_name || '-'}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {asset.laptop_make && asset.laptop_model ? `${asset.laptop_make} ${asset.laptop_model}` : '-'}
+                    <TableCell className="hidden xl:table-cell capitalize">
+                      {asset.asset_type === 'mobile_phone' ? 'Mobile Phone' : asset.asset_type || '-'}
                     </TableCell>
-                    <TableCell className="hidden 2xl:table-cell font-mono text-sm">{asset.laptop_serial_number || '-'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {asset.make && asset.model ? `${asset.make} ${asset.model}` : '-'}
+                    </TableCell>
+                    <TableCell className="hidden 2xl:table-cell font-mono text-sm">{asset.serial_number || '-'}</TableCell>
                     <TableCell>{getStatusBadge(asset.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">

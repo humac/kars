@@ -66,10 +66,11 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
     manager_last_name: isEmployee ? managerNames.last : '',
     manager_email: isEmployee ? (user.manager_email || '') : '',
     company_name: '',
-    laptop_make: '',
-    laptop_model: '',
-    laptop_serial_number: '',
-    laptop_asset_tag: '',
+    asset_type: 'laptop',
+    make: '',
+    model: '',
+    serial_number: '',
+    asset_tag: '',
     status: 'active',
     notes: '',
   });
@@ -110,10 +111,10 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
     manager_first_name: 100,
     manager_last_name: 100,
     company_name: 255,
-    laptop_make: 100,
-    laptop_model: 100,
-    laptop_serial_number: 100,
-    laptop_asset_tag: 100,
+    make: 100,
+    model: 100,
+    serial_number: 100,
+    asset_tag: 100,
     notes: 1000,
   };
 
@@ -147,7 +148,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
 
     // Validate required fields
     if (!form.employee_first_name || !form.employee_last_name || !form.employee_email || !form.company_name || 
-        !form.laptop_serial_number || !form.laptop_asset_tag) {
+        !form.asset_type || !form.serial_number || !form.asset_tag) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -166,10 +167,11 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
         manager_last_name: form.manager_last_name || null,
         manager_email: form.manager_email || null,
         company_name: form.company_name,
-        laptop_make: form.laptop_make,
-        laptop_model: form.laptop_model,
-        laptop_serial_number: form.laptop_serial_number,
-        laptop_asset_tag: form.laptop_asset_tag,
+        asset_type: form.asset_type,
+        make: form.make,
+        model: form.model,
+        serial_number: form.serial_number,
+        asset_tag: form.asset_tag,
         status: form.status,
         notes: form.notes,
       };
@@ -379,38 +381,54 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground">Asset Information</h4>
               
+              <div className="space-y-2">
+                <Label htmlFor="asset_type">Asset Type *</Label>
+                <Select 
+                  value={form.asset_type} 
+                  onValueChange={(value) => setForm(prev => ({ ...prev, asset_type: value }))}
+                >
+                  <SelectTrigger id="asset_type">
+                    <SelectValue placeholder="Select asset type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="laptop">Laptop</SelectItem>
+                    <SelectItem value="mobile_phone">Mobile Phone</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="laptop_make">Laptop Make</Label>
+                <Label htmlFor="make">Make</Label>
                 <Input 
-                  id="laptop_make" 
-                  name="laptop_make" 
-                  value={form.laptop_make} 
+                  id="make" 
+                  name="make" 
+                  value={form.make} 
                   onChange={onChange}
                   maxLength={100}
-                  placeholder="Dell, Apple, Lenovo"
+                  placeholder="Dell, Apple, Samsung"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="laptop_model">Laptop Model</Label>
+                <Label htmlFor="model">Model</Label>
                 <Input 
-                  id="laptop_model" 
-                  name="laptop_model" 
-                  value={form.laptop_model} 
+                  id="model" 
+                  name="model" 
+                  value={form.model} 
                   onChange={onChange}
                   maxLength={100}
-                  placeholder="XPS 15, MacBook Pro"
+                  placeholder="XPS 15, iPhone 15"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="laptop_serial_number">Serial Number *</Label>
+              <Label htmlFor="serial_number">Serial Number *</Label>
               <Input 
-                id="laptop_serial_number" 
-                name="laptop_serial_number" 
-                value={form.laptop_serial_number} 
+                id="serial_number" 
+                name="serial_number" 
+                value={form.serial_number} 
                 onChange={onChange}
                 maxLength={100}
                 placeholder="ABC123456789"
@@ -419,11 +437,11 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="laptop_asset_tag">Asset Tag *</Label>
+              <Label htmlFor="asset_tag">Asset Tag *</Label>
               <Input 
-                id="laptop_asset_tag" 
-                name="laptop_asset_tag" 
-                value={form.laptop_asset_tag} 
+                id="asset_tag" 
+                name="asset_tag" 
+                value={form.asset_tag} 
                 onChange={onChange}
                 maxLength={100}
                 placeholder="AT-1001"

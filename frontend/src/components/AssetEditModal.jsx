@@ -152,18 +152,24 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Asset Tag:</span>
-                <div className="font-semibold">{asset.laptop_asset_tag || 'N/A'}</div>
+                <div className="font-semibold">{asset.asset_tag || 'N/A'}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Serial Number:</span>
-                <div className="font-semibold">{asset.laptop_serial_number || 'N/A'}</div>
+                <div className="font-semibold">{asset.serial_number || 'N/A'}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="font-medium text-muted-foreground">Type:</span>
-                <div>{asset.laptop_make || 'N/A'} {asset.laptop_model || ''}</div>
+                <span className="font-medium text-muted-foreground">Asset Type:</span>
+                <div className="capitalize">{asset.asset_type === 'mobile_phone' ? 'Mobile Phone' : asset.asset_type || 'N/A'}</div>
               </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Make/Model:</span>
+                <div>{asset.make || 'N/A'} {asset.model || ''}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Company:</span>
                 <div>{asset.company_name || 'N/A'}</div>

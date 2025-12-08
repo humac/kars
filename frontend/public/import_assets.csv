@@ -1,4 +1,4 @@
-employee_first_name,employee_last_name,employee_email,manager_first_name,manager_last_name,manager_email,company_name,laptop_make,laptop_model,laptop_serial_number,laptop_asset_tag,status,notes
-Jane,Doe,jane.doe@example.com,John,Manager,john.manager@example.com,Acme Corp,Lenovo,ThinkPad T14,ABC12345,AT-1001,active,Primary laptop issued Q1
-Sam,Smith,sam.smith@example.com,John,Manager,john.manager@example.com,Globex Inc,Apple,MacBook Pro,XYZ98765,AT-1002,returned,Returned after project completion
-Alex,Rivera,alex.rivera@example.com,,,,,Initech,Dell,Latitude 5440,LMN54321,AT-1003,lost,Reported missing during office move
+employee_first_name,employee_last_name,employee_email,manager_first_name,manager_last_name,manager_email,company_name,asset_type,make,model,serial_number,asset_tag,status,notes
+Jane,Doe,jane.doe@example.com,John,Manager,john.manager@example.com,Acme Corp,laptop,Lenovo,ThinkPad T14,ABC12345,AT-1001,active,Primary laptop issued Q1
+Sam,Smith,sam.smith@example.com,John,Manager,john.manager@example.com,Globex Inc,mobile_phone,Apple,iPhone 15 Pro,XYZ98765,AT-1002,active,Company phone
+Alex,Rivera,alex.rivera@example.com,,,,,Initech,laptop,Dell,Latitude 5440,LMN54321,AT-1003,lost,Reported missing during office move
