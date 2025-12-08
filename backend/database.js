@@ -91,6 +91,79 @@ const isValidCertPath = (filePath) => {
 };
 
 /**
+ * Validates that a column name from PRAGMA table_info is safe to use in dynamic SQL.
+ * 
+ * This function provides defense-in-depth validation for column names retrieved from
+ * database schema introspection (PRAGMA table_info for SQLite, information_schema for PostgreSQL).
+ * 
+ * SECURITY NOTE: Column names from PRAGMA table_info are already trusted since they come
+ * directly from the database schema, not from user input. However, this validation provides
+ * an additional safety layer to:
+ * 1. Catch potential bugs in schema parsing
+ * 2. Prevent future vulnerabilities if code is modified to accept untrusted sources
+ * 3. Document expected column name format explicitly
+ * 
+ * Valid column names must:
+ * - Only contain alphanumeric characters, underscores, and hyphens
+ * - Start with a letter or underscore
+ * - Be 1-64 characters in length
+ * 
+ * @param {string} columnName - Column name to validate
+ * @returns {boolean} True if the column name is safe, false otherwise
+ * @throws {TypeError} If columnName is not a string
+ */
+const isValidColumnName = (columnName) => {
+  if (typeof columnName !== 'string') {
+    throw new TypeError('Column name must be a string');
+  }
+
+  // Column name must not be empty and must have reasonable length
+  if (columnName.length === 0 || columnName.length > 64) {
+    return false;
+  }
+
+  // Valid SQL identifiers: start with letter or underscore, contain only alphanumeric, underscore, or hyphen
+  // This pattern is stricter than SQL standard but appropriate for our schema
+  const validColumnNamePattern = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+  
+  return validColumnNamePattern.test(columnName);
+};
+
+/**
+ * Safely constructs a SQL SELECT expression for a column, with validation.
+ * 
+ * This function is used during database migrations when we need to dynamically select
+ * columns based on schema introspection. It validates column names before using them
+ * in SQL to prevent SQL injection (defense-in-depth).
+ * 
+ * USAGE REQUIREMENTS:
+ * - Only use with column names from PRAGMA table_info or information_schema
+ * - Never use with user-provided input or external data
+ * - Always prefer static column references when possible
+ * 
+ * @param {string} columnName - Column name from PRAGMA table_info
+ * @param {string} [alias] - Optional alias for the column in SELECT
+ * @returns {string} Safe SQL SELECT expression
+ * @throws {Error} If column name is invalid
+ */
+const buildSafeColumnExpression = (columnName, alias = null) => {
+  if (!isValidColumnName(columnName)) {
+    throw new Error(`Invalid column name for SQL expression: "${columnName}"`);
+  }
+
+  // Build the expression
+  let expr = columnName;
+  if (alias) {
+    if (!isValidColumnName(alias)) {
+      throw new Error(`Invalid alias name for SQL expression: "${alias}"`);
+    }
+    expr = `${columnName} AS ${alias}`;
+  }
+
+  return expr;
+};
+
+/**
  * Build PostgreSQL SSL configuration from environment variables
  * @returns {undefined|object} SSL configuration object or undefined if SSL not enabled
  */
@@ -583,7 +656,19 @@ const initDb = async () => {
           // Copy data from old table to new table
           // Avoid referencing columns that may not exist (older schemas used `client_name`).
           // Detect which column exists and build the SELECT expression accordingly.
+          //
+          // SECURITY: Column names come from PRAGMA table_info (trusted source),
+          // but we validate them as defense-in-depth to catch schema parsing bugs
+          // and document that only trusted sources should be used here.
           const existingCols = await dbAll("PRAGMA table_info(assets)");
+          
+          // Validate all column names from PRAGMA to ensure schema integrity
+          existingCols.forEach(col => {
+            if (!isValidColumnName(col.name)) {
+              throw new Error(`Database schema contains invalid column name: "${col.name}"`);
+            }
+          });
+          
           const hasCompanyName = existingCols.some(col => col.name === 'company_name');
           const hasClientName = existingCols.some(col => col.name === 'client_name');
           const hasLaptopMake = existingCols.some(col => col.name === 'laptop_make');
@@ -592,16 +677,16 @@ const initDb = async () => {
 
           let companyExpr;
           if (hasCompanyName) {
-            companyExpr = 'company_name AS company_name';
+            companyExpr = buildSafeColumnExpression('company_name', 'company_name');
           } else if (hasClientName) {
-            companyExpr = 'client_name AS company_name';
+            companyExpr = buildSafeColumnExpression('client_name', 'company_name');
           } else {
             companyExpr = "'' AS company_name";
           }
 
-          const laptopMakeExpr = hasLaptopMake ? 'laptop_make' : "''";
-          const laptopModelExpr = hasLaptopModel ? 'laptop_model' : "''";
-          const notesExpr = hasNotes ? 'notes' : "''";
+          const laptopMakeExpr = hasLaptopMake ? buildSafeColumnExpression('laptop_make') : "''";
+          const laptopModelExpr = hasLaptopModel ? buildSafeColumnExpression('laptop_model') : "''";
+          const notesExpr = hasNotes ? buildSafeColumnExpression('notes') : "''";
 
           const copySql = `
             INSERT INTO assets_new (id, employee_name, employee_email, manager_name, manager_email,
@@ -701,14 +786,26 @@ const initDb = async () => {
 
           // Copy data, renaming client_name to company_name
           // Detect optional columns so older schemas without laptop_make/model/notes don't cause errors
+          //
+          // SECURITY: Column names come from PRAGMA table_info (trusted source),
+          // but we validate them as defense-in-depth to catch schema parsing bugs
+          // and document that only trusted sources should be used here.
           const srcCols = await dbAll("PRAGMA table_info(assets)");
+          
+          // Validate all column names from PRAGMA to ensure schema integrity
+          srcCols.forEach(col => {
+            if (!isValidColumnName(col.name)) {
+              throw new Error(`Database schema contains invalid column name: "${col.name}"`);
+            }
+          });
+          
           const srcHasLaptopMake = srcCols.some(col => col.name === 'laptop_make');
           const srcHasLaptopModel = srcCols.some(col => col.name === 'laptop_model');
           const srcHasNotes = srcCols.some(col => col.name === 'notes');
 
-          const laptopMakeSrc = srcHasLaptopMake ? 'laptop_make' : "''";
-          const laptopModelSrc = srcHasLaptopModel ? 'laptop_model' : "''";
-          const notesSrc = srcHasNotes ? 'notes' : "''";
+          const laptopMakeSrc = srcHasLaptopMake ? buildSafeColumnExpression('laptop_make') : "''";
+          const laptopModelSrc = srcHasLaptopModel ? buildSafeColumnExpression('laptop_model') : "''";
+          const notesSrc = srcHasNotes ? buildSafeColumnExpression('notes') : "''";
 
           await dbRun(`
             INSERT INTO assets_temp (id, employee_name, employee_email, manager_name, manager_email,
