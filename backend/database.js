@@ -1141,6 +1141,7 @@ export const assetDb = {
     `;
     const params = [];
 
+    // TODO: Performance optimization - Consider using full-text search or computed columns for name searches on large datasets
     if (filters.employee_name) {
       query += ` AND (COALESCE(owner.first_name, assets.employee_first_name) LIKE ? OR COALESCE(owner.last_name, assets.employee_last_name) LIKE ? OR (COALESCE(owner.first_name, assets.employee_first_name) || ' ' || COALESCE(owner.last_name, assets.employee_last_name)) LIKE ?)`;
       params.push(`%${filters.employee_name}%`, `%${filters.employee_name}%`, `%${filters.employee_name}%`);
