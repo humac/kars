@@ -164,7 +164,7 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
               <div>{asset.laptop_make || 'N/A'} {asset.laptop_model || ''}</div>
             </div>
             <div>
-              <span className="font-medium text-muted-foreground">Location:</span>
+              <span className="font-medium text-muted-foreground">Company:</span>
               <div>{asset.company_name || 'N/A'}</div>
             </div>
           </div>
