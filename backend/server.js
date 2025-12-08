@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
+import { testHubSpotConnection, syncCompaniesToKARS } from './hubspot.js';
 import { randomBytes, webcrypto as nodeWebcrypto } from 'crypto';
 import multer from 'multer';
 import { readFile, unlink } from 'fs/promises';
@@ -1859,6 +1860,177 @@ app.post('/api/admin/database/import-sqlite', authenticate, authorize('admin'), 
     res.status(500).json({ error: error.message || 'Failed to import SQLite data' });
   } finally {
     await unlink(req.file.path).catch(() => {});
+  }
+});
+
+// ===== HubSpot Integration Endpoints =====
+
+// Get HubSpot settings (Admin only)
+app.get('/api/admin/hubspot-settings', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const settings = await hubspotSettingsDb.get();
+    res.json(settings);
+  } catch (error) {
+    console.error('Get HubSpot settings error:', error);
+    res.status(500).json({ error: 'Failed to load HubSpot settings' });
+  }
+});
+
+// Update HubSpot settings (Admin only)
+app.put('/api/admin/hubspot-settings', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { enabled, access_token, auto_sync_enabled, sync_interval } = req.body;
+    
+    await hubspotSettingsDb.update({
+      enabled,
+      access_token,
+      auto_sync_enabled,
+      sync_interval
+    });
+
+    // Log the settings change
+    await auditDb.log(
+      'update',
+      'hubspot_settings',
+      1,
+      'HubSpot Integration',
+      'Updated HubSpot integration settings',
+      req.user.email
+    );
+
+    const updatedSettings = await hubspotSettingsDb.get();
+    res.json({ message: 'HubSpot settings saved successfully', settings: updatedSettings });
+  } catch (error) {
+    console.error('Update HubSpot settings error:', error);
+    res.status(500).json({ error: error.message || 'Failed to update HubSpot settings' });
+  }
+});
+
+// Test HubSpot connection (Admin only)
+app.post('/api/admin/hubspot/test-connection', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const accessToken = await hubspotSettingsDb.getAccessToken();
+    
+    if (!accessToken) {
+      return res.status(400).json({ error: 'HubSpot access token is not configured' });
+    }
+
+    const result = await testHubSpotConnection(accessToken);
+    
+    if (result.success) {
+      res.json({ message: result.message });
+    } else {
+      res.status(400).json({ error: result.message });
+    }
+  } catch (error) {
+    console.error('HubSpot connection test error:', error);
+    res.status(500).json({ error: error.message || 'Failed to test HubSpot connection' });
+  }
+});
+
+// Rate limiting for sync operations (simple in-memory implementation)
+const syncRateLimiter = new Map();
+const SYNC_RATE_LIMIT_MS = 60000; // 1 minute
+
+// Sync companies from HubSpot (Admin only)
+app.post('/api/admin/hubspot/sync-companies', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    // Check rate limiting
+    const lastSync = syncRateLimiter.get('hubspot-sync');
+    if (lastSync && Date.now() - lastSync < SYNC_RATE_LIMIT_MS) {
+      const remainingSeconds = Math.ceil((SYNC_RATE_LIMIT_MS - (Date.now() - lastSync)) / 1000);
+      return res.status(429).json({ 
+        error: `Please wait ${remainingSeconds} seconds before syncing again` 
+      });
+    }
+
+    const accessToken = await hubspotSettingsDb.getAccessToken();
+    
+    if (!accessToken) {
+      return res.status(400).json({ error: 'HubSpot access token is not configured' });
+    }
+
+    const syncStartedAt = new Date().toISOString();
+    
+    // Update rate limiter
+    syncRateLimiter.set('hubspot-sync', Date.now());
+
+    try {
+      // Perform the sync
+      const result = await syncCompaniesToKARS(
+        accessToken,
+        companyDb,
+        auditDb,
+        req.user.email
+      );
+
+      const syncCompletedAt = new Date().toISOString();
+
+      // Log the sync
+      await hubspotSyncLogDb.log({
+        sync_started_at: syncStartedAt,
+        sync_completed_at: syncCompletedAt,
+        status: 'success',
+        companies_found: result.companiesFound,
+        companies_created: result.companiesCreated,
+        companies_updated: result.companiesUpdated,
+        error_message: result.errors.length > 0 ? JSON.stringify(result.errors) : null
+      });
+
+      // Update HubSpot settings with last sync info
+      await hubspotSettingsDb.updateSyncStatus(
+        'success',
+        result.companiesCreated + result.companiesUpdated
+      );
+
+      // Log to audit log
+      await auditDb.log(
+        'sync',
+        'hubspot',
+        null,
+        'HubSpot Companies',
+        `Synced ${result.companiesFound} companies: ${result.companiesCreated} created, ${result.companiesUpdated} updated`,
+        req.user.email
+      );
+
+      res.json({
+        message: 'HubSpot sync completed successfully',
+        ...result
+      });
+    } catch (syncError) {
+      const syncCompletedAt = new Date().toISOString();
+
+      // Log the failed sync
+      await hubspotSyncLogDb.log({
+        sync_started_at: syncStartedAt,
+        sync_completed_at: syncCompletedAt,
+        status: 'error',
+        companies_found: 0,
+        companies_created: 0,
+        companies_updated: 0,
+        error_message: syncError.message
+      });
+
+      // Update HubSpot settings with last sync info
+      await hubspotSettingsDb.updateSyncStatus('error', 0);
+
+      throw syncError;
+    }
+  } catch (error) {
+    console.error('HubSpot sync error:', error);
+    res.status(500).json({ error: error.message || 'Failed to sync companies from HubSpot' });
+  }
+});
+
+// Get HubSpot sync history (Admin only)
+app.get('/api/admin/hubspot/sync-history', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const history = await hubspotSyncLogDb.getHistory(limit);
+    res.json(history);
+  } catch (error) {
+    console.error('Get HubSpot sync history error:', error);
+    res.status(500).json({ error: 'Failed to load sync history' });
   }
 });
 

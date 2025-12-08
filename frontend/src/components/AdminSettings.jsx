@@ -18,9 +18,10 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import TablePaginationControls from '@/components/TablePaginationControls';
 import { cn } from '@/lib/utils';
-import { Settings, Users, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Edit, Search, Sparkles } from 'lucide-react';
+import { Settings, Users, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Edit, Search, Sparkles, Plug } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 import SecuritySettings from './SecuritySettings';
+import HubSpotSettings from './HubSpotSettings';
 
 const AdminSettingsNew = () => {
   const { getAuthHeaders, user } = useAuth();
@@ -378,6 +379,7 @@ const AdminSettingsNew = () => {
               <TabsTrigger value="settings" className="gap-2"><Database className="h-4 w-4" />Database</TabsTrigger>
               <TabsTrigger value="branding" className="gap-2"><Image className="h-4 w-4" />Branding</TabsTrigger>
               <TabsTrigger value="security" className="gap-2"><Shield className="h-4 w-4" />Security</TabsTrigger>
+              <TabsTrigger value="integrations" className="gap-2"><Plug className="h-4 w-4" />Integrations</TabsTrigger>
             </TabsList>
 
             <TabsContent value="users" className="space-y-2">
@@ -695,6 +697,10 @@ const AdminSettingsNew = () => {
 
             <TabsContent value="security">
               <SecuritySettings />
+            </TabsContent>
+
+            <TabsContent value="integrations">
+              <HubSpotSettings />
             </TabsContent>
           </Tabs>
         </CardContent>
