@@ -543,13 +543,31 @@ const initDb = async () => {
       await dbRun("ALTER TABLE oidc_settings ADD COLUMN IF NOT EXISTS sso_button_variant TEXT DEFAULT 'outline'");
     } else {
       // SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so check first
-      const columns = await dbAll("PRAGMA table_info(users)");
+      const columns = isPostgres
+        ? await dbAll(`
+            SELECT column_name as name
+            FROM information_schema.columns
+            WHERE table_name = $1
+          `, ['users'])
+        : await dbAll("PRAGMA table_info(users)");
       const hasManagerName = columns.some(col => col.name === 'manager_name');
       const hasManagerEmail = columns.some(col => col.name === 'manager_email');
       const hasProfileImage = columns.some(col => col.name === 'profile_image');
-      const passkeyColumns = await dbAll("PRAGMA table_info(passkey_settings)");
+      const passkeyColumns = isPostgres
+        ? await dbAll(`
+            SELECT column_name as name
+            FROM information_schema.columns
+            WHERE table_name = $1
+          `, ['passkey_settings'])
+        : await dbAll("PRAGMA table_info(passkey_settings)");
       const hasPasskeyEnabled = passkeyColumns.some(col => col.name === 'enabled');
-      const oidcColumns = await dbAll("PRAGMA table_info(oidc_settings)");
+      const oidcColumns = isPostgres
+        ? await dbAll(`
+            SELECT column_name as name
+            FROM information_schema.columns
+            WHERE table_name = $1
+          `, ['oidc_settings'])
+        : await dbAll("PRAGMA table_info(oidc_settings)");
       const hasOidcButtonText = oidcColumns.some(col => col.name === 'sso_button_text');
       const hasOidcButtonHelp = oidcColumns.some(col => col.name === 'sso_button_help_text');
       const hasOidcButtonVariant = oidcColumns.some(col => col.name === 'sso_button_variant');
@@ -657,10 +675,16 @@ const initDb = async () => {
           // Avoid referencing columns that may not exist (older schemas used `client_name`).
           // Detect which column exists and build the SELECT expression accordingly.
           //
-          // SECURITY: Column names come from PRAGMA table_info (trusted source),
+          // SECURITY: Column names come from PRAGMA table_info or information_schema (trusted source),
           // but we validate them as defense-in-depth to catch schema parsing bugs
           // and document that only trusted sources should be used here.
-          const existingCols = await dbAll("PRAGMA table_info(assets)");
+          const existingCols = isPostgres
+            ? await dbAll(`
+                SELECT column_name as name
+                FROM information_schema.columns
+                WHERE table_name = $1
+              `, ['assets'])
+            : await dbAll("PRAGMA table_info(assets)");
           
           // Validate all column names from PRAGMA to ensure schema integrity
           existingCols.forEach(col => {
@@ -787,10 +811,16 @@ const initDb = async () => {
           // Copy data, renaming client_name to company_name
           // Detect optional columns so older schemas without laptop_make/model/notes don't cause errors
           //
-          // SECURITY: Column names come from PRAGMA table_info (trusted source),
+          // SECURITY: Column names come from PRAGMA table_info or information_schema (trusted source),
           // but we validate them as defense-in-depth to catch schema parsing bugs
           // and document that only trusted sources should be used here.
-          const srcCols = await dbAll("PRAGMA table_info(assets)");
+          const srcCols = isPostgres
+            ? await dbAll(`
+                SELECT column_name as name
+                FROM information_schema.columns
+                WHERE table_name = $1
+              `, ['assets'])
+            : await dbAll("PRAGMA table_info(assets)");
           
           // Validate all column names from PRAGMA to ensure schema integrity
           srcCols.forEach(col => {
@@ -943,7 +973,13 @@ const initDb = async () => {
   await dbRun('CREATE INDEX IF NOT EXISTS idx_user_manager_email ON users(manager_email)');
   // Only create oidc_sub index if the column exists (older DBs may not have oidc_sub)
   try {
-    const userCols = await dbAll("PRAGMA table_info(users)");
+    const userCols = isPostgres
+      ? await dbAll(`
+          SELECT column_name as name
+          FROM information_schema.columns
+          WHERE table_name = $1
+        `, ['users'])
+      : await dbAll("PRAGMA table_info(users)");
     const hasOidcSub = userCols.some(col => col.name === 'oidc_sub');
     if (hasOidcSub) {
       await dbRun('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_oidc_sub ON users(oidc_sub)');
