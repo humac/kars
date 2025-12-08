@@ -11,7 +11,7 @@ Get your KeyData Asset Registration System (KARS) running on Portainer in minute
 
 ### Step 1: Fork/Clone Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude_app_poc.git
+git clone https://github.com/YOUR_USERNAME/kars.git
 ```
 
 ### Step 2: Configure GitHub Actions
@@ -29,7 +29,7 @@ git clone https://github.com/YOUR_USERNAME/claude_app_poc.git
 5. Set environment variables:
 
 ```env
-GITHUB_REPOSITORY=your-username/claude_app_poc
+GITHUB_REPOSITORY=your-username/kars
 APP_PORT=8080
 JWT_SECRET=generate-a-long-random-string-here
 ADMIN_EMAIL=admin@jvhlabs.com

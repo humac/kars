@@ -24,7 +24,7 @@ services:
 
   # Backend Application
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/claude_app_poc}/backend:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/kars}/backend:latest
     pull_policy: always
     container_name: asset-registration-backend
     restart: unless-stopped
@@ -55,7 +55,7 @@ services:
 
   # Frontend Application
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/claude_app_poc}/frontend:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/kars}/frontend:latest
     pull_policy: always
     container_name: asset-registration-frontend
     restart: unless-stopped

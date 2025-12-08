@@ -42,8 +42,8 @@ Get the KeyData Asset Registration System (KARS) running in minutes. Pick the se
 ### Local Development
 ```bash
 # Clone repository
-git clone https://github.com/humac/claude_app_poc.git
-cd claude_app_poc
+git clone https://github.com/humac/kars.git
+cd kars
 
 # Backend
 cd backend

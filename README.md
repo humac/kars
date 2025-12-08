@@ -1,6 +1,6 @@
 # KARS (KeyData Asset Registration System)
 
-[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/humac/claude_app_poc/actions)
+[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/humac/kars/actions)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -131,8 +131,8 @@ Enable MFA or register a passkey from your profile
 
 ```bash
 # 1. Clone and install dependencies
-git clone https://github.com/humac/claude_app_poc.git
-cd claude_app_poc
+git clone https://github.com/humac/kars.git
+cd kars
 
 # 2. Backend setup
 cd backend

@@ -70,7 +70,7 @@ Complete production deployment guide for the KeyData Asset Registration System (
 
 1. **Fork or clone the repository**
    ```bash
-   git clone https://github.com/humac/claude_app_poc.git
+   git clone https://github.com/humac/kars.git
    ```
 
 2. **Enable GitHub Actions**
@@ -94,7 +94,7 @@ Complete production deployment guide for the KeyData Asset Registration System (
 
 6. **Set Environment Variables:**
    ```env
-   GITHUB_REPOSITORY=humac/claude_app_poc
+   GITHUB_REPOSITORY=humac/kars
    APP_PORT=8080
    JWT_SECRET=your-super-secret-random-string-minimum-32-chars
    ADMIN_EMAIL=admin@jvhlabs.com
@@ -262,7 +262,7 @@ git push origin main
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `GITHUB_REPOSITORY` | Your GitHub repo | `humac/claude_app_poc` |
+| `GITHUB_REPOSITORY` | Your GitHub repo | `humac/kars` |
 | `APP_PORT` | Host port to expose | `8080` |
 | `JWT_SECRET` | Secret for JWT tokens | (64+ char random string) |
 

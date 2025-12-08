@@ -17,13 +17,13 @@ This directory contains all the documentation pages for the GitHub Wiki.
 
 ```bash
 # 1. Clone the wiki repository
-git clone https://github.com/humac/claude_app_poc.wiki.git
+git clone https://github.com/humac/kars.wiki.git
 
 # 2. Copy wiki files
-cp wiki/*.md claude_app_poc.wiki/
+cp wiki/*.md kars.wiki/
 
 # 3. Commit and push
-cd claude_app_poc.wiki
+cd kars.wiki
 git add .
 git commit -m "Add comprehensive documentation"
 git push origin master
@@ -31,7 +31,7 @@ git push origin master
 
 ### Method 2: Manual Upload via GitHub UI
 
-1. Go to your repository's Wiki tab: `https://github.com/humac/claude_app_poc/wiki`
+1. Go to your repository's Wiki tab: `https://github.com/humac/kars/wiki`
 2. Click "New Page" for each wiki page
 3. Copy the content from each `.md` file
 4. Paste into the wiki editor
@@ -48,16 +48,16 @@ git push origin master
 # https://cli.github.com/
 
 # Enable wiki
-gh repo edit humac/claude_app_poc --enable-wiki
+gh repo edit humac/kars --enable-wiki
 
 # Clone wiki
-git clone https://github.com/humac/claude_app_poc.wiki.git
+git clone https://github.com/humac/kars.wiki.git
 
 # Copy files
-cp wiki/*.md claude_app_poc.wiki/
+cp wiki/*.md kars.wiki/
 
 # Push
-cd claude_app_poc.wiki
+cd kars.wiki
 git add .
 git commit -m "Add documentation"
 git push
@@ -130,8 +130,8 @@ When updating documentation:
 ```bash
 # Quick update script
 cd wiki
-cp *.md ../claude_app_poc.wiki/
-cd ../claude_app_poc.wiki
+cp *.md ../kars.wiki/
+cd ../kars.wiki
 git add .
 git commit -m "Update documentation"
 git push

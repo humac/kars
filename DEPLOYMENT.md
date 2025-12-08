@@ -50,7 +50,7 @@ nvm use 18
 
 To avoid authentication issues with Portainer:
 
-1. Go to your repository packages: `https://github.com/YOUR_USERNAME/claude_app_poc/packages`
+1. Go to your repository packages: `https://github.com/YOUR_USERNAME/kars/packages`
 2. Click on each package (frontend and backend)
 3. Go to "Package settings"
 4. Scroll to "Danger Zone"
@@ -72,7 +72,7 @@ Alternatively, configure Portainer with GitHub Container Registry credentials.
 **Stack Name:** `asset-registration`
 
 **Method 1: Using Git Repository**
-- Repository URL: `https://github.com/YOUR_USERNAME/claude_app_poc`
+- Repository URL: `https://github.com/YOUR_USERNAME/kars`
 - Repository reference: `refs/heads/main`
 - Compose path: `docker-compose.portainer.yml`
 
@@ -85,7 +85,7 @@ Alternatively, configure Portainer with GitHub Container Registry credentials.
 In Portainer stack configuration, add these environment variables:
 
 ```env
-GITHUB_REPOSITORY=YOUR_USERNAME/claude_app_poc
+GITHUB_REPOSITORY=YOUR_USERNAME/kars
 APP_PORT=8080
 JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
 ADMIN_EMAIL=admin@jvhlabs.com

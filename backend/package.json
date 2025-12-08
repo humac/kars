@@ -16,6 +16,10 @@
     "soc2",
     "compliance"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/humac/kars.git"
+  },
   "author": "",
   "license": "MIT",
   "dependencies": {

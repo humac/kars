@@ -202,7 +202,7 @@ const SecuritySettings = () => {
             </Button>
 
             <a
-              href="https://github.com/humac/claude_app_poc/blob/main/PASSKEY-TROUBLESHOOTING.md"
+              href="https://github.com/humac/kars/blob/main/PASSKEY-TROUBLESHOOTING.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-primary hover:underline flex items-center gap-1"
