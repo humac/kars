@@ -952,6 +952,13 @@ export const assetDb = {
   updateManagerForEmployee: async (employeeEmail, managerName, managerEmail) => {
     const now = new Date().toISOString();
     
+    // Debug logging to catch data corruption
+    console.log('updateManagerForEmployee called:', {
+      employeeEmail,
+      managerName,
+      managerEmail
+    });
+    
     // Look up manager_id from manager_email
     let managerId = null;
     if (managerEmail) {
@@ -966,6 +973,12 @@ export const assetDb = {
     const nameParts = trimmedName ? trimmedName.split(/\s+/) : [];
     const managerFirstName = nameParts[0] || '';
     const managerLastName = nameParts.slice(1).join(' ') || '';
+    
+    console.log('Split manager name:', {
+      managerFirstName,
+      managerLastName,
+      managerId
+    });
     
     // Get the owner_id for this employee to update by both email AND ID
     const employee = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [employeeEmail]);

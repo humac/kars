@@ -2838,20 +2838,47 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
       });
     }
 
+    // Validate manager fields before update
+    if (manager_first_name || manager_last_name || manager_email) {
+      // Check if manager name fields accidentally contain email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      if (manager_first_name && emailRegex.test(manager_first_name)) {
+        return res.status(400).json({
+          error: 'Manager first name appears to be an email address. Please enter a name instead.'
+        });
+      }
+      
+      if (manager_last_name && emailRegex.test(manager_last_name)) {
+        return res.status(400).json({
+          error: 'Manager last name appears to be an email address. Please enter a name instead.'
+        });
+      }
+
+      // If manager email is provided, ensure name fields are also provided
+      if (manager_email && (!manager_first_name || !manager_last_name)) {
+        return res.status(400).json({
+          error: 'Manager first name and last name are required when providing manager email'
+        });
+      }
+    }
+
     await assetDb.update(req.params.id, req.body);
     const updatedAsset = await assetDb.getById(req.params.id);
 
     // Log audit trail
-    await auditDb.create({
-      user_id: req.user.id,
-      action: 'UPDATE_ASSET',
-      target_type: 'asset',
-      target_id: req.params.id,
-      details: JSON.stringify({
+    const employeeName = `${updatedAsset.employee_first_name} ${updatedAsset.employee_last_name}`;
+    await auditDb.log(
+      'UPDATE',
+      'asset',
+      req.params.id,
+      `${updatedAsset.serial_number} - ${employeeName}`,
+      {
         previous: asset,
         updated: updatedAsset
-      })
-    });
+      },
+      req.user.email
+    );
 
     res.json({
       message: 'Asset updated successfully',
