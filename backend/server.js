@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, syncAssetOwnership } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
@@ -278,6 +278,25 @@ app.post('/api/auth/register', async (req, res) => {
 
     const newUser = await userDb.getById(result.id);
 
+    // Sync asset ownership for pre-loaded assets
+    const syncResult = await syncAssetOwnership(newUser.email);
+    if (syncResult.ownerUpdates > 0 || syncResult.managerUpdates > 0) {
+      console.log(`Synced asset ownership for ${newUser.email}: ${syncResult.ownerUpdates} as owner, ${syncResult.managerUpdates} as manager`);
+      
+      // Log audit for sync
+      await auditDb.log(
+        'sync_assets',
+        'user',
+        newUser.id,
+        newUser.email,
+        {
+          owner_assets_synced: syncResult.ownerUpdates,
+          manager_assets_synced: syncResult.managerUpdates
+        },
+        'system'
+      );
+    }
+
     // Generate token
     const token = generateToken(newUser);
 
@@ -367,6 +386,8 @@ app.post('/api/auth/register', async (req, res) => {
         first_name: newUser.first_name,
         last_name: newUser.last_name,
         manager_name: newUser.manager_name,
+        manager_first_name: newUser.manager_first_name,
+        manager_last_name: newUser.manager_last_name,
         manager_email: newUser.manager_email,
         profile_image: newUser.profile_image
       }
@@ -436,6 +457,8 @@ app.post('/api/auth/login', async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         manager_name: user.manager_name,
+        manager_first_name: user.manager_first_name,
+        manager_last_name: user.manager_last_name,
         manager_email: user.manager_email,
         profile_image: user.profile_image
       }
@@ -462,6 +485,8 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
       first_name: user.first_name,
       last_name: user.last_name,
       manager_name: user.manager_name,
+      manager_first_name: user.manager_first_name,
+      manager_last_name: user.manager_last_name,
       manager_email: user.manager_email,
       profile_image: user.profile_image
     });
@@ -625,6 +650,8 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
       first_name: user.first_name,
       last_name: user.last_name,
       manager_name: user.manager_name,
+      manager_first_name: user.manager_first_name,
+      manager_last_name: user.manager_last_name,
       manager_email: user.manager_email,
       profile_image: user.profile_image
     }
@@ -890,6 +917,8 @@ app.post('/api/auth/mfa/verify-login', async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         manager_name: user.manager_name,
+        manager_first_name: user.manager_first_name,
+        manager_last_name: user.manager_last_name,
         manager_email: user.manager_email
       }
     });
@@ -1510,6 +1539,8 @@ app.put('/api/auth/users/:id/role', authenticate, authorize('admin'), async (req
         first_name: updatedUser.first_name,
         last_name: updatedUser.last_name,
         manager_name: updatedUser.manager_name,
+        manager_first_name: updatedUser.manager_first_name,
+        manager_last_name: updatedUser.manager_last_name,
         manager_email: updatedUser.manager_email
       }
     });
@@ -2190,6 +2221,8 @@ app.get('/api/auth/oidc/callback', async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         manager_name: user.manager_name,
+        manager_first_name: user.manager_first_name,
+        manager_last_name: user.manager_last_name,
         manager_email: user.manager_email
       }
     });

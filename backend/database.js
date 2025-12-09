@@ -967,11 +967,15 @@ export const assetDb = {
     const managerFirstName = nameParts[0] || '';
     const managerLastName = nameParts.slice(1).join(' ') || '';
     
+    // Get the owner_id for this employee to update by both email AND ID
+    const employee = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [employeeEmail]);
+    const employeeId = employee?.id || null;
+    
     return dbRun(`
       UPDATE assets
       SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?, last_updated = ?
-      WHERE employee_email = ?
-    `, [managerFirstName, managerLastName, managerEmail || '', managerId, now, employeeEmail]);
+      WHERE LOWER(employee_email) = LOWER(?) OR (owner_id = ? AND owner_id IS NOT NULL)
+    `, [managerFirstName, managerLastName, managerEmail || '', managerId, now, employeeEmail, employeeId]);
   },
   updateManagerIdForOwner: async (ownerId, managerId) => {
     const now = new Date().toISOString();
@@ -1072,13 +1076,16 @@ export const assetDb = {
       // Admin sees all
       baseQuery += ' ORDER BY assets.registration_date DESC';
     } else if (user.role === 'manager') {
-      // Manager sees own + direct reports
-      baseQuery += ' WHERE assets.owner_id = ? OR assets.manager_id = ? ORDER BY assets.registration_date DESC';
-      params = [user.id, user.id];
+      // Manager sees own + direct reports (check both ID and email fields)
+      baseQuery += ` WHERE (assets.owner_id = ? OR LOWER(assets.employee_email) = LOWER(?))
+                     OR (assets.manager_id = ? OR LOWER(assets.manager_email) = LOWER(?))
+                     ORDER BY assets.registration_date DESC`;
+      params = [user.id, user.email, user.id, user.email];
     } else {
-      // Employee sees only own
-      baseQuery += ' WHERE assets.owner_id = ? ORDER BY assets.registration_date DESC';
-      params = [user.id];
+      // Employee sees only own (check both owner_id and employee_email)
+      baseQuery += ` WHERE assets.owner_id = ? OR LOWER(assets.employee_email) = LOWER(?)
+                     ORDER BY assets.registration_date DESC`;
+      params = [user.id, user.email];
     }
     
     const rows = await dbAll(baseQuery, params);
@@ -1088,6 +1095,35 @@ export const assetDb = {
       last_updated: normalizeDates(row.last_updated)
     }));
   }
+};
+
+/**
+ * Sync asset ownership by backfilling owner_id and manager_id when users register
+ * @param {string} email - The email address to sync assets for
+ * @returns {Promise<{ownerUpdates: number, managerUpdates: number}>}
+ */
+export const syncAssetOwnership = async (email) => {
+  const user = await userDb.getByEmail(email);
+  if (!user) return { ownerUpdates: 0, managerUpdates: 0 };
+
+  // Update assets where this user is the employee
+  const ownerResult = await dbRun(`
+    UPDATE assets 
+    SET owner_id = ?, last_updated = ? 
+    WHERE LOWER(employee_email) = LOWER(?) AND owner_id IS NULL
+  `, [user.id, new Date().toISOString(), email]);
+
+  // Update assets where this user is the manager
+  const managerResult = await dbRun(`
+    UPDATE assets 
+    SET manager_id = ?, last_updated = ?
+    WHERE LOWER(manager_email) = LOWER(?) AND manager_id IS NULL
+  `, [user.id, new Date().toISOString(), email]);
+
+  return {
+    ownerUpdates: ownerResult.changes || 0,
+    managerUpdates: managerResult.changes || 0
+  };
 };
 
 export const companyDb = {
