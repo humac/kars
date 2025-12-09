@@ -2869,7 +2869,7 @@ app.put('/api/assets/:id', authenticate, async (req, res) => {
     // Log audit trail
     const employeeName = `${updatedAsset.employee_first_name} ${updatedAsset.employee_last_name}`;
     await auditDb.log(
-      'UPDATE',
+      'update',
       'asset',
       req.params.id,
       `${updatedAsset.serial_number} - ${employeeName}`,
