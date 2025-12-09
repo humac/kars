@@ -82,8 +82,15 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   }
 
   const canEdit = (asset) => {
+    // Admins and editors can edit any asset
     if (currentUser?.roles?.includes('admin')) return true;
     if (currentUser?.roles?.includes('editor')) return true;
+    
+    // Users can edit their own assets (match by email)
+    if (currentUser?.email && asset.employee_email) {
+      return currentUser.email.toLowerCase() === asset.employee_email.toLowerCase();
+    }
+    
     return false;
   };
 

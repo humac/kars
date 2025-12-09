@@ -132,7 +132,7 @@ function AppNew() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 flex h-16 items-center justify-between">
           {/* Logo and Nav */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/assets')}>
@@ -239,7 +239,7 @@ function AppNew() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background">
-            <div className="container mx-auto py-4 space-y-4">
+            <div className="container mx-auto px-4 md:px-6 py-4 space-y-4">
               {/* User Info */}
               <div className="flex items-center gap-3 pb-4 border-b">
                 <Avatar className="h-10 w-10">
@@ -318,7 +318,7 @@ function AppNew() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto py-6">
+      <main className="container mx-auto px-4 md:px-6 py-6">
         <Routes>
           <Route path="/" element={<Navigate to="/assets" replace />} />
           <Route path="/assets" element={<AssetsPage />} />
@@ -339,7 +339,7 @@ function AppNew() {
 
       {/* Footer */}
       <footer className="border-t py-4 mt-auto">
-        <div className="container mx-auto text-center text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 md:px-6 text-center text-sm text-muted-foreground">
           SOC2 Compliance - KeyData Asset Registration System
         </div>
       </footer>

@@ -435,4 +435,75 @@ describe('AssetTable Component', () => {
       expect(screen.queryAllByText('Employee Two').length).toBe(0);
     });
   });
+
+  it('allows users to edit their own assets', async () => {
+    const currentUser = { 
+      roles: ['user'],
+      email: 'john@example.com'
+    };
+    
+    render(
+      <AssetTable
+        assets={sampleAssets}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // User should be able to see their own asset
+    expect(screen.getAllByText('John Doe')[0]).toBeInTheDocument();
+  });
+
+  it('prevents users from editing other users assets', async () => {
+    const currentUser = { 
+      roles: ['user'],
+      email: 'john@example.com'
+    };
+    
+    const otherUserAsset = {
+      id: 3,
+      employee_first_name: 'Alice',
+      employee_last_name: 'Smith',
+      asset_type: 'laptop',
+      make: 'Apple',
+      model: 'MacBook Pro',
+      serial_number: 'SN789',
+      asset_tag: 'AT003',
+      employee_email: 'alice@example.com',
+      status: 'active',
+    };
+    
+    render(
+      <AssetTable
+        assets={[...sampleAssets, otherUserAsset]}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // User should see other users' assets but not be able to edit them
+    expect(screen.getAllByText('Alice Smith')[0]).toBeInTheDocument();
+  });
+
+  it('allows editors to edit all assets', async () => {
+    const currentUser = { 
+      roles: ['editor'],
+      email: 'editor@example.com'
+    };
+    
+    render(
+      <AssetTable
+        assets={sampleAssets}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        currentUser={currentUser}
+      />
+    );
+
+    // Editor should be able to see all assets
+    expect(screen.getAllByText('John Doe')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Jane Smith')[0]).toBeInTheDocument();
+  });
 });
