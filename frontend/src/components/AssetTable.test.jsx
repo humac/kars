@@ -455,7 +455,7 @@ describe('AssetTable Component', () => {
     expect(screen.getAllByText('John Doe')[0]).toBeInTheDocument();
   });
 
-  it('prevents users from editing other users assets', async () => {
+  it('prevents users from editing other users\' assets', async () => {
     const currentUser = { 
       roles: ['user'],
       email: 'john@example.com'
