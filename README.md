@@ -88,6 +88,11 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **OIDC/SSO Configuration** - Database-backed SSO settings with admin UI
 - **Passkey Settings** - Configure relying party name/ID and origin from the UI
 - **Branding** - Upload and reset custom logos and app names
+- **Email Notifications** - SMTP configuration for system notifications
+  - Secure password encryption at rest (AES-256-GCM)
+  - Support for TLS/SSL and multiple auth methods
+  - Test email functionality
+  - Admin-only access to settings
 - **Database Engine Selection** - Switch between SQLite and PostgreSQL (with SQLite-to-Postgres import helper)
 - **Audit Access** - View all system activity
 
@@ -153,6 +158,7 @@ npm run dev   # starts UI on http://localhost:5173
 - First registered account becomes **Admin** automatically (or set `ADMIN_EMAIL` in the backend `.env`).
 - Passkeys require the frontend origin to match `PASSKEY_ORIGIN` (default `http://localhost:5173`).
 - Enable OIDC/SSO from the admin UI after setting issuer/client credentials.
+- For email notifications, set `KARS_MASTER_KEY` environment variable for password encryption (see below).
 
 ### Manual Backup
 
@@ -173,6 +179,39 @@ docker run --rm \
   -v $(pwd):/backup \
   alpine tar xzf /backup/asset-data-YYYYMMDD.tar.gz -C /data
 ```
+
+### Configure Email Notifications
+
+Email notifications require SMTP configuration accessible from **Admin Settings → Notifications**.
+
+1. **Generate Master Encryption Key** (required for password encryption at rest):
+   ```bash
+   # Generate a secure 256-bit encryption key
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+   ```
+
+2. **Set Environment Variable**:
+   ```bash
+   # Add to backend/.env
+   KARS_MASTER_KEY=your-generated-key-here
+   ```
+
+3. **Configure SMTP Settings** (from Admin Settings UI):
+   - Enable notifications
+   - Enter SMTP host and port (e.g., smtp.gmail.com:587)
+   - Enable TLS/SSL (recommended)
+   - Set authentication method (Plain, Login, CRAM-MD5, or None)
+   - Enter username and password (encrypted at rest)
+   - Configure "From" email and name
+   - Set default test recipient (optional)
+   - Click "Save Settings"
+
+4. **Test Configuration**:
+   - Click "Send Test Email" button
+   - Enter recipient email
+   - Check for test email delivery
+
+**Security Note:** SMTP passwords are encrypted using AES-256-GCM before storage. The `KARS_MASTER_KEY` must remain secure and consistent across deployments.
 
 ---
 
