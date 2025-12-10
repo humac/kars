@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -117,14 +116,10 @@ const OIDCSettings = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {/* Enable Toggle */}
-      <div className="flex items-center justify-between space-x-4">
-        <div className="flex-1">
-          <Label htmlFor="oidc-enabled" className="text-sm font-semibold">
-            Enable OIDC/SSO Authentication
-          </Label>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Allow users to sign in with an external identity provider
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2 bg-muted/50">
+        <div>
+          <p className="font-medium text-sm">Enable OIDC/SSO Authentication</p>
+          <p className="text-xs text-muted-foreground">Allow users to sign in with an external identity provider.</p>
         </div>
         <Switch
           id="oidc-enabled"
@@ -133,14 +128,12 @@ const OIDCSettings = () => {
         />
       </div>
 
-      <Separator />
-
       {/* Provider Configuration */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Provider Configuration</h3>
+      <div className="space-y-3 rounded-lg border p-3">
+        <h3 className="text-sm font-medium">Provider Configuration</h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="issuer_url" className="text-sm">Issuer URL {settings.enabled && <span className="text-destructive">*</span>}</Label>
+          <Label htmlFor="issuer_url" className="text-xs">Issuer URL {settings.enabled && <span className="text-destructive">*</span>}</Label>
           <Input
             id="issuer_url"
             name="issuer_url"
@@ -149,7 +142,6 @@ const OIDCSettings = () => {
             required={settings.enabled}
             disabled={!settings.enabled}
             placeholder="https://your-domain.auth0.com"
-            className="h-9"
           />
           <p className="text-xs text-muted-foreground">
             The OIDC issuer URL from your identity provider
@@ -157,7 +149,7 @@ const OIDCSettings = () => {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="client_id" className="text-sm">Client ID {settings.enabled && <span className="text-destructive">*</span>}</Label>
+          <Label htmlFor="client_id" className="text-xs">Client ID {settings.enabled && <span className="text-destructive">*</span>}</Label>
           <Input
             id="client_id"
             name="client_id"
@@ -166,12 +158,11 @@ const OIDCSettings = () => {
             required={settings.enabled}
             disabled={!settings.enabled}
             placeholder="your-client-id"
-            className="h-9"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="client_secret" className="text-sm">
+          <Label htmlFor="client_secret" className="text-xs">
             Client Secret {settings.enabled && !hasClientSecret && <span className="text-destructive">*</span>}
           </Label>
           <Input
@@ -183,7 +174,6 @@ const OIDCSettings = () => {
             required={settings.enabled && !hasClientSecret}
             disabled={!settings.enabled}
             placeholder={hasClientSecret ? "••••••••••••" : "your-client-secret"}
-            className="h-9"
           />
           {hasClientSecret && (
             <p className="text-xs text-muted-foreground">
@@ -193,7 +183,7 @@ const OIDCSettings = () => {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="redirect_uri" className="text-sm">Redirect URI {settings.enabled && <span className="text-destructive">*</span>}</Label>
+          <Label htmlFor="redirect_uri" className="text-xs">Redirect URI {settings.enabled && <span className="text-destructive">*</span>}</Label>
           <Input
             id="redirect_uri"
             name="redirect_uri"
@@ -202,7 +192,6 @@ const OIDCSettings = () => {
             required={settings.enabled}
             disabled={!settings.enabled}
             placeholder={window.location.origin + "/auth/callback"}
-            className="h-9"
           />
           <p className="text-xs text-muted-foreground">
             Configure this URL in your OIDC provider's allowed callback URLs
@@ -210,14 +199,12 @@ const OIDCSettings = () => {
         </div>
       </div>
 
-      <Separator />
-
       {/* Advanced Settings */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Advanced Settings</h3>
+      <div className="space-y-3 rounded-lg border p-3">
+        <h3 className="text-sm font-medium">Advanced Settings</h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="scope" className="text-sm">Scopes</Label>
+          <Label htmlFor="scope" className="text-xs">Scopes</Label>
           <Input
             id="scope"
             name="scope"
@@ -225,7 +212,6 @@ const OIDCSettings = () => {
             onChange={(e) => handleChange('scope', e.target.value)}
             disabled={!settings.enabled}
             placeholder="openid email profile"
-            className="h-9"
           />
           <p className="text-xs text-muted-foreground">
             Space-separated list of OAuth scopes
@@ -233,7 +219,7 @@ const OIDCSettings = () => {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="role_claim_path" className="text-sm">Role Claim Path</Label>
+          <Label htmlFor="role_claim_path" className="text-xs">Role Claim Path</Label>
           <Input
             id="role_claim_path"
             name="role_claim_path"
@@ -241,7 +227,6 @@ const OIDCSettings = () => {
             onChange={(e) => handleChange('role_claim_path', e.target.value)}
             disabled={!settings.enabled}
             placeholder="roles"
-            className="h-9"
           />
           <p className="text-xs text-muted-foreground">
             Path to the roles claim in the OIDC token (e.g., 'roles', 'groups', 'https://myapp.com/roles')
@@ -249,13 +234,13 @@ const OIDCSettings = () => {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="default_role" className="text-sm">Default Role</Label>
+          <Label htmlFor="default_role" className="text-xs">Default Role</Label>
           <Select
             value={settings.default_role}
             onValueChange={(value) => handleChange('default_role', value)}
             disabled={!settings.enabled}
           >
-            <SelectTrigger id="default_role" className="h-9">
+            <SelectTrigger id="default_role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -270,13 +255,12 @@ const OIDCSettings = () => {
         </div>
       </div>
 
-      <Separator />
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Sign in button customization</h3>
+      {/* Button Customization */}
+      <div className="space-y-3 rounded-lg border p-3">
+        <h3 className="text-sm font-medium">Sign-in Button Customization</h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="sso_button_text" className="text-sm">Button label</Label>
+          <Label htmlFor="sso_button_text" className="text-xs">Button label</Label>
           <Input
             id="sso_button_text"
             name="sso_button_text"
@@ -284,13 +268,12 @@ const OIDCSettings = () => {
             onChange={(e) => handleChange('sso_button_text', e.target.value)}
             disabled={!settings.enabled}
             placeholder="Sign In with SSO"
-            className="h-9"
           />
           <p className="text-xs text-muted-foreground">Set the text users see on the sign-in button.</p>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="sso_button_help_text" className="text-sm">Helper text (optional)</Label>
+          <Label htmlFor="sso_button_help_text" className="text-xs">Helper text (optional)</Label>
           <Textarea
             id="sso_button_help_text"
             name="sso_button_help_text"
@@ -304,13 +287,13 @@ const OIDCSettings = () => {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="sso_button_variant" className="text-sm">Button style</Label>
+          <Label htmlFor="sso_button_variant" className="text-xs">Button style</Label>
           <Select
             value={settings.sso_button_variant}
             onValueChange={(value) => handleChange('sso_button_variant', value)}
             disabled={!settings.enabled}
           >
-            <SelectTrigger id="sso_button_variant" className="h-9">
+            <SelectTrigger id="sso_button_variant">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

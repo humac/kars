@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -211,14 +210,10 @@ const HubSpotSettings = () => {
     <div className="space-y-3">
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Enable Toggle */}
-        <div className="flex items-center justify-between space-x-4 rounded-lg border px-3 py-2 bg-muted/50">
-          <div className="flex-1">
-            <Label htmlFor="hubspot-enabled" className="text-sm font-semibold">
-              Enable HubSpot Integration
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Automatically sync companies from HubSpot CRM
-            </p>
+        <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2 bg-muted/50">
+          <div>
+            <p className="font-medium text-sm">Enable HubSpot Integration</p>
+            <p className="text-xs text-muted-foreground">Automatically sync companies from HubSpot CRM.</p>
           </div>
           <Switch
             id="hubspot-enabled"
@@ -228,122 +223,108 @@ const HubSpotSettings = () => {
         </div>
 
         {/* Configuration Section */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">HubSpot Configuration</CardTitle>
-            <CardDescription className="text-sm">
-              Configure your HubSpot Private App access token
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="access_token" className="text-sm">
-                Access Token {settings.enabled && !hasAccessToken && <span className="text-destructive">*</span>}
-              </Label>
-              <Input
-                id="access_token"
-                name="access_token"
-                type="password"
-                value={settings.access_token}
-                onChange={(e) => handleChange('access_token', e.target.value)}
-                required={settings.enabled && !hasAccessToken}
-                disabled={!settings.enabled}
-                placeholder={hasAccessToken ? "••••••••••••" : "pat-na1-..."}
-                className="h-9 font-mono text-sm"
-              />
-              {hasAccessToken && (
-                <p className="text-xs text-muted-foreground">
-                  Leave blank to keep existing token
-                </p>
-              )}
+        <div className="space-y-3 rounded-lg border p-3">
+          <h3 className="text-sm font-medium">HubSpot Configuration</h3>
+          <div className="space-y-1.5">
+            <Label htmlFor="access_token" className="text-xs">
+              Access Token {settings.enabled && !hasAccessToken && <span className="text-destructive">*</span>}
+            </Label>
+            <Input
+              id="access_token"
+              name="access_token"
+              type="password"
+              value={settings.access_token}
+              onChange={(e) => handleChange('access_token', e.target.value)}
+              required={settings.enabled && !hasAccessToken}
+              disabled={!settings.enabled}
+              placeholder={hasAccessToken ? "••••••••••••" : "pat-na1-..."}
+              className="font-mono text-sm"
+            />
+            {hasAccessToken && (
               <p className="text-xs text-muted-foreground">
-                Create a Private App in HubSpot with <code className="bg-muted px-1 py-0.5 rounded">crm.objects.companies.read</code> scope
+                Leave blank to keep existing token
               </p>
-            </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Create a Private App in HubSpot with <code className="bg-muted px-1 py-0.5 rounded">crm.objects.companies.read</code> scope
+            </p>
+          </div>
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleTestConnection}
-                disabled={!hasAccessToken || testing || !settings.enabled}
-              >
-                {testing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  <>Test Connection</>
-                )}
-              </Button>
-              <a
-                href="https://developers.hubspot.com/docs/api/private-apps"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline flex items-center gap-1"
-              >
-                <Info className="h-3 w-3" />
-                HubSpot Private Apps Guide
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestConnection}
+              disabled={!hasAccessToken || testing || !settings.enabled}
+            >
+              {testing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>Test Connection</>
+              )}
+            </Button>
+            <a
+              href="https://developers.hubspot.com/docs/api/private-apps"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              <Info className="h-3 w-3" />
+              HubSpot Private Apps Guide
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
 
         {/* Auto-Sync Configuration */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Automatic Sync</CardTitle>
-            <CardDescription className="text-sm">
-              Schedule automatic company synchronization
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-2">
-            <div className="flex items-center justify-between space-x-4 rounded-lg border px-3 py-2 bg-muted/50">
-              <div>
-                <p className="font-medium text-sm">Enable auto-sync</p>
-                <p className="text-xs text-muted-foreground">Automatically sync on schedule</p>
-              </div>
-              <Switch
-                checked={settings.auto_sync_enabled}
-                onCheckedChange={(checked) => handleChange('auto_sync_enabled', checked)}
-                disabled={!settings.enabled}
-              />
+        <div className="space-y-3 rounded-lg border p-3">
+          <h3 className="text-sm font-medium">Automatic Sync</h3>
+          <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2 bg-muted/50">
+            <div>
+              <p className="font-medium text-sm">Enable auto-sync</p>
+              <p className="text-xs text-muted-foreground">Automatically sync on schedule</p>
             </div>
+            <Switch
+              checked={settings.auto_sync_enabled}
+              onCheckedChange={(checked) => handleChange('auto_sync_enabled', checked)}
+              disabled={!settings.enabled}
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="sync_interval" className="text-sm">Sync Interval</Label>
-              <Select
-                value={settings.sync_interval}
-                onValueChange={(value) => handleChange('sync_interval', value)}
-                disabled={!settings.enabled || !settings.auto_sync_enabled}
-              >
-                <SelectTrigger id="sync_interval" className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hourly">Hourly</SelectItem>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                How often to automatically sync companies from HubSpot
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sync_interval" className="text-xs">Sync Interval</Label>
+            <Select
+              value={settings.sync_interval}
+              onValueChange={(value) => handleChange('sync_interval', value)}
+              disabled={!settings.enabled || !settings.auto_sync_enabled}
+            >
+              <SelectTrigger id="sync_interval">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hourly">Hourly</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              How often to automatically sync companies from HubSpot
+            </p>
+          </div>
 
-            {!settings.auto_sync_enabled && (
-              <Alert className="py-2">
-                <Info className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  Note: Automatic sync is currently disabled. Use the "Sync Now" button to sync manually.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+          {!settings.auto_sync_enabled && (
+            <Alert className="py-2">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Note: Automatic sync is currently disabled. Use the "Sync Now" button to sync manually.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
 
         {/* Save Button */}
         <Button
@@ -363,93 +344,85 @@ const HubSpotSettings = () => {
       </form>
 
       {/* Sync Status */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Sync Status</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Last Sync</p>
-              <p className="text-sm font-medium">{formatDate(settings.last_sync)}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Status</p>
-              <div>{getSyncStatusBadge(settings.last_sync_status)}</div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Companies Synced</p>
-              <p className="text-sm font-medium">{settings.companies_synced}</p>
-            </div>
+      <div className="space-y-3 rounded-lg border p-3">
+        <h3 className="text-sm font-medium">Sync Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Last Sync</p>
+            <p className="text-sm font-medium">{formatDate(settings.last_sync)}</p>
           </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Status</p>
+            <div>{getSyncStatusBadge(settings.last_sync_status)}</div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Companies Synced</p>
+            <p className="text-sm font-medium">{settings.companies_synced}</p>
+          </div>
+        </div>
 
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={handleSyncNow}
-            disabled={!hasAccessToken || syncing || !settings.enabled}
-          >
-            {syncing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Syncing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sync Companies Now
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+        <Button
+          type="button"
+          variant="default"
+          size="sm"
+          onClick={handleSyncNow}
+          disabled={!hasAccessToken || syncing || !settings.enabled}
+        >
+          {syncing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sync Companies Now
+            </>
+          )}
+        </Button>
+      </div>
 
       {/* Sync History */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Sync History</CardTitle>
-          <CardDescription className="text-sm">
-            Recent synchronization results
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-2">
-          {loadingHistory ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            </div>
-          ) : syncHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No sync history available
-            </p>
-          ) : (
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="text-xs">Started</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs text-right">Found</TableHead>
-                    <TableHead className="text-xs text-right">Created</TableHead>
-                    <TableHead className="text-xs text-right">Updated</TableHead>
+      <div className="space-y-3 rounded-lg border p-3">
+        <div>
+          <h3 className="text-sm font-medium">Sync History</h3>
+          <p className="text-xs text-muted-foreground">Recent synchronization results</p>
+        </div>
+        {loadingHistory ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        ) : syncHistory.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No sync history available
+          </p>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-xs">Started</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs text-right">Found</TableHead>
+                  <TableHead className="text-xs text-right">Created</TableHead>
+                  <TableHead className="text-xs text-right">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {syncHistory.map((sync) => (
+                  <TableRow key={sync.id}>
+                    <TableCell className="text-xs">{formatDate(sync.sync_started_at)}</TableCell>
+                    <TableCell className="text-xs">{getSyncStatusBadge(sync.status)}</TableCell>
+                    <TableCell className="text-xs text-right">{sync.companies_found || 0}</TableCell>
+                    <TableCell className="text-xs text-right">{sync.companies_created || 0}</TableCell>
+                    <TableCell className="text-xs text-right">{sync.companies_updated || 0}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {syncHistory.map((sync) => (
-                    <TableRow key={sync.id}>
-                      <TableCell className="text-xs">{formatDate(sync.sync_started_at)}</TableCell>
-                      <TableCell className="text-xs">{getSyncStatusBadge(sync.status)}</TableCell>
-                      <TableCell className="text-xs text-right">{sync.companies_found || 0}</TableCell>
-                      <TableCell className="text-xs text-right">{sync.companies_created || 0}</TableCell>
-                      <TableCell className="text-xs text-right">{sync.companies_updated || 0}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

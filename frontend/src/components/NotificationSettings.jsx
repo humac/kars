@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, AlertTriangle, Info, CheckCircle2, Mail, Send } from 'lucide-react';
+import { Loader2, Info, Send } from 'lucide-react';
 
 const NotificationSettings = () => {
   const { getAuthHeaders } = useAuth();
@@ -220,32 +218,21 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base">SMTP Email Notifications</CardTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={settings.enabled}
-                onCheckedChange={(checked) => handleChange('enabled', checked)}
-              />
-              <Label>
-                <Badge variant={settings.enabled ? 'success' : 'secondary'}>
-                  {settings.enabled ? 'Enabled' : 'Disabled'}
-                </Badge>
-              </Label>
-            </div>
+    <div className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Enable Toggle */}
+        <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2 bg-muted/50">
+          <div>
+            <p className="font-medium text-sm">Enable SMTP Email Notifications</p>
+            <p className="text-xs text-muted-foreground">Configure SMTP settings for sending email notifications from KARS.</p>
           </div>
-          <CardDescription className="text-sm">
-            Configure SMTP settings for sending email notifications from KARS.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <Switch
+            checked={settings.enabled}
+            onCheckedChange={(checked) => handleChange('enabled', checked)}
+          />
+        </div>
+
+        <div className="space-y-3">
             {/* SMTP Server Settings */}
             <div className="space-y-3 rounded-lg border p-3">
               <h3 className="text-sm font-medium">SMTP Server</h3>
@@ -374,25 +361,25 @@ const NotificationSettings = () => {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Save Settings
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleTestEmail}
-                disabled={!settings.enabled || saving}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Send Test Email
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" disabled={saving} size="sm">
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Settings
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestEmail}
+              disabled={!settings.enabled || saving}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Send Test Email
+            </Button>
+          </div>
+        </div>
+      </form>
 
       {/* Security Notice */}
       <Alert>

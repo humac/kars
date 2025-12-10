@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -18,7 +19,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import TablePaginationControls from '@/components/TablePaginationControls';
 import { cn } from '@/lib/utils';
-import { Settings, LayoutDashboard, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Edit, Search, Sparkles, Plug, Bell } from 'lucide-react';
+import { Settings, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Plug, Bell } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 import SecuritySettings from './SecuritySettings';
 import HubSpotSettings from './HubSpotSettings';
@@ -27,12 +28,13 @@ import NotificationSettings from './NotificationSettings';
 const AdminSettingsNew = () => {
   const { getAuthHeaders, user } = useAuth();
   const { toast } = useToast();
-  const [activeView, setActiveView] = useState('overview');
+  const [activeView, setActiveView] = useState('branding');
   const [dbSettings, setDbSettings] = useState({ engine: 'sqlite', postgresUrl: '', managedByEnv: false, effectiveEngine: 'sqlite' });
   const [dbLoading, setDbLoading] = useState(false);
   const [brandingSettings, setBrandingSettings] = useState({ logo_data: null, logo_filename: null });
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [logoFilename, setLogoFilename] = useState('');
 
   useEffect(() => {
     if (activeView === 'settings') fetchDatabaseSettings();
@@ -75,6 +77,7 @@ const AdminSettingsNew = () => {
       const data = await response.json();
       setBrandingSettings(data);
       setLogoPreview(data.logo_data || null);
+      setLogoFilename(data.logo_filename || '');
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setBrandingLoading(false); }
@@ -102,6 +105,7 @@ const AdminSettingsNew = () => {
       reader.onloadend = async () => {
         const logo_data = reader.result;
         setLogoPreview(logo_data);
+        setLogoFilename(file.name);
 
         const response = await fetch('/api/admin/branding', {
           method: 'PUT',
@@ -137,6 +141,7 @@ const AdminSettingsNew = () => {
       if (!response.ok) throw new Error(data.error || 'Failed to remove logo');
 
       setLogoPreview(null);
+      setLogoFilename('');
       toast({ title: "Success", description: "Logo removed successfully", variant: "success" });
       fetchBrandingSettings();
     } catch (err) {
@@ -170,33 +175,13 @@ const AdminSettingsNew = () => {
         <CardContent className="pt-2">
           <Tabs value={activeView} onValueChange={setActiveView}>
             <TabsList className="mb-3">
-              <TabsTrigger value="overview" className="gap-2"><LayoutDashboard className="h-4 w-4" />Overview</TabsTrigger>
-              <TabsTrigger value="settings" className="gap-2"><Database className="h-4 w-4" />Database</TabsTrigger>
               <TabsTrigger value="branding" className="gap-2"><Image className="h-4 w-4" />Branding</TabsTrigger>
               <TabsTrigger value="security" className="gap-2"><Shield className="h-4 w-4" />Security</TabsTrigger>
               <TabsTrigger value="notifications" className="gap-2"><Bell className="h-4 w-4" />Notifications</TabsTrigger>
               <TabsTrigger value="integrations" className="gap-2"><Plug className="h-4 w-4" />Integrations</TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2"><Database className="h-4 w-4" />Database</TabsTrigger>
             </TabsList>
 
-
-            <TabsContent value="overview" className="space-y-3">
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">System Information</CardTitle></CardHeader>
-                <CardContent className="space-y-1 text-sm text-muted-foreground pt-2">
-                  <p><strong>Application:</strong> KARS - KeyData Asset Registration System</p>
-                  <p><strong>Purpose:</strong> SOC2 Compliance - Track and manage company assets</p>
-                  <p><strong>Features:</strong> Role-based access, Asset tracking, Company management, Audit logging, CSV exports</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">Admin Navigation</CardTitle></CardHeader>
-                <CardContent className="space-y-1 text-sm text-muted-foreground pt-2">
-                  <p><strong>User Management:</strong> Visit the Users page from the main navigation to manage user accounts and roles.</p>
-                  <p><strong>Company Management:</strong> Use the Companies page to add, edit, or remove client companies.</p>
-                  <p><strong>Audit & Reports:</strong> Access comprehensive audit logs and compliance reports.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             <TabsContent value="settings" className="space-y-2">
               <Card>
@@ -252,43 +237,49 @@ const AdminSettingsNew = () => {
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : (
-                    <>
-                      {logoPreview && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-center p-4 border rounded-lg bg-muted/50">
-                            <img
-                              src={logoPreview}
-                              alt="Company Logo"
-                              className="max-h-24 object-contain"
-                            />
-                          </div>
-                          <div className="flex gap-2">
+                    <div className="flex items-center gap-4 pb-2">
+                      <div className="h-20 w-20 flex items-center justify-center rounded-lg border bg-muted/50 overflow-hidden shrink-0">
+                        {logoPreview ? (
+                          <img
+                            src={logoPreview}
+                            alt="Company Logo"
+                            className="max-h-16 max-w-16 object-contain"
+                          />
+                        ) : (
+                          <Image className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="company-logo" className="text-sm">Company Logo</Label>
+                        <Input id="company-logo" type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => document.getElementById('company-logo')?.click()}
+                            disabled={brandingLoading}
+                          >
+                            Choose Image
+                          </Button>
+                          {logoPreview && (
                             <Button
-                              variant="destructive"
+                              type="button"
                               size="sm"
+                              variant="outline"
                               onClick={handleLogoRemove}
                               disabled={brandingLoading}
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remove Logo
+                              Remove
                             </Button>
-                          </div>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {logoFilename || 'No file selected'}
+                          </span>
                         </div>
-                      )}
-
-                      <div className="space-y-1">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          disabled={brandingLoading}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Supported formats: PNG, JPG, SVG. Max size: 2MB.
-                          The logo will be automatically scaled to fit the login page width.
-                        </p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG, or SVG up to 2MB.</p>
                       </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
