@@ -1,11 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, syncAssetOwnership } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, smtpSettingsDb, syncAssetOwnership } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
 import { testHubSpotConnection, syncCompaniesToKARS } from './hubspot.js';
+import { encryptValue, decryptValue } from './utils/encryption.js';
+import { sendTestEmail } from './services/smtpMailer.js';
 import { randomBytes, webcrypto as nodeWebcrypto } from 'crypto';
 import multer from 'multer';
 import { readFile, unlink } from 'fs/promises';
@@ -2062,6 +2064,135 @@ app.get('/api/admin/hubspot/sync-history', authenticate, authorize('admin'), asy
   } catch (error) {
     console.error('Get HubSpot sync history error:', error);
     res.status(500).json({ error: 'Failed to load sync history' });
+  }
+});
+
+// ===== SMTP Notification Settings Endpoints =====
+
+// Get SMTP notification settings
+app.get('/api/admin/notification-settings', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const settings = await smtpSettingsDb.get();
+    res.json(settings);
+  } catch (error) {
+    console.error('Get SMTP settings error:', error);
+    res.status(500).json({ error: 'Failed to load notification settings' });
+  }
+});
+
+// Update SMTP notification settings
+app.put('/api/admin/notification-settings', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const {
+      enabled,
+      host,
+      port,
+      use_tls,
+      username,
+      password,
+      clear_password,
+      auth_method,
+      from_name,
+      from_email,
+      default_recipient
+    } = req.body;
+
+    // Build update object
+    const updateData = {
+      enabled,
+      host,
+      port,
+      use_tls,
+      username,
+      auth_method,
+      from_name,
+      from_email,
+      default_recipient
+    };
+
+    // Handle password encryption
+    // Only encrypt and update if password is provided and not the placeholder
+    if (password && password !== '[REDACTED]' && password !== '') {
+      try {
+        const encryptedPassword = encryptValue(password);
+        updateData.password_encrypted = encryptedPassword;
+      } catch (error) {
+        console.error('Password encryption error:', error);
+        return res.status(500).json({ 
+          error: 'Failed to encrypt password. Please check KARS_MASTER_KEY configuration.' 
+        });
+      }
+    } else if (clear_password === true) {
+      // Explicitly clear the password if requested
+      updateData.clear_password = true;
+    }
+
+    await smtpSettingsDb.update(updateData);
+
+    // Log the action
+    await auditDb.log({
+      action: 'update',
+      entity_type: 'smtp_settings',
+      entity_id: 1,
+      entity_name: 'SMTP Notification Settings',
+      details: `Updated SMTP settings. Enabled: ${enabled ? 'Yes' : 'No'}`,
+      user_email: req.user.email
+    });
+
+    // Return updated settings (without password)
+    const updatedSettings = await smtpSettingsDb.get();
+    res.json(updatedSettings);
+  } catch (error) {
+    console.error('Update SMTP settings error:', error);
+    res.status(500).json({ error: 'Failed to update notification settings' });
+  }
+});
+
+// Send test email
+app.post('/api/admin/notification-settings/test', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { recipient } = req.body;
+
+    // Validate that settings are enabled
+    const settings = await smtpSettingsDb.get();
+    if (!settings || !settings.enabled) {
+      return res.status(400).json({ 
+        error: 'SMTP settings are not enabled. Please enable them before sending a test email.' 
+      });
+    }
+
+    // Send test email
+    const result = await sendTestEmail(recipient);
+
+    if (result.success) {
+      // Log the action
+      await auditDb.log({
+        action: 'test',
+        entity_type: 'smtp_settings',
+        entity_id: 1,
+        entity_name: 'SMTP Notification Settings',
+        details: `Sent test email to ${recipient || settings.default_recipient}`,
+        user_email: req.user.email
+      });
+
+      res.json({ 
+        success: true, 
+        message: result.message,
+        messageId: result.messageId
+      });
+    } else {
+      res.status(400).json({ 
+        success: false, 
+        error: result.error,
+        details: result.details
+      });
+    }
+  } catch (error) {
+    console.error('Send test email error:', error);
+    res.status(500).json({ 
+      error: 'Failed to send test email',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

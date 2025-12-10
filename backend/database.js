@@ -584,6 +584,40 @@ const initDb = async () => {
     )
   `;
 
+  const smtpSettingsTable = isPostgres ? `
+    CREATE TABLE IF NOT EXISTS smtp_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER DEFAULT 0,
+      host TEXT,
+      port INTEGER,
+      use_tls INTEGER DEFAULT 1,
+      username TEXT,
+      password_encrypted TEXT,
+      auth_method TEXT DEFAULT 'plain',
+      from_name TEXT DEFAULT 'KARS Notifications',
+      from_email TEXT,
+      default_recipient TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS smtp_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER DEFAULT 0,
+      host TEXT,
+      port INTEGER,
+      use_tls INTEGER DEFAULT 1,
+      username TEXT,
+      password_encrypted TEXT,
+      auth_method TEXT DEFAULT 'plain',
+      from_name TEXT DEFAULT 'KARS Notifications',
+      from_email TEXT,
+      default_recipient TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+
   // Create tables in dependency order to satisfy foreign key constraints
   await dbRun(usersTable);           // 1. Create users first (no dependencies)
   await dbRun(companiesTable);       // 2. Create companies (no dependencies)
@@ -595,6 +629,7 @@ const initDb = async () => {
   await dbRun(passkeysTable);        // 8. Create passkeys (depends on users)
   await dbRun(hubspotSettingsTable); // 9. Create HubSpot settings table
   await dbRun(hubspotSyncLogTable);  // 10. Create HubSpot sync log table
+  await dbRun(smtpSettingsTable);    // 11. Create SMTP settings table
 
   // Insert default OIDC settings if not exists
   const checkSettings = await dbGet('SELECT id FROM oidc_settings WHERE id = 1');
@@ -631,6 +666,16 @@ const initDb = async () => {
     await dbRun(`
       INSERT INTO hubspot_settings (id, enabled, auto_sync_enabled, sync_interval, created_at, updated_at)
       VALUES (1, 0, 0, 'daily', ?, ?)
+    `, [now, now]);
+  }
+
+  // Insert default SMTP settings if not exists
+  const checkSmtp = await dbGet('SELECT id FROM smtp_settings WHERE id = 1');
+  if (!checkSmtp) {
+    const now = new Date().toISOString();
+    await dbRun(`
+      INSERT INTO smtp_settings (id, enabled, created_at, updated_at)
+      VALUES (1, 0, ?, ?)
     `, [now, now]);
   }
 
@@ -1790,6 +1835,104 @@ export const hubspotSyncLogDb = {
       sync_started_at: normalizeDates(row.sync_started_at),
       sync_completed_at: normalizeDates(row.sync_completed_at)
     }));
+  }
+};
+
+export const smtpSettingsDb = {
+  get: async () => {
+    let settings = await dbGet('SELECT * FROM smtp_settings WHERE id = 1');
+
+    // If no settings exist, create default row
+    if (!settings) {
+      const now = new Date().toISOString();
+      await dbRun(`
+        INSERT INTO smtp_settings (id, enabled, created_at, updated_at)
+        VALUES (1, 0, ?, ?)
+      `, [now, now]);
+      settings = await dbGet('SELECT * FROM smtp_settings WHERE id = 1');
+    }
+
+    return {
+      ...settings,
+      enabled: settings.enabled ?? 0,
+      has_password: !!settings.password_encrypted,
+      // Don't return the encrypted password for security
+      password_encrypted: undefined,
+      created_at: normalizeDates(settings.created_at),
+      updated_at: normalizeDates(settings.updated_at)
+    };
+  },
+  getPassword: async () => {
+    const settings = await dbGet('SELECT password_encrypted FROM smtp_settings WHERE id = 1');
+    return settings?.password_encrypted || null;
+  },
+  update: async (settings) => {
+    const now = new Date().toISOString();
+
+    // Build update fields dynamically
+    const updates = [];
+    const params = [];
+
+    if (settings.enabled !== undefined) {
+      updates.push('enabled = ?');
+      params.push(settings.enabled ? 1 : 0);
+    }
+    if (settings.host !== undefined) {
+      updates.push('host = ?');
+      params.push(settings.host || null);
+    }
+    if (settings.port !== undefined) {
+      updates.push('port = ?');
+      params.push(settings.port || null);
+    }
+    if (settings.use_tls !== undefined) {
+      updates.push('use_tls = ?');
+      params.push(settings.use_tls ? 1 : 0);
+    }
+    if (settings.username !== undefined) {
+      updates.push('username = ?');
+      params.push(settings.username || null);
+    }
+    // Only update password if explicitly provided
+    if (settings.password_encrypted !== undefined && settings.password_encrypted !== null) {
+      updates.push('password_encrypted = ?');
+      params.push(settings.password_encrypted);
+    }
+    // Clear password if clear_password flag is set
+    if (settings.clear_password === true) {
+      updates.push('password_encrypted = ?');
+      params.push(null);
+    }
+    if (settings.auth_method !== undefined) {
+      updates.push('auth_method = ?');
+      params.push(settings.auth_method || 'plain');
+    }
+    if (settings.from_name !== undefined) {
+      updates.push('from_name = ?');
+      params.push(settings.from_name || 'KARS Notifications');
+    }
+    if (settings.from_email !== undefined) {
+      updates.push('from_email = ?');
+      params.push(settings.from_email || null);
+    }
+    if (settings.default_recipient !== undefined) {
+      updates.push('default_recipient = ?');
+      params.push(settings.default_recipient || null);
+    }
+
+    updates.push('updated_at = ?');
+    params.push(now);
+
+    if (updates.length === 1) {
+      // Only updated_at, nothing to do
+      return;
+    }
+
+    await dbRun(`
+      UPDATE smtp_settings
+      SET ${updates.join(', ')}
+      WHERE id = 1
+    `, params);
   }
 };
 
