@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, syncAssetOwnership, notificationSettingsDb } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, syncAssetOwnership } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
@@ -2062,108 +2062,6 @@ app.get('/api/admin/hubspot/sync-history', authenticate, authorize('admin'), asy
   } catch (error) {
     console.error('Get HubSpot sync history error:', error);
     res.status(500).json({ error: 'Failed to load sync history' });
-  }
-});
-
-// ===== Notification Settings Endpoints =====
-
-// Get notification settings (Admin only)
-app.get('/api/admin/notification-settings', authenticate, authorize('admin'), async (req, res) => {
-  try {
-    const settings = await notificationSettingsDb.get();
-    res.json(settings);
-  } catch (error) {
-    console.error('Get notification settings error:', error);
-    res.status(500).json({ error: 'Failed to load notification settings' });
-  }
-});
-
-// Update notification settings (Admin only)
-app.put('/api/admin/notification-settings', authenticate, authorize('admin'), async (req, res) => {
-  try {
-    const { enabled, smtp_host, smtp_port, smtp_use_tls, smtp_username, smtp_password, smtp_from_name, smtp_from_email } = req.body;
-
-    // Validation when enabled
-    if (enabled) {
-      if (!smtp_host) {
-        return res.status(400).json({ error: 'SMTP host is required when notifications are enabled' });
-      }
-      if (!smtp_from_email) {
-        return res.status(400).json({ error: 'From email address is required when notifications are enabled' });
-      }
-      if (smtp_port && (smtp_port < 1 || smtp_port > 65535)) {
-        return res.status(400).json({ error: 'SMTP port must be between 1 and 65535' });
-      }
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(smtp_from_email)) {
-        return res.status(400).json({ error: 'Invalid from email address format' });
-      }
-    }
-
-    await notificationSettingsDb.update({
-      enabled,
-      smtp_host,
-      smtp_port,
-      smtp_use_tls,
-      smtp_username,
-      smtp_password,
-      smtp_from_name,
-      smtp_from_email
-    }, req.user.email);
-
-    await auditDb.log(
-      'update',
-      'notification_settings',
-      1,
-      'Notification Settings',
-      'Updated notification settings',
-      req.user.email
-    );
-
-    const updatedSettings = await notificationSettingsDb.get();
-    res.json(updatedSettings);
-  } catch (error) {
-    console.error('Update notification settings error:', error);
-    res.status(500).json({ error: 'Failed to update notification settings' });
-  }
-});
-
-// Send test email (Admin only)
-app.post('/api/admin/notification-settings/test', authenticate, authorize('admin'), async (req, res) => {
-  try {
-    const { recipient } = req.body;
-
-    if (!recipient) {
-      return res.status(400).json({ error: 'Recipient email address is required' });
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(recipient)) {
-      return res.status(400).json({ error: 'Invalid recipient email address format' });
-    }
-
-    // Import sendTestEmail dynamically to avoid issues if nodemailer isn't available
-    const { sendTestEmail } = await import('./mailer.js');
-    const result = await sendTestEmail(recipient);
-
-    if (result.success) {
-      await auditDb.log(
-        'test',
-        'notification_settings',
-        1,
-        'Test Email',
-        `Sent test email to ${recipient}`,
-        req.user.email
-      );
-      res.json({ message: result.message, details: result.details });
-    } else {
-      res.status(400).json({ error: result.message, details: result.error });
-    }
-  } catch (error) {
-    console.error('Send test email error:', error);
-    res.status(500).json({ error: error.message || 'Failed to send test email' });
   }
 });
 

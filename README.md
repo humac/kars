@@ -88,11 +88,6 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **OIDC/SSO Configuration** - Database-backed SSO settings with admin UI
 - **Passkey Settings** - Configure relying party name/ID and origin from the UI
 - **Branding** - Upload and reset custom logos and app names
-- **Email Notifications** - SMTP-based email notification system
-  - Configure SMTP server settings (host, port, TLS/SSL)
-  - Secure password encryption at rest
-  - Send test emails to verify configuration
-  - Support for optional authentication
 - **Database Engine Selection** - Switch between SQLite and PostgreSQL (with SQLite-to-Postgres import helper)
 - **Audit Access** - View all system activity
 
@@ -264,7 +259,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Database-Backed SSO Configuration
 - [x] WebAuthn/Passkey Support
 - [x] PostgreSQL Database Support
-- [x] Email Notifications (SMTP)
+- [ ] Email Notifications
 - [ ] Advanced Reporting Dashboard
 - [ ] Mobile App
 - [ ] API Rate Limiting
