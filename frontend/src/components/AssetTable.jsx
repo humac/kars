@@ -350,16 +350,55 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   return (
     <>
       <div className="space-y-4">
-        {/* Action Buttons and Search */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative max-w-md w-full">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-            <Input
-              placeholder="Search assets by name, email, manager, serial, tag..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* Search, Status Filters, and Action Buttons */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+            <div className="relative w-full sm:w-auto sm:min-w-[300px]">
+              <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+              <Input
+                placeholder="Search assets by name, email, manager, serial, tag..."
+                className="pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={statusFilter === 'active' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('active')}
+              >
+                Active
+              </Button>
+              <Button
+                variant={statusFilter === 'returned' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('returned')}
+              >
+                Returned
+              </Button>
+              <Button
+                variant={statusFilter === 'lost' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('lost')}
+              >
+                Lost
+              </Button>
+              <Button
+                variant={statusFilter === 'damaged' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('damaged')}
+              >
+                Damaged
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {canRegister() && (
@@ -385,45 +424,6 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
               </>
             )}
           </div>
-        </div>
-
-        {/* Status Filters */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={statusFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('all')}
-          >
-            All
-          </Button>
-          <Button
-            variant={statusFilter === 'active' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('active')}
-          >
-            Active
-          </Button>
-          <Button
-            variant={statusFilter === 'returned' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('returned')}
-          >
-            Returned
-          </Button>
-          <Button
-            variant={statusFilter === 'lost' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('lost')}
-          >
-            Lost
-          </Button>
-          <Button
-            variant={statusFilter === 'damaged' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('damaged')}
-          >
-            Damaged
-          </Button>
         </div>
 
         {/* Bulk Actions Bar */}
