@@ -3,7 +3,6 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve, isAbsolute } from 'path';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import pg from 'pg';
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
 
 const { Pool } = pg;
 
@@ -128,65 +127,6 @@ const isValidColumnName = (columnName) => {
   const validColumnNamePattern = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   
   return validColumnNamePattern.test(columnName);
-};
-
-/**
- * Encryption key for sensitive data (e.g., SMTP passwords).
- * Uses JWT_SECRET as the base key or generates a random key for development.
- * In production, JWT_SECRET must be set for consistent encryption/decryption.
- */
-const ENCRYPTION_KEY = (() => {
-  const secret = process.env.JWT_SECRET || 'dev-fallback-key-not-for-production';
-  
-  // Warn if using fallback in production
-  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-    console.warn('WARNING: JWT_SECRET not set in production. Using fallback encryption key. This is insecure for production use.');
-  }
-  
-  // Derive a 32-byte key from the secret using SHA-256
-  return createHash('sha256').update(secret).digest();
-})();
-
-const ALGORITHM = 'aes-256-cbc';
-const IV_LENGTH = 16;
-
-/**
- * Encrypts sensitive data (e.g., passwords) for storage in the database.
- * Uses AES-256-CBC encryption with a random IV for each encryption.
- * 
- * @param {string} text - Plain text to encrypt
- * @returns {string} Encrypted text in format: iv:encryptedData (hex encoded)
- */
-const encrypt = (text) => {
-  if (!text) return null;
-  const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return `${iv.toString('hex')}:${encrypted}`;
-};
-
-/**
- * Decrypts sensitive data that was encrypted using the encrypt function.
- * 
- * @param {string} text - Encrypted text in format: iv:encryptedData (hex encoded)
- * @returns {string|null} Decrypted plain text, or null if input is invalid
- */
-const decrypt = (text) => {
-  if (!text) return null;
-  try {
-    const parts = text.split(':');
-    if (parts.length !== 2) return null;
-    const iv = Buffer.from(parts[0], 'hex');
-    const encryptedText = parts[1];
-    const decipher = createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  } catch (error) {
-    console.error('Decryption error:', error.message);
-    return null;
-  }
 };
 
 /**
@@ -644,36 +584,6 @@ const initDb = async () => {
     )
   `;
 
-  const notificationSettingsTable = isPostgres ? `
-    CREATE TABLE IF NOT EXISTS notification_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      enabled INTEGER NOT NULL DEFAULT 0,
-      smtp_host TEXT,
-      smtp_port INTEGER DEFAULT 587,
-      smtp_use_tls INTEGER DEFAULT 1,
-      smtp_username TEXT,
-      smtp_password TEXT,
-      smtp_from_name TEXT,
-      smtp_from_email TEXT,
-      updated_at TIMESTAMP NOT NULL,
-      updated_by TEXT
-    )
-  ` : `
-    CREATE TABLE IF NOT EXISTS notification_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      enabled INTEGER NOT NULL DEFAULT 0,
-      smtp_host TEXT,
-      smtp_port INTEGER DEFAULT 587,
-      smtp_use_tls INTEGER DEFAULT 1,
-      smtp_username TEXT,
-      smtp_password TEXT,
-      smtp_from_name TEXT,
-      smtp_from_email TEXT,
-      updated_at TEXT NOT NULL,
-      updated_by TEXT
-    )
-  `;
-
   // Create tables in dependency order to satisfy foreign key constraints
   await dbRun(usersTable);           // 1. Create users first (no dependencies)
   await dbRun(companiesTable);       // 2. Create companies (no dependencies)
@@ -685,7 +595,6 @@ const initDb = async () => {
   await dbRun(passkeysTable);        // 8. Create passkeys (depends on users)
   await dbRun(hubspotSettingsTable); // 9. Create HubSpot settings table
   await dbRun(hubspotSyncLogTable);  // 10. Create HubSpot sync log table
-  await dbRun(notificationSettingsTable); // 11. Create notification settings table
 
   // Insert default OIDC settings if not exists
   const checkSettings = await dbGet('SELECT id FROM oidc_settings WHERE id = 1');
@@ -723,16 +632,6 @@ const initDb = async () => {
       INSERT INTO hubspot_settings (id, enabled, auto_sync_enabled, sync_interval, created_at, updated_at)
       VALUES (1, 0, 0, 'daily', ?, ?)
     `, [now, now]);
-  }
-
-  // Insert default notification settings if not exists
-  const checkNotification = await dbGet('SELECT id FROM notification_settings WHERE id = 1');
-  if (!checkNotification) {
-    const now = new Date().toISOString();
-    await dbRun(`
-      INSERT INTO notification_settings (id, enabled, smtp_port, smtp_use_tls, updated_at)
-      VALUES (1, 0, 587, 1, ?)
-    `, [now]);
   }
 
   // Indexes
@@ -1891,101 +1790,6 @@ export const hubspotSyncLogDb = {
       sync_started_at: normalizeDates(row.sync_started_at),
       sync_completed_at: normalizeDates(row.sync_completed_at)
     }));
-  }
-};
-
-export const notificationSettingsDb = {
-  get: async () => {
-    let settings = await dbGet('SELECT * FROM notification_settings WHERE id = 1');
-
-    // If no settings exist, create default row
-    if (!settings) {
-      const now = new Date().toISOString();
-      await dbRun(`
-        INSERT INTO notification_settings (id, enabled, smtp_port, smtp_use_tls, updated_at)
-        VALUES (1, 0, 587, 1, ?)
-      `, [now]);
-      settings = await dbGet('SELECT * FROM notification_settings WHERE id = 1');
-    }
-
-    // Decrypt password if present
-    const decryptedPassword = settings.smtp_password ? decrypt(settings.smtp_password) : null;
-
-    return {
-      ...settings,
-      enabled: settings.enabled ?? 0,
-      smtp_use_tls: settings.smtp_use_tls ?? 1,
-      smtp_port: settings.smtp_port ?? 587,
-      has_password: !!settings.smtp_password,
-      // Don't return the actual password for security
-      smtp_password: undefined,
-      updated_at: normalizeDates(settings.updated_at)
-    };
-  },
-  getSmtpPassword: async () => {
-    const settings = await dbGet('SELECT smtp_password FROM notification_settings WHERE id = 1');
-    return settings?.smtp_password ? decrypt(settings.smtp_password) : null;
-  },
-  update: async (settings, userEmail) => {
-    const now = new Date().toISOString();
-
-    // Encrypt password if provided
-    let encryptedPassword = undefined;
-    if (settings.smtp_password !== undefined && settings.smtp_password !== '') {
-      encryptedPassword = encrypt(settings.smtp_password);
-    }
-
-    // Build update fields dynamically
-    const updates = [];
-    const params = [];
-
-    if (settings.enabled !== undefined) {
-      updates.push('enabled = ?');
-      params.push(settings.enabled ? 1 : 0);
-    }
-    if (settings.smtp_host !== undefined) {
-      updates.push('smtp_host = ?');
-      params.push(settings.smtp_host || null);
-    }
-    if (settings.smtp_port !== undefined) {
-      updates.push('smtp_port = ?');
-      params.push(settings.smtp_port || 587);
-    }
-    if (settings.smtp_use_tls !== undefined) {
-      updates.push('smtp_use_tls = ?');
-      params.push(settings.smtp_use_tls ? 1 : 0);
-    }
-    if (settings.smtp_username !== undefined) {
-      updates.push('smtp_username = ?');
-      params.push(settings.smtp_username || null);
-    }
-    if (encryptedPassword !== undefined) {
-      updates.push('smtp_password = ?');
-      params.push(encryptedPassword);
-    }
-    if (settings.smtp_from_name !== undefined) {
-      updates.push('smtp_from_name = ?');
-      params.push(settings.smtp_from_name || null);
-    }
-    if (settings.smtp_from_email !== undefined) {
-      updates.push('smtp_from_email = ?');
-      params.push(settings.smtp_from_email || null);
-    }
-
-    updates.push('updated_at = ?');
-    params.push(now);
-    updates.push('updated_by = ?');
-    params.push(userEmail);
-
-    if (updates.length === 0) {
-      return;
-    }
-
-    await dbRun(`
-      UPDATE notification_settings
-      SET ${updates.join(', ')}
-      WHERE id = 1
-    `, params);
   }
 };
 
