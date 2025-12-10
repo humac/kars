@@ -54,7 +54,7 @@ describe('AssetEditModal Component', () => {
 
   it('renders modal with title', () => {
     const currentUser = { roles: ['admin'] };
-    
+
     render(
       <AssetEditModal
         asset={sampleAsset}
@@ -69,7 +69,7 @@ describe('AssetEditModal Component', () => {
 
   it('displays read-only summary section with asset details', () => {
     const currentUser = { roles: ['admin'] };
-    
+
     render(
       <AssetEditModal
         asset={sampleAsset}
@@ -94,9 +94,9 @@ describe('AssetEditModal Component', () => {
     expect(screen.getByText('John Doe')).toBeInTheDocument();
   });
 
-  it('shows only editable fields: status, manager name, manager email, notes', () => {
+  it('displays manager info in read-only section', () => {
     const currentUser = { roles: ['admin'] };
-    
+
     render(
       <AssetEditModal
         asset={sampleAsset}
@@ -106,14 +106,52 @@ describe('AssetEditModal Component', () => {
       />
     );
 
-    // Editable fields should be present
-    expect(screen.getByLabelText('Status')).toBeInTheDocument();
-    expect(screen.getByLabelText('Manager First Name')).toBeInTheDocument();
-    expect(screen.getByLabelText('Manager Last Name')).toBeInTheDocument();
-    expect(screen.getByLabelText('Manager Email')).toBeInTheDocument();
-    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+    expect(screen.getByText('Manager:')).toBeInTheDocument();
+    expect(screen.getByText('Jane Manager')).toBeInTheDocument();
+    expect(screen.getByText('Manager Email:')).toBeInTheDocument();
+    expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+  });
 
-    // Other fields should NOT be editable inputs (only in read-only summary)
+  it('displays notes in read-only section when present', () => {
+    const currentUser = { roles: ['admin'] };
+
+    render(
+      <AssetEditModal
+        asset={sampleAsset}
+        currentUser={currentUser}
+        onClose={mockOnClose}
+        onSaved={mockOnSaved}
+      />
+    );
+
+    expect(screen.getByText('Notes:')).toBeInTheDocument();
+    expect(screen.getByText('Test notes')).toBeInTheDocument();
+  });
+
+  it('shows only status as editable field', () => {
+    const currentUser = { roles: ['admin'] };
+
+    render(
+      <AssetEditModal
+        asset={sampleAsset}
+        currentUser={currentUser}
+        onClose={mockOnClose}
+        onSaved={mockOnSaved}
+      />
+    );
+
+    // Status should be the only editable field
+    expect(screen.getByLabelText('Status')).toBeInTheDocument();
+
+    // Manager fields should NOT be editable inputs
+    expect(screen.queryByLabelText('Manager First Name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Manager Last Name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Manager Email')).not.toBeInTheDocument();
+
+    // Notes should NOT be editable
+    expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument();
+
+    // Other fields should NOT be editable inputs
     expect(screen.queryByLabelText('Employee First Name')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Employee Last Name')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Employee Email')).not.toBeInTheDocument();
@@ -122,107 +160,10 @@ describe('AssetEditModal Component', () => {
     expect(screen.queryByLabelText('Serial Number')).not.toBeInTheDocument();
   });
 
-  it('validates email and shows error for invalid email', async () => {
-    const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
-    
-    render(
-      <AssetEditModal
-        asset={sampleAsset}
-        currentUser={currentUser}
-        onClose={mockOnClose}
-        onSaved={mockOnSaved}
-      />
-    );
-
-    const emailField = screen.getByLabelText('Manager Email');
-    await user.clear(emailField);
-    await user.type(emailField, 'invalid-email');
-
-    expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-    
-    // Save button should be disabled with invalid email
-    const saveButton = screen.getByText('Save');
-    expect(saveButton).toBeDisabled();
-  });
-
-  it('clears email error when valid email is entered', async () => {
-    const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
-    
-    render(
-      <AssetEditModal
-        asset={sampleAsset}
-        currentUser={currentUser}
-        onClose={mockOnClose}
-        onSaved={mockOnSaved}
-      />
-    );
-
-    const emailField = screen.getByLabelText('Manager Email');
-    await user.clear(emailField);
-    await user.type(emailField, 'invalid');
-    
-    expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-    
-    await user.clear(emailField);
-    await user.type(emailField, 'valid@example.com');
-    
-    expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
-  });
-
-  it('enforces max length on manager name (100 chars)', async () => {
-    const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
-    
-    render(
-      <AssetEditModal
-        asset={sampleAsset}
-        currentUser={currentUser}
-        onClose={mockOnClose}
-        onSaved={mockOnSaved}
-      />
-    );
-
-    const firstNameField = screen.getByLabelText('Manager First Name');
-    const longName = 'a'.repeat(150);
-    await user.clear(firstNameField);
-    await user.click(firstNameField);
-    await user.paste(longName);
-
-    expect(firstNameField).toHaveValue('a'.repeat(100));
-    // Check for the character counter for first name field
-    const counters = screen.getAllByText('100/100');
-    expect(counters.length).toBeGreaterThan(0);
-  });
-
-  it('enforces max length on notes (1000 chars)', async () => {
-    const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
-    
-    render(
-      <AssetEditModal
-        asset={sampleAsset}
-        currentUser={currentUser}
-        onClose={mockOnClose}
-        onSaved={mockOnSaved}
-      />
-    );
-
-    const notesField = screen.getByLabelText('Notes');
-    const longNotes = 'a'.repeat(1100);
-    await user.clear(notesField);
-    await user.click(notesField);
-    await user.paste(longNotes);
-
-    expect(notesField).toHaveValue('a'.repeat(1000));
-    expect(screen.getByText('1000/1000')).toBeInTheDocument();
-  });
-
   it('calls onClose when Cancel button is clicked', async () => {
     const user = userEvent.setup();
     const currentUser = { roles: ['admin'] };
-    
+
     render(
       <AssetEditModal
         asset={sampleAsset}
@@ -238,19 +179,15 @@ describe('AssetEditModal Component', () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it('saves only editable fields when Save button is clicked', async () => {
+  it('saves only status when Save button is clicked', async () => {
     const user = userEvent.setup();
     const currentUser = { roles: ['admin'] };
-    
-    const mockResponse = { 
-      asset: { 
-        ...sampleAsset, 
-        status: 'maintenance',
-        manager_first_name: 'New',
-        manager_last_name: 'Manager',
-        manager_email: 'new@example.com',
-        notes: 'Updated notes' 
-      } 
+
+    const mockResponse = {
+      asset: {
+        ...sampleAsset,
+        status: 'returned',
+      }
     };
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -265,27 +202,6 @@ describe('AssetEditModal Component', () => {
         onSaved={mockOnSaved}
       />
     );
-
-    // Update editable fields using paste instead of type to avoid character composition issues
-    const managerFirstNameField = screen.getByLabelText('Manager First Name');
-    await user.clear(managerFirstNameField);
-    await user.click(managerFirstNameField);
-    await user.paste('New');
-
-    const managerLastNameField = screen.getByLabelText('Manager Last Name');
-    await user.clear(managerLastNameField);
-    await user.click(managerLastNameField);
-    await user.paste('Manager');
-
-    const managerEmailField = screen.getByLabelText('Manager Email');
-    await user.clear(managerEmailField);
-    await user.click(managerEmailField);
-    await user.paste('new@example.com');
-
-    const notesField = screen.getByLabelText('Notes');
-    await user.clear(notesField);
-    await user.click(notesField);
-    await user.paste('Updated notes');
 
     const saveButton = screen.getByText('Save');
     await user.click(saveButton);
@@ -302,53 +218,25 @@ describe('AssetEditModal Component', () => {
         })
       );
 
-      // Verify the payload contains the updated editable fields
+      // Verify the payload contains the status
       const fetchCall = global.fetch.mock.calls[0];
       const payload = JSON.parse(fetchCall[1].body);
       expect(payload.status).toBe('active');
-      expect(payload.manager_first_name).toBe('New');
-      expect(payload.manager_last_name).toBe('Manager');
-      expect(payload.manager_email).toBe('new@example.com');
-      expect(payload.notes).toBe('Updated notes');
-      
+
       // Verify it also includes the original asset data (for backend validation)
       expect(payload.employee_first_name).toBe('John');
       expect(payload.employee_last_name).toBe('Doe');
       expect(payload.company_name).toBe('Acme Corp');
-      
+      expect(payload.manager_first_name).toBe('Jane');
+      expect(payload.manager_last_name).toBe('Manager');
+
       expect(mockOnSaved).toHaveBeenCalledWith(mockResponse.asset);
     });
   });
 
-  it('updates form fields on user input', async () => {
-    const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
-    
-    render(
-      <AssetEditModal
-        asset={sampleAsset}
-        currentUser={currentUser}
-        onClose={mockOnClose}
-        onSaved={mockOnSaved}
-      />
-    );
-
-    const firstNameField = screen.getByLabelText('Manager First Name');
-    await user.clear(firstNameField);
-    await user.type(firstNameField, 'Updated');
-
-    expect(firstNameField).toHaveValue('Updated');
-    
-    const lastNameField = screen.getByLabelText('Manager Last Name');
-    await user.clear(lastNameField);
-    await user.type(lastNameField, 'Manager');
-
-    expect(lastNameField).toHaveValue('Manager');
-  });
-
   it('has status dropdown with backend-compatible values', () => {
     const currentUser = { roles: ['admin'] };
-    
+
     render(
       <AssetEditModal
         asset={sampleAsset}
@@ -362,8 +250,23 @@ describe('AssetEditModal Component', () => {
     const statusTrigger = screen.getByLabelText('Status');
     expect(statusTrigger).toBeInTheDocument();
     expect(statusTrigger).toHaveAttribute('role', 'combobox');
-    
+
     // Status options should match backend-supported values: active, returned, lost, damaged, retired
     // This is verified by the component not throwing errors and save working correctly
+  });
+
+  it('displays correct dialog description', () => {
+    const currentUser = { roles: ['admin'] };
+
+    render(
+      <AssetEditModal
+        asset={sampleAsset}
+        currentUser={currentUser}
+        onClose={mockOnClose}
+        onSaved={mockOnSaved}
+      />
+    );
+
+    expect(screen.getByText('Update the status of this asset.')).toBeInTheDocument();
   });
 });
