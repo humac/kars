@@ -114,12 +114,11 @@ const OIDCSettings = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      {/* Enable Toggle */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2 bg-muted/50">
+    <div className="rounded-lg border p-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="font-medium text-sm">Enable OIDC/SSO Authentication</p>
-          <p className="text-xs text-muted-foreground">Allow users to sign in with an external identity provider.</p>
+          <h3 className="text-sm font-semibold">OIDC/SSO Authentication</h3>
+          <p className="text-sm text-muted-foreground">Allow users to sign in with an external identity provider.</p>
         </div>
         <Switch
           id="oidc-enabled"
@@ -128,202 +127,200 @@ const OIDCSettings = () => {
         />
       </div>
 
-      {/* Provider Configuration */}
-      <div className="space-y-3 rounded-lg border p-3">
-        <h3 className="text-sm font-medium">Provider Configuration</h3>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Provider Configuration */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">Provider Configuration</h4>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="issuer_url" className="text-xs">Issuer URL {settings.enabled && <span className="text-destructive">*</span>}</Label>
-          <Input
-            id="issuer_url"
-            name="issuer_url"
-            value={settings.issuer_url}
-            onChange={(e) => handleChange('issuer_url', e.target.value)}
-            required={settings.enabled}
-            disabled={!settings.enabled}
-            placeholder="https://your-domain.auth0.com"
-          />
-          <p className="text-xs text-muted-foreground">
-            The OIDC issuer URL from your identity provider
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="client_id" className="text-xs">Client ID {settings.enabled && <span className="text-destructive">*</span>}</Label>
-          <Input
-            id="client_id"
-            name="client_id"
-            value={settings.client_id}
-            onChange={(e) => handleChange('client_id', e.target.value)}
-            required={settings.enabled}
-            disabled={!settings.enabled}
-            placeholder="your-client-id"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="client_secret" className="text-xs">
-            Client Secret {settings.enabled && !hasClientSecret && <span className="text-destructive">*</span>}
-          </Label>
-          <Input
-            id="client_secret"
-            name="client_secret"
-            type="password"
-            value={settings.client_secret}
-            onChange={(e) => handleChange('client_secret', e.target.value)}
-            required={settings.enabled && !hasClientSecret}
-            disabled={!settings.enabled}
-            placeholder={hasClientSecret ? "••••••••••••" : "your-client-secret"}
-          />
-          {hasClientSecret && (
-            <p className="text-xs text-muted-foreground">
-              Leave blank to keep existing secret
+          <div className="space-y-1.5">
+            <Label htmlFor="issuer_url" className="text-sm">Issuer URL {settings.enabled && <span className="text-destructive">*</span>}</Label>
+            <Input
+              id="issuer_url"
+              name="issuer_url"
+              value={settings.issuer_url}
+              onChange={(e) => handleChange('issuer_url', e.target.value)}
+              required={settings.enabled}
+              disabled={!settings.enabled}
+              placeholder="https://your-domain.auth0.com"
+            />
+            <p className="text-sm text-muted-foreground">
+              The OIDC issuer URL from your identity provider
             </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="client_id" className="text-sm">Client ID {settings.enabled && <span className="text-destructive">*</span>}</Label>
+            <Input
+              id="client_id"
+              name="client_id"
+              value={settings.client_id}
+              onChange={(e) => handleChange('client_id', e.target.value)}
+              required={settings.enabled}
+              disabled={!settings.enabled}
+              placeholder="your-client-id"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="client_secret" className="text-sm">
+              Client Secret {settings.enabled && !hasClientSecret && <span className="text-destructive">*</span>}
+            </Label>
+            <Input
+              id="client_secret"
+              name="client_secret"
+              type="password"
+              value={settings.client_secret}
+              onChange={(e) => handleChange('client_secret', e.target.value)}
+              required={settings.enabled && !hasClientSecret}
+              disabled={!settings.enabled}
+              placeholder={hasClientSecret ? "••••••••••••" : "your-client-secret"}
+            />
+            {hasClientSecret && (
+              <p className="text-sm text-muted-foreground">
+                Leave blank to keep existing secret
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="redirect_uri" className="text-sm">Redirect URI {settings.enabled && <span className="text-destructive">*</span>}</Label>
+            <Input
+              id="redirect_uri"
+              name="redirect_uri"
+              value={settings.redirect_uri}
+              onChange={(e) => handleChange('redirect_uri', e.target.value)}
+              required={settings.enabled}
+              disabled={!settings.enabled}
+              placeholder={window.location.origin + "/auth/callback"}
+            />
+            <p className="text-sm text-muted-foreground">
+              Configure this URL in your OIDC provider's allowed callback URLs
+            </p>
+          </div>
+        </div>
+
+        {/* Advanced Settings */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">Advanced Settings</h4>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="scope" className="text-sm">Scopes</Label>
+            <Input
+              id="scope"
+              name="scope"
+              value={settings.scope}
+              onChange={(e) => handleChange('scope', e.target.value)}
+              disabled={!settings.enabled}
+              placeholder="openid email profile"
+            />
+            <p className="text-sm text-muted-foreground">
+              Space-separated list of OAuth scopes
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="role_claim_path" className="text-sm">Role Claim Path</Label>
+            <Input
+              id="role_claim_path"
+              name="role_claim_path"
+              value={settings.role_claim_path}
+              onChange={(e) => handleChange('role_claim_path', e.target.value)}
+              disabled={!settings.enabled}
+              placeholder="roles"
+            />
+            <p className="text-sm text-muted-foreground">
+              Path to the roles claim in the OIDC token (e.g., 'roles', 'groups')
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="default_role" className="text-sm">Default Role</Label>
+            <Select
+              value={settings.default_role}
+              onValueChange={(value) => handleChange('default_role', value)}
+              disabled={!settings.enabled}
+            >
+              <SelectTrigger id="default_role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="employee">Employee</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Default role for new users if no role mapping matches
+            </p>
+          </div>
+        </div>
+
+        {/* Button Customization */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">Sign-in Button Customization</h4>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="sso_button_text" className="text-sm">Button Label</Label>
+            <Input
+              id="sso_button_text"
+              name="sso_button_text"
+              value={settings.sso_button_text}
+              onChange={(e) => handleChange('sso_button_text', e.target.value)}
+              disabled={!settings.enabled}
+              placeholder="Sign In with SSO"
+            />
+            <p className="text-sm text-muted-foreground">Set the text users see on the sign-in button.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="sso_button_help_text" className="text-sm">Helper Text (optional)</Label>
+            <Textarea
+              id="sso_button_help_text"
+              name="sso_button_help_text"
+              value={settings.sso_button_help_text}
+              onChange={(e) => handleChange('sso_button_help_text', e.target.value)}
+              disabled={!settings.enabled}
+              placeholder="Use your company identity provider."
+              className="min-h-[60px]"
+            />
+            <p className="text-sm text-muted-foreground">Appears below the button on the sign-in page.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="sso_button_variant" className="text-sm">Button Style</Label>
+            <Select
+              value={settings.sso_button_variant}
+              onValueChange={(value) => handleChange('sso_button_variant', value)}
+              disabled={!settings.enabled}
+            >
+              <SelectTrigger id="sso_button_variant">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Primary</SelectItem>
+                <SelectItem value="secondary">Muted</SelectItem>
+                <SelectItem value="outline">Outline</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">Match your branding by selecting a button variant.</p>
+          </div>
+        </div>
+
+        <Button type="submit" disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save OIDC Settings
+            </>
           )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="redirect_uri" className="text-xs">Redirect URI {settings.enabled && <span className="text-destructive">*</span>}</Label>
-          <Input
-            id="redirect_uri"
-            name="redirect_uri"
-            value={settings.redirect_uri}
-            onChange={(e) => handleChange('redirect_uri', e.target.value)}
-            required={settings.enabled}
-            disabled={!settings.enabled}
-            placeholder={window.location.origin + "/auth/callback"}
-          />
-          <p className="text-xs text-muted-foreground">
-            Configure this URL in your OIDC provider's allowed callback URLs
-          </p>
-        </div>
-      </div>
-
-      {/* Advanced Settings */}
-      <div className="space-y-3 rounded-lg border p-3">
-        <h3 className="text-sm font-medium">Advanced Settings</h3>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="scope" className="text-xs">Scopes</Label>
-          <Input
-            id="scope"
-            name="scope"
-            value={settings.scope}
-            onChange={(e) => handleChange('scope', e.target.value)}
-            disabled={!settings.enabled}
-            placeholder="openid email profile"
-          />
-          <p className="text-xs text-muted-foreground">
-            Space-separated list of OAuth scopes
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="role_claim_path" className="text-xs">Role Claim Path</Label>
-          <Input
-            id="role_claim_path"
-            name="role_claim_path"
-            value={settings.role_claim_path}
-            onChange={(e) => handleChange('role_claim_path', e.target.value)}
-            disabled={!settings.enabled}
-            placeholder="roles"
-          />
-          <p className="text-xs text-muted-foreground">
-            Path to the roles claim in the OIDC token (e.g., 'roles', 'groups', 'https://myapp.com/roles')
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="default_role" className="text-xs">Default Role</Label>
-          <Select
-            value={settings.default_role}
-            onValueChange={(value) => handleChange('default_role', value)}
-            disabled={!settings.enabled}
-          >
-            <SelectTrigger id="default_role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="employee">Employee</SelectItem>
-              <SelectItem value="manager">Manager</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Default role for new users if no role mapping matches
-          </p>
-        </div>
-      </div>
-
-      {/* Button Customization */}
-      <div className="space-y-3 rounded-lg border p-3">
-        <h3 className="text-sm font-medium">Sign-in Button Customization</h3>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="sso_button_text" className="text-xs">Button label</Label>
-          <Input
-            id="sso_button_text"
-            name="sso_button_text"
-            value={settings.sso_button_text}
-            onChange={(e) => handleChange('sso_button_text', e.target.value)}
-            disabled={!settings.enabled}
-            placeholder="Sign In with SSO"
-          />
-          <p className="text-xs text-muted-foreground">Set the text users see on the sign-in button.</p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="sso_button_help_text" className="text-xs">Helper text (optional)</Label>
-          <Textarea
-            id="sso_button_help_text"
-            name="sso_button_help_text"
-            value={settings.sso_button_help_text}
-            onChange={(e) => handleChange('sso_button_help_text', e.target.value)}
-            disabled={!settings.enabled}
-            placeholder="Use your company identity provider."
-            className="min-h-[60px]"
-          />
-          <p className="text-xs text-muted-foreground">Appears below the button on the sign-in page.</p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="sso_button_variant" className="text-xs">Button style</Label>
-          <Select
-            value={settings.sso_button_variant}
-            onValueChange={(value) => handleChange('sso_button_variant', value)}
-            disabled={!settings.enabled}
-          >
-            <SelectTrigger id="sso_button_variant">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Primary</SelectItem>
-              <SelectItem value="secondary">Muted</SelectItem>
-              <SelectItem value="outline">Outline</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">Match your branding by selecting a button variant.</p>
-        </div>
-      </div>
-
-      <Button
-        type="submit"
-        disabled={saving}
-        size="sm"
-      >
-        {saving ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Saving...
-          </>
-        ) : (
-          <>
-            <Save className="h-4 w-4 mr-2" />
-            Save OIDC Settings
-          </>
-        )}
-      </Button>
-    </form>
+        </Button>
+      </form>
+    </div>
   );
 };
 
