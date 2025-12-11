@@ -55,7 +55,6 @@ describe('SMTP Mailer Service', () => {
   afterEach(() => {
     // Additional cleanup to ensure no lingering state
     jest.clearAllMocks();
-    jest.clearAllTimers();
   });
 
   describe('sendTestEmail', () => {

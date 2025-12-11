@@ -1656,10 +1656,10 @@ export const userDb = {
     // Defensive check: ensure user exists and has backup codes
     if (!user || !user.mfa_backup_codes) return false;
     
-    // Additional defensive checks for edge cases
+    // Additional defensive check for empty string edge case
     const backupCodesStr = user.mfa_backup_codes;
-    if (typeof backupCodesStr !== 'string' || backupCodesStr.trim() === '') {
-      console.error('MFA backup codes for user', userId, 'is not a valid string');
+    if (backupCodesStr.trim() === '') {
+      console.error('MFA backup codes for user', userId, 'is an empty string');
       return false;
     }
 
