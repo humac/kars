@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import AssetTable from '../components/AssetTable';
 import AssetEditModal from '../components/AssetEditModal';
+import AssetRegisterModal from '../components/AssetRegisterModal';
+import AssetBulkImportModal from '../components/AssetBulkImportModal';
 import Dashboard from '../components/Dashboard';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Laptop, Loader2 } from 'lucide-react';
+import { Laptop, Loader2, Upload, Plus } from 'lucide-react';
 
 export default function AssetsPage() {
   const { getAuthHeaders, user } = useAuth();
@@ -13,6 +16,8 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [currentUser, setCurrentUser] = useState({ roles: ['user'] });
 
   useEffect(() => {
@@ -72,6 +77,26 @@ export default function AssetsPage() {
     setAssets(prev => [...prev, newAsset]);
   }
 
+  const canRegister = () => {
+    if (currentUser?.roles?.includes('admin')) return true;
+    if (currentUser?.roles?.includes('editor')) return true;
+    if (currentUser?.roles?.includes('user')) return true;
+    return false;
+  };
+
+  const canBulkImport = () => {
+    return currentUser?.roles?.includes('admin') || currentUser?.roles?.includes('editor');
+  };
+
+  const handleAssetRegistered = (newAsset) => {
+    onAssetAdded(newAsset);
+    loadAssets();
+  };
+
+  const handleBulkImported = () => {
+    loadAssets();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -84,10 +109,24 @@ export default function AssetsPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Laptop className="h-5 w-5 text-primary" />
-            <CardTitle>Asset Management</CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <Laptop className="h-5 w-5 text-primary" />
+              <CardTitle>Asset Management</CardTitle>
+            </div>
+            {canRegister() && (
+              <div className="flex gap-2 flex-wrap">
+                {canBulkImport() && (
+                  <Button variant="outline" onClick={() => setShowBulkImportModal(true)}>
+                    <Upload className="h-4 w-4 mr-2" />Bulk Import
+                  </Button>
+                )}
+                <Button onClick={() => setShowRegisterModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />Register Asset
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -119,6 +158,20 @@ export default function AssetsPage() {
           currentUser={currentUser}
           onClose={() => { setShowEditModal(false); setSelectedAsset(null); }}
           onSaved={onSave}
+        />
+      )}
+
+      {showRegisterModal && (
+        <AssetRegisterModal
+          onClose={() => setShowRegisterModal(false)}
+          onRegistered={handleAssetRegistered}
+        />
+      )}
+
+      {showBulkImportModal && (
+        <AssetBulkImportModal
+          onClose={() => setShowBulkImportModal(false)}
+          onImported={handleBulkImported}
         />
       )}
     </div>

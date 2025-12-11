@@ -33,9 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TablePaginationControls from '@/components/TablePaginationControls';
-import AssetRegisterModal from '@/components/AssetRegisterModal';
-import AssetBulkImportModal from '@/components/AssetBulkImportModal';
-import { Laptop, Search, Edit, Trash2, Sparkles, Loader2, Plus, Upload, Download } from 'lucide-react';
+import { Laptop, Search, Edit, Trash2, Sparkles, Loader2, Download } from 'lucide-react';
 
 export default function AssetTable({ assets = [], onEdit, onDelete, currentUser, onRefresh, onAssetAdded }) {
   const { getAuthHeaders } = useAuth();
@@ -51,8 +49,6 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const [formLoading, setFormLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
 
   async function handleDeleteConfirm() {
     const asset = deleteDialog.asset;
@@ -325,44 +321,22 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     );
   };
 
-  const canRegister = () => {
-    if (currentUser?.roles?.includes('admin')) return true;
-    if (currentUser?.roles?.includes('editor')) return true;
-    if (currentUser?.roles?.includes('user')) return true; // Employees can register assets for themselves
-    return false;
-  };
-
-  const handleAssetRegistered = (newAsset) => {
-    if (onAssetAdded) {
-      onAssetAdded(newAsset);
-    }
-    if (onRefresh) {
-      onRefresh();
-    }
-  };
-
-  const handleBulkImported = () => {
-    if (onRefresh) {
-      onRefresh();
-    }
-  };
-
   return (
     <>
       <div className="space-y-4">
-        {/* Search, Status Filters, and Action Buttons */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-            <div className="relative w-full sm:w-auto sm:min-w-[300px]">
+        {/* Search, Status Filters, and Bulk Actions - all on one row */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap flex-1">
+            <div className="relative w-full sm:w-auto sm:min-w-[320px] lg:min-w-[380px]">
               <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
               <Input
-                placeholder="Search assets by name, email, manager, serial, tag..."
+                placeholder="Search assets by name, manager, company, serial, tag..."
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               <Button
                 variant={statusFilter === 'all' ? 'default' : 'outline'}
                 size="sm"
@@ -400,56 +374,31 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {canRegister() && (
-              <>
-                {/* Only admins and editors can bulk import */}
-                {(currentUser?.roles?.includes('admin') || currentUser?.roles?.includes('editor')) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowBulkImportModal(true)}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Bulk Import
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={() => setShowRegisterModal(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Register Asset
+          {/* Bulk Actions - inline on the right */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 sm:gap-3 rounded-lg border px-3 py-1.5 bg-muted/50 shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium whitespace-nowrap">{selectedIds.size} selected</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
+                <Button variant="ghost" size="sm" onClick={handleExportSelected}>
+                  <Download className="h-4 w-4 mr-1" />Export
                 </Button>
-              </>
-            )}
-          </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={handleBulkDelete}
+                >
+                  Delete
+                </Button>
+                <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Bulk Actions Bar */}
-        {selectedIds.size > 0 && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 rounded-lg border px-3 py-2 bg-muted/50">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">{selectedIds.size} selected</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
-              <Button variant="ghost" size="sm" onClick={handleExportSelected}>
-                <Download className="h-4 w-4 mr-2" />Export
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={handleBulkDelete}
-              >
-                Delete
-              </Button>
-              <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
-            </div>
-          </div>
-        )}
 
         {/* Table */}
         {filteredAssets.length === 0 ? (
@@ -688,22 +637,6 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Register Asset Modal */}
-      {showRegisterModal && (
-        <AssetRegisterModal
-          onClose={() => setShowRegisterModal(false)}
-          onRegistered={handleAssetRegistered}
-        />
-      )}
-
-      {/* Bulk Import Modal */}
-      {showBulkImportModal && (
-        <AssetBulkImportModal
-          onClose={() => setShowBulkImportModal(false)}
-          onImported={handleBulkImported}
-        />
-      )}
     </>
   );
 }
