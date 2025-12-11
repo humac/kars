@@ -252,6 +252,29 @@ function extractUserData(claims) {
   const roles = extractRoles(claims);
   const role = mapRole(roles);
 
+  // Extract manager information from various common OIDC claim paths
+  let managerFirstName = null;
+  let managerLastName = null;
+  let managerEmail = null;
+
+  // Try to get manager email
+  managerEmail = claims.manager_email || claims.manager || claims.managerId || claims.manager_id || null;
+
+  // Try to get manager name (split or separate fields)
+  if (claims.manager_first_name || claims.managerFirstName) {
+    managerFirstName = claims.manager_first_name || claims.managerFirstName;
+  }
+  if (claims.manager_last_name || claims.managerLastName) {
+    managerLastName = claims.manager_last_name || claims.managerLastName;
+  }
+  
+  // If we have manager_name but not split fields, try to split it
+  if (!managerFirstName && !managerLastName && claims.manager_name) {
+    const nameParts = claims.manager_name.trim().split(/\s+/);
+    managerFirstName = nameParts[0] || null;
+    managerLastName = nameParts.slice(1).join(' ') || null;
+  }
+
   return {
     email,
     firstName,
@@ -259,6 +282,9 @@ function extractUserData(claims) {
     fullName,
     role,
     oidcSub: claims.sub, // Store OIDC subject for linking
+    managerFirstName,
+    managerLastName,
+    managerEmail,
   };
 }
 

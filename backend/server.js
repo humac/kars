@@ -492,7 +492,8 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
       manager_first_name: user.manager_first_name,
       manager_last_name: user.manager_last_name,
       manager_email: user.manager_email,
-      profile_image: user.profile_image
+      profile_image: user.profile_image,
+      profile_complete: user.profile_complete
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -663,6 +664,86 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Complete profile (for OIDC users)
+app.post('/api/auth/complete-profile', authenticate, async (req, res) => {
+  try {
+    const { manager_first_name, manager_last_name, manager_email } = req.body;
+
+    // Validation
+    if (!manager_first_name || !manager_last_name || !manager_email) {
+      return res.status(400).json({
+        error: 'Manager first name, last name, and email are required'
+      });
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(manager_email)) {
+      return res.status(400).json({
+        error: 'Please provide a valid email address'
+      });
+    }
+
+    // Get current user
+    const user = await userDb.getById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update user with manager information and mark profile as complete
+    await userDb.completeProfile(req.user.id, {
+      manager_first_name,
+      manager_last_name,
+      manager_email
+    });
+
+    // Get updated user
+    const updatedUser = await userDb.getById(req.user.id);
+
+    // Log audit
+    await auditDb.log(
+      'complete_profile',
+      'user',
+      updatedUser.id,
+      updatedUser.email,
+      {
+        manager_first_name,
+        manager_last_name,
+        manager_email
+      },
+      updatedUser.email
+    );
+
+    // Auto-assign manager role if manager exists
+    try {
+      await autoAssignManagerRole(manager_email, updatedUser.email);
+    } catch (roleError) {
+      console.error('Error auto-assigning manager role during profile completion:', roleError);
+      // Don't fail profile completion if role assignment fails
+    }
+
+    res.json({
+      message: 'Profile completed successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        manager_first_name: updatedUser.manager_first_name,
+        manager_last_name: updatedUser.manager_last_name,
+        manager_email: updatedUser.manager_email,
+        profile_image: updatedUser.profile_image,
+        profile_complete: updatedUser.profile_complete
+      }
+    });
+  } catch (error) {
+    console.error('Complete profile error:', error);
+    res.status(500).json({ error: 'Failed to complete profile' });
   }
 });
 
@@ -2320,7 +2401,10 @@ app.get('/api/auth/oidc/callback', async (req, res) => {
           first_name: userData.firstName,
           last_name: userData.lastName,
           role: userData.role,
-          oidcSub: userData.oidcSub
+          oidcSub: userData.oidcSub,
+          manager_first_name: userData.managerFirstName,
+          manager_last_name: userData.managerLastName,
+          manager_email: userData.managerEmail
         });
 
         user = await userDb.getById(result.id);
@@ -2356,7 +2440,8 @@ app.get('/api/auth/oidc/callback', async (req, res) => {
         manager_name: user.manager_name,
         manager_first_name: user.manager_first_name,
         manager_last_name: user.manager_last_name,
-        manager_email: user.manager_email
+        manager_email: user.manager_email,
+        profile_complete: user.profile_complete
       }
     });
   } catch (error) {

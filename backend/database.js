@@ -402,7 +402,8 @@ const initDb = async () => {
       oidc_sub TEXT UNIQUE,
       mfa_enabled INTEGER DEFAULT 0,
       mfa_secret TEXT,
-      mfa_backup_codes TEXT
+      mfa_backup_codes TEXT,
+      profile_complete INTEGER DEFAULT 1
     )
   ` : `
     CREATE TABLE IF NOT EXISTS users (
@@ -423,7 +424,8 @@ const initDb = async () => {
       oidc_sub TEXT,
       mfa_enabled INTEGER DEFAULT 0,
       mfa_secret TEXT,
-      mfa_backup_codes TEXT
+      mfa_backup_codes TEXT,
+      profile_complete INTEGER DEFAULT 1
     )
   `;
 
@@ -739,6 +741,34 @@ const initDb = async () => {
     }
   } catch (err) {
     console.error('Migration error (company_name -> company_id):', err.message);
+    // Don't fail initialization - the table might be new with correct schema
+  }
+
+  // Migration: Add profile_complete column to users table
+  try {
+    const userCols = isPostgres
+      ? await dbAll(`
+          SELECT column_name as name
+          FROM information_schema.columns
+          WHERE table_name = 'users'
+        `)
+      : await dbAll("PRAGMA table_info(users)");
+
+    const hasProfileComplete = userCols.some(col => col.name === 'profile_complete');
+
+    if (!hasProfileComplete) {
+      console.log('Migrating users table: adding profile_complete column...');
+      
+      // Add profile_complete column with default value of 1 (true) for existing users
+      await dbRun('ALTER TABLE users ADD COLUMN profile_complete INTEGER DEFAULT 1');
+      
+      // Ensure all existing users have profile_complete = 1
+      await dbRun('UPDATE users SET profile_complete = 1 WHERE profile_complete IS NULL');
+      
+      console.log('Migration complete: Added profile_complete column to users table');
+    }
+  } catch (err) {
+    console.error('Migration error (profile_complete column):', err.message);
     // Don't fail initialization - the table might be new with correct schema
   }
 
@@ -1617,9 +1647,16 @@ export const userDb = {
   },
   createFromOIDC: async (userData) => {
     const now = new Date().toISOString();
+    
+    // Determine if profile is complete based on manager data presence
+    const hasManagerData = userData.manager_first_name && 
+                          userData.manager_last_name && 
+                          userData.manager_email;
+    const profileComplete = hasManagerData ? 1 : 0;
+    
     const insertQuery = `
-      INSERT INTO users (email, password_hash, name, role, created_at, first_name, last_name, manager_first_name, manager_last_name, manager_email, oidc_sub)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (email, password_hash, name, role, created_at, first_name, last_name, manager_first_name, manager_last_name, manager_email, oidc_sub, profile_complete)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ${isPostgres ? 'RETURNING id' : ''}
     `;
     const result = await dbRun(insertQuery, [
@@ -1633,7 +1670,8 @@ export const userDb = {
       userData.manager_first_name || null,
       userData.manager_last_name || null,
       userData.manager_email || null,
-      userData.oidcSub
+      userData.oidcSub,
+      profileComplete
     ]);
     const id = isPostgres ? result.rows?.[0]?.id : result.lastInsertRowid;
     return { id };
@@ -1650,6 +1688,11 @@ export const userDb = {
     WHERE id = ?
   `, [userId]),
   getMFAStatus: async (userId) => dbGet('SELECT mfa_enabled, mfa_secret, mfa_backup_codes FROM users WHERE id = ?', [userId]),
+  completeProfile: async (userId, managerData) => dbRun(`
+    UPDATE users
+    SET manager_first_name = ?, manager_last_name = ?, manager_email = ?, profile_complete = 1
+    WHERE id = ?
+  `, [managerData.manager_first_name, managerData.manager_last_name, managerData.manager_email, userId]),
   useBackupCode: async (userId, code) => {
     const user = await userDb.getMFAStatus(userId);
     
