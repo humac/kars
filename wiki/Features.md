@@ -149,27 +149,51 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 
 **Three User Roles:**
 
-**Employee**
-- Register and manage own assets
-- View only assets where they are listed as employee
-- Update status of own assets
-- View own audit logs
-- Access profile management
+KARS implements a comprehensive role-based access control system with three distinct roles: **Employee**, **Manager**, and **Admin**. Each role has specific permissions designed to support different levels of system access and responsibility.
 
-**Manager**
-- All employee capabilities
-- View all assets in the system (same as admin)
-- View all audit logs (same as admin)
-- Access all reports with complete data
-- Cannot access admin settings or user management
+#### 📋 Role/Permissions Matrix
 
-**Admin**
-- Full system access
-- Manage all users (view, edit roles, delete)
-- Manage all companies (add, edit, delete)
-- View all assets and audit logs
-- Access admin settings panel
-- System configuration and monitoring
+| Feature | Employee | Manager | Admin |
+|---------|:--------:|:-------:|:-----:|
+| **Assets** | | | |
+| View own assets | ✅ | ✅ | ✅ |
+| View team assets (direct reports) | ❌ | ✅ | ✅ |
+| View all assets | ❌ | ✅ | ✅ |
+| Register own assets | ✅ | ✅ | ✅ |
+| Register assets for others | ❌ | ✅ | ✅ |
+| Edit own assets | ✅ | ✅ | ✅ |
+| Edit team assets | ❌ | ❌ | ✅ |
+| Edit all assets | ❌ | ❌ | ✅ |
+| Bulk import assets (CSV) | ❌ | ✅ | ✅ |
+| **Companies** | | | |
+| View company names (dropdown) | ✅ | ✅ | ✅ |
+| Create companies | ❌ | ❌ | ✅ |
+| Edit companies | ❌ | ❌ | ✅ |
+| Delete companies | ❌ | ❌ | ✅ |
+| Bulk import companies (CSV) | ❌ | ❌ | ✅ |
+| **Users** | | | |
+| View users page | ❌ | ✅ (read-only) | ✅ |
+| Add new users | ❌ | ❌ | ✅ |
+| Edit user roles | ❌ | ❌ | ✅ |
+| Delete users | ❌ | ❌ | ✅ |
+| **Audit & Reporting** | | | |
+| View own audit logs | ✅ | ✅ | ✅ |
+| View team audit logs | ❌ | ✅ | ✅ |
+| View all audit logs | ❌ | ✅ | ✅ |
+| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
+| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
+| **Profile & Security** | | | |
+| Update own profile | ✅ | ✅ | ✅ |
+| Change own password | ✅ | ✅ | ✅ |
+| Enable/disable MFA | ✅ | ✅ | ✅ |
+| Register passkeys | ✅ | ✅ | ✅ |
+| **Admin Settings** | | | |
+| Access Admin Settings | ❌ | ❌ | ✅ |
+| Configure OIDC/SSO | ❌ | ❌ | ✅ |
+| Configure passkey settings | ❌ | ❌ | ✅ |
+| Manage branding | ❌ | ❌ | ✅ |
+| Configure database engine | ❌ | ❌ | ✅ |
+| Configure email/SMTP | ❌ | ❌ | ✅ |
 
 **Automatic Manager Role Assignment**
 - When a user registers with a **manager email** that matches an existing account, that person is automatically promoted to **Manager** (unless already Manager/Admin).

@@ -3,7 +3,7 @@
 Welcome to the documentation for the **KeyData Asset Registration System (KARS)** — a SOC2-focused web app for tracking client assets with strong authentication, imports/exports, and admin controls.
 
 ## 🎯 Overview
-- **Asset visibility by role** with employee, manager, and admin scopes
+- **Asset visibility by role** with employee, manager, and admin scopes (see [Role/Permissions Matrix](Features#role-based-access-control-rbac))
 - **Modern authentication**: passwords, TOTP MFA, passkeys/WebAuthn, and OIDC/SSO
 - **Bulk operations**: CSV imports for assets/companies and CSV exports for audits
 - **Configurable platform**: branding controls, passkey relying-party settings, and database engine selection (SQLite or PostgreSQL)
