@@ -1323,8 +1323,8 @@ export const assetDb = {
       // 2. Assets where they are the manager (manager_id or manager_email matches)
       // 3. All employee-owned assets (for organizational visibility)
       baseQuery += ` WHERE (assets.owner_id = ? OR LOWER(assets.employee_email) = LOWER(?))
-                     OR (assets.manager_id = ? OR LOWER(assets.manager_email) = LOWER(?))
-                     OR (owner.role = 'employee')
+                        OR (assets.manager_id = ? OR LOWER(assets.manager_email) = LOWER(?))
+                        OR (owner.role = 'employee')
                      ORDER BY assets.registration_date DESC`;
       params = [user.id, user.email, user.id, user.email];
     } else {
