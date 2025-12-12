@@ -3500,17 +3500,8 @@ app.get('/api/audit/export', authenticate, async (req, res) => {
     if (user.role === 'employee') {
       // Employees only see their own audit logs
       logs = logs.filter(log => log.user_email === user.email);
-    } else if (user.role === 'manager') {
-      // Managers see their own logs + their employees' logs
-      // Optimized: Query only employee emails from assets instead of all asset data
-      const employeeEmails = await assetDb.getEmployeeEmailsByManager(user.email);
-      const allowedEmails = new Set([user.email, ...employeeEmails]);
-
-      logs = logs.filter(log =>
-        !log.user_email || allowedEmails.has(log.user_email)
-      );
     }
-    // Admin sees all logs (no filtering)
+    // Admin and Manager see all logs (no filtering)
 
     // Generate CSV
     const headers = ['ID', 'Timestamp', 'Action', 'Entity Type', 'Entity Name', 'Details', 'User Email'];
