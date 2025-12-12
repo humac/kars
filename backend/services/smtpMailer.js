@@ -152,7 +152,7 @@ Sent at: ${new Date().toISOString()}`,
       errorMessage = `SMTP server error (${error.responseCode}): ${error.response || error.message}`;
     }
     
-    console.error('SMTP test email failed:', error);
+    // console.error('SMTP test email failed:', error);
     
     return {
       success: false,
@@ -175,7 +175,7 @@ export const verifyConnection = async () => {
       message: 'SMTP connection verified successfully'
     };
   } catch (error) {
-    console.error('SMTP connection verification failed:', error);
+    // console.error('SMTP connection verification failed:', error);
     return {
       success: false,
       error: error.message

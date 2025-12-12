@@ -133,8 +133,10 @@ describe('Encryption Utilities', () => {
       const plaintext = 'my secret';
       const encrypted = encryptValue(plaintext);
       
-      // Tamper with the ciphertext (change last character)
-      const tampered = encrypted.slice(0, -1) + 'X';
+      // Tamper with the middle of the ciphertext portion (more reliable)
+      const parts = encrypted.split(':');
+      const tamperedCiphertext = parts[2].substring(0, 10) + 'XXXX' + parts[2].substring(14);
+      const tampered = `${parts[0]}:${parts[1]}:${tamperedCiphertext}`;
       
       expect(() => {
         decryptValue(tampered);
