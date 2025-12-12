@@ -139,10 +139,15 @@ describe('Asset Authorization and Manager Sync', () => {
       });
     });
 
-    it('should return managed assets for manager', async () => {
-      const assets = await assetDb.getScopedForUser(managerUser);
-      expect(assets.length).toBeGreaterThan(0);
-      const foundAsset = assets.find(a => a.id === asset.id);
+    it('should return all assets for manager (same as admin)', async () => {
+      const managerAssets = await assetDb.getScopedForUser(managerUser);
+      const adminAssets = await assetDb.getScopedForUser(adminUser);
+      
+      // Manager should see all assets, same count as admin
+      expect(managerAssets.length).toBe(adminAssets.length);
+      expect(managerAssets.length).toBeGreaterThan(0);
+      
+      const foundAsset = managerAssets.find(a => a.id === asset.id);
       expect(foundAsset).toBeDefined(); // Manager should see employee's asset
     });
   });

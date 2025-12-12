@@ -3437,17 +3437,8 @@ app.get('/api/audit/logs', authenticate, async (req, res) => {
     if (user.role === 'employee') {
       // Employees only see their own audit logs
       logs = logs.filter(log => log.user_email === user.email);
-    } else if (user.role === 'manager') {
-      // Managers see their own logs + their employees' logs
-      // Optimized: Query only employee emails from assets instead of all asset data
-      const employeeEmails = await assetDb.getEmployeeEmailsByManager(user.email);
-      const allowedEmails = new Set([user.email, ...employeeEmails]);
-
-      logs = logs.filter(log =>
-        !log.user_email || allowedEmails.has(log.user_email)
-      );
     }
-    // Admin sees all logs (no filtering)
+    // Admin and Manager see all logs (no filtering)
 
     res.json(logs);
   } catch (error) {
@@ -3557,17 +3548,11 @@ app.get('/api/reports/summary', authenticate, async (req, res) => {
 
     // Filter assets based on role
     let assets;
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'manager') {
+      // Admin and Manager see all assets
       assets = allAssets;
-    } else if (user.role === 'manager') {
-      // Manager sees their own assets OR assets owned by employees
-      // (Note: This is a simplified filter since we don't have owner.role here.
-      // The proper filtering is done in assetDb.getScopedForUser)
-      assets = allAssets.filter(asset =>
-        asset.employee_email === user.email ||
-        asset.manager_email === user.email
-      );
     } else {
+      // Employee sees only own assets
       assets = allAssets.filter(asset =>
         asset.employee_email === user.email
       );
