@@ -13,7 +13,7 @@ describe('Asset Ownership Sync', () => {
 
     // Create test company (required for assets with company_id FK)
     const companyResult = await companyDb.create({
-      name: 'Test Company',
+      name: `Test Company ${Date.now()}`,
       description: 'Test company for ownership sync tests'
     });
     testCompany = await companyDb.getById(companyResult.id);
@@ -78,7 +78,7 @@ describe('Asset Ownership Sync', () => {
         manager_first_name: 'Test',
         manager_last_name: 'Manager',
         manager_email: 'manager-sync-test@test.com',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
         serial_number: 'SN-SYNC-001',
         asset_tag: 'TAG-SYNC-001',
@@ -125,7 +125,7 @@ describe('Asset Ownership Sync', () => {
         manager_first_name: 'Test',
         manager_last_name: 'Manager',
         manager_email: 'manager-sync-test2@test.com',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
         serial_number: 'SN-SYNC-002',
         asset_tag: 'TAG-SYNC-002',
@@ -194,7 +194,7 @@ describe('Asset Ownership Sync', () => {
         manager_first_name: 'Some',
         manager_last_name: 'Manager',
         manager_email: 'some@manager.com',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
         serial_number: 'SN-SYNC-003',
         asset_tag: 'TAG-SYNC-003',
@@ -228,7 +228,7 @@ describe('Asset Ownership Sync', () => {
         manager_first_name: 'Test',
         manager_last_name: 'Manager',
         manager_email: 'test-manager@test.com',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
         serial_number: 'SN-EMAIL-001',
         asset_tag: 'TAG-EMAIL-001',
@@ -284,7 +284,7 @@ describe('Asset Ownership Sync', () => {
         manager_first_name: 'Manager',
         manager_last_name: 'Email',
         manager_email: 'mgr-email-test@test.com',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
         serial_number: 'SN-MGR-001',
         asset_tag: 'TAG-MGR-001',
@@ -330,7 +330,7 @@ describe('Asset Ownership Sync', () => {
         manager_first_name: 'Old',
         manager_last_name: 'Manager',
         manager_email: 'old-manager@test.com',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
         serial_number: 'SN-UPDATE-001',
         asset_tag: 'TAG-UPDATE-001',

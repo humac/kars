@@ -1320,11 +1320,13 @@ export const assetDb = {
     } else if (user.role === 'manager') {
       // Manager sees:
       // 1. Their own assets (where they are the owner/employee)
-      // 2. All employee-owned assets (for organizational visibility)
+      // 2. Assets where they are the manager (manager_id or manager_email matches)
+      // 3. All employee-owned assets (for organizational visibility)
       baseQuery += ` WHERE (assets.owner_id = ? OR LOWER(assets.employee_email) = LOWER(?))
-                     OR (owner.role = 'employee')
+                        OR (assets.manager_id = ? OR LOWER(assets.manager_email) = LOWER(?))
+                        OR (owner.role = 'employee')
                      ORDER BY assets.registration_date DESC`;
-      params = [user.id, user.email];
+      params = [user.id, user.email, user.id, user.email];
     } else {
       // Employee sees only own (check both owner_id and employee_email)
       baseQuery += ` WHERE assets.owner_id = ? OR LOWER(assets.employee_email) = LOWER(?)
@@ -1714,11 +1716,10 @@ export const userDb = {
       
       // Validate that parsed result is an array
       if (!Array.isArray(backupCodes)) {
-        console.error('MFA backup codes for user', userId, 'is not an array after parsing');
         return false;
       }
     } catch (error) {
-      console.error('Failed to parse MFA backup codes for user', userId, ':', error.message);
+      // Invalid JSON or other parsing error - this is expected for corrupted data
       return false;
     }
 
