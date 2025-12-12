@@ -74,10 +74,43 @@ npm run dev   # UI on http://localhost:5173
 
 ---
 
+## Understanding Your Role
+
+KARS uses role-based access control (RBAC) to ensure appropriate access levels. Here's a quick overview of what each role can do:
+
+### 🔑 Quick Permissions Overview
+
+**Employee** - Basic user focused on personal asset management
+- ✅ View and edit your own assets
+- ✅ Register assets for yourself
+- ✅ View your own audit logs
+- ✅ Manage your profile and security settings (password, MFA, passkeys)
+- ❌ Cannot view other users' assets or access admin features
+
+**Manager** - Team oversight with extended visibility
+- ✅ Everything an Employee can do, plus:
+- ✅ View all assets in the system (including team members)
+- ✅ Register assets for others
+- ✅ Bulk import assets via CSV
+- ✅ View all audit logs and reports
+- ✅ Read-only access to Users page
+- ❌ Cannot edit other users' assets, manage users, or access admin settings
+
+**Admin** - Full system control
+- ✅ Everything a Manager can do, plus:
+- ✅ Edit all assets (including other users' assets)
+- ✅ Create, edit, and delete companies
+- ✅ Bulk import companies via CSV
+- ✅ Add, edit, and delete users
+- ✅ Change user roles
+- ✅ Access Admin Settings (OIDC/SSO, passkeys, branding, database, email/SMTP)
+
+For a complete permissions matrix, see the [Features → RBAC](Features#role-based-access-control-rbac) page.
+
 ## Common First Tasks
 - **Employees** – Register assets and keep statuses current.
-- **Managers** – Review team assets and export filtered audit logs for your reports.
-- **Admins** – Seed companies, set up SSO/passkeys, and schedule database backups (see repository README for backup commands).
+- **Managers** – Review team assets, bulk import assets via CSV, and export filtered audit logs for your reports.
+- **Admins** – Seed companies, set up SSO/passkeys, manage users and roles, and schedule database backups (see repository README for backup commands).
 
 ---
 

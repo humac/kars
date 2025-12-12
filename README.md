@@ -35,10 +35,55 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
   - Database-backed configuration (admin UI)
 - **Password Security** - bcrypt hashing (10 rounds)
 - **Password Management** - Change password from profile settings
-- **Role-Based Access Control** - Three roles with distinct permissions:
+- **Role-Based Access Control** - Three roles with distinct permissions (see detailed matrix below):
   - **Employee**: View/edit own assets and audit logs only
-  - **Manager**: View all assets and audit logs (same as admin); cannot edit employee assets or access admin settings
-  - **Admin**: Full access to all resources including admin settings
+  - **Manager**: View all assets and audit logs; bulk import assets; read-only access to users page; cannot edit other users' assets or access admin settings
+  - **Admin**: Full access to all resources including admin settings, user management, and company management
+
+### 📋 Role/Permissions Matrix
+
+| Feature | Employee | Manager | Admin |
+|---------|:--------:|:-------:|:-----:|
+| **Assets** | | | |
+| View own assets | ✅ | ✅ | ✅ |
+| View team assets (direct reports) | ❌ | ✅ | ✅ |
+| View all assets | ❌ | ✅ | ✅ |
+| Register own assets | ✅ | ✅ | ✅ |
+| Register assets for others | ❌ | ✅ | ✅ |
+| Edit own assets | ✅ | ✅ | ✅ |
+| Edit team assets | ❌ | ❌ | ✅ |
+| Edit all assets | ❌ | ❌ | ✅ |
+| Bulk import assets (CSV) | ❌ | ✅ | ✅ |
+| **Companies** | | | |
+| View company names (dropdown) | ✅ | ✅ | ✅ |
+| Create companies | ❌ | ❌ | ✅ |
+| Edit companies | ❌ | ❌ | ✅ |
+| Delete companies | ❌ | ❌ | ✅ |
+| Bulk import companies (CSV) | ❌ | ❌ | ✅ |
+| **Users** | | | |
+| View users page | ❌ | ✅ (read-only) | ✅ |
+| Add new users | ❌ | ❌ | ✅ |
+| Edit user roles | ❌ | ❌ | ✅ |
+| Delete users | ❌ | ❌ | ✅ |
+| **Audit & Reporting** | | | |
+| View own audit logs | ✅ | ✅ | ✅ |
+| View team audit logs | ❌ | ✅ | ✅ |
+| View all audit logs | ❌ | ✅ | ✅ |
+| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
+| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
+| **Profile & Security** | | | |
+| Update own profile | ✅ | ✅ | ✅ |
+| Change own password | ✅ | ✅ | ✅ |
+| Enable/disable MFA | ✅ | ✅ | ✅ |
+| Register passkeys | ✅ | ✅ | ✅ |
+| **Admin Settings** | | | |
+| Access Admin Settings | ❌ | ❌ | ✅ |
+| Configure OIDC/SSO | ❌ | ❌ | ✅ |
+| Configure passkey settings | ❌ | ❌ | ✅ |
+| Manage branding | ❌ | ❌ | ✅ |
+| Configure database engine | ❌ | ❌ | ✅ |
+| Configure email/SMTP | ❌ | ❌ | ✅ |
+
 - **Automatic Manager Promotion** - Users listed as a manager are auto-promoted to manager with audit logging
 - **First Admin Setup** - Automatic admin promotion for first user
 - **Profile Management** - Update first/last name, password, MFA settings, passkeys, and manager details

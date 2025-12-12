@@ -108,22 +108,56 @@ Total user count displayed at top right.
 
 **Role Capabilities:**
 
-**Employee**
-- Can only see their own assets
-- Limited to personal asset management
-- No team or system access
+Understanding the permissions for each role is crucial for effective user management. Below is a comprehensive matrix showing what each role can do:
 
-**Manager**
-- Can see all assets in the system (same as admin)
-- Access to all reports and audit logs (same as admin)
-- No user or company management
-- No admin settings access
+#### 📋 Role/Permissions Matrix
 
-**Admin**
-- Full system access
-- User and company management
-- All assets and audit logs visible
-- System settings access
+| Feature | Employee | Manager | Admin |
+|---------|:--------:|:-------:|:-----:|
+| **Assets** | | | |
+| View own assets | ✅ | ✅ | ✅ |
+| View team assets (direct reports) | ❌ | ✅ | ✅ |
+| View all assets | ❌ | ✅ | ✅ |
+| Register own assets | ✅ | ✅ | ✅ |
+| Register assets for others | ❌ | ✅ | ✅ |
+| Edit own assets | ✅ | ✅ | ✅ |
+| Edit team assets | ❌ | ❌ | ✅ |
+| Edit all assets | ❌ | ❌ | ✅ |
+| Bulk import assets (CSV) | ❌ | ✅ | ✅ |
+| **Companies** | | | |
+| View company names (dropdown) | ✅ | ✅ | ✅ |
+| Create companies | ❌ | ❌ | ✅ |
+| Edit companies | ❌ | ❌ | ✅ |
+| Delete companies | ❌ | ❌ | ✅ |
+| Bulk import companies (CSV) | ❌ | ❌ | ✅ |
+| **Users** | | | |
+| View users page | ❌ | ✅ (read-only) | ✅ |
+| Add new users | ❌ | ❌ | ✅ |
+| Edit user roles | ❌ | ❌ | ✅ |
+| Delete users | ❌ | ❌ | ✅ |
+| **Audit & Reporting** | | | |
+| View own audit logs | ✅ | ✅ | ✅ |
+| View team audit logs | ❌ | ✅ | ✅ |
+| View all audit logs | ❌ | ✅ | ✅ |
+| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
+| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
+| **Profile & Security** | | | |
+| Update own profile | ✅ | ✅ | ✅ |
+| Change own password | ✅ | ✅ | ✅ |
+| Enable/disable MFA | ✅ | ✅ | ✅ |
+| Register passkeys | ✅ | ✅ | ✅ |
+| **Admin Settings** | | | |
+| Access Admin Settings | ❌ | ❌ | ✅ |
+| Configure OIDC/SSO | ❌ | ❌ | ✅ |
+| Configure passkey settings | ❌ | ❌ | ✅ |
+| Manage branding | ❌ | ❌ | ✅ |
+| Configure database engine | ❌ | ❌ | ✅ |
+| Configure email/SMTP | ❌ | ❌ | ✅ |
+
+**Key Differences:**
+- **Employee**: Limited to personal asset management and profile settings
+- **Manager**: Can view all assets and audit logs; bulk import assets; read-only access to users page; cannot edit other users' assets or access admin settings
+- **Admin**: Full system access including user management, company management, and all admin settings
 
 ### Automatic Manager Role Assignment
 
