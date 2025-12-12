@@ -1156,6 +1156,30 @@ export const assetDb = {
       last_updated: normalizeDates(row.last_updated)
     }));
   },
+  getByManagerEmail: async (email) => {
+    const query = `
+      SELECT
+        assets.*,
+        companies.name as company_name,
+        COALESCE(owner.first_name, assets.employee_first_name) as employee_first_name,
+        COALESCE(owner.last_name, assets.employee_last_name) as employee_last_name,
+        COALESCE(owner.email, assets.employee_email) as employee_email,
+        COALESCE(manager.first_name, assets.manager_first_name) as manager_first_name,
+        COALESCE(manager.last_name, assets.manager_last_name) as manager_last_name,
+        COALESCE(manager.email, assets.manager_email) as manager_email
+      FROM assets
+      INNER JOIN companies ON assets.company_id = companies.id
+      LEFT JOIN users owner ON assets.owner_id = owner.id
+      LEFT JOIN users manager ON assets.manager_id = manager.id
+      WHERE LOWER(COALESCE(manager.email, assets.manager_email)) = LOWER(?)
+    `;
+    const rows = await dbAll(query, [email]);
+    return rows.map((row) => ({
+      ...row,
+      registration_date: normalizeDates(row.registration_date),
+      last_updated: normalizeDates(row.last_updated)
+    }));
+  },
   linkAssetsToUser: async (employeeEmail, managerFirstName, managerLastName, managerEmail) => {
     const now = new Date().toISOString();
     

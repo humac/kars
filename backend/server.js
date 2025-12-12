@@ -373,6 +373,19 @@ app.post('/api/auth/register', async (req, res) => {
           console.log(`User ${newUser.email} has ${employeesWithThisManager.length} employees and was assigned manager role`);
         }
       }
+
+      // Case 3: If any assets have this new user's email as their manager_email,
+      // this new user should be assigned the manager role (if not already manager/admin)
+      const assetsWithThisManager = await assetDb.getByManagerEmail(newUser.email);
+      if (assetsWithThisManager && assetsWithThisManager.length > 0) {
+        const wasUpdated = await autoAssignManagerRole(newUser.email, newUser.email);
+        if (wasUpdated) {
+          // Refresh the newUser object to reflect the updated role
+          const updatedUser = await userDb.getById(newUser.id);
+          newUser.role = updatedUser.role;
+          console.log(`User ${newUser.email} is manager of ${assetsWithThisManager.length} assets and was assigned manager role`);
+        }
+      }
     } catch (roleError) {
       console.error('Error auto-assigning manager role during registration:', roleError);
       // Don't fail registration if role assignment fails

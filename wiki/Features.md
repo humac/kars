@@ -198,6 +198,7 @@ KARS implements a comprehensive role-based access control system with three dist
 **Automatic Manager Role Assignment**
 - When a user registers with a **manager email** that matches an existing account, that person is automatically promoted to **Manager** (unless already Manager/Admin).
 - If a newly registered user already has employees pointing to their email as manager, their role is auto-promoted to **Manager**.
+- If a newly registered user's email matches the **manager_email** field of any existing assets, their role is auto-promoted to **Manager**.
 - Manager role auto-promotions are logged for auditability.
 
 ### Company Management
