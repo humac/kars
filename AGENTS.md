@@ -136,15 +136,10 @@ app.get('/api/users', authenticate, authorize('admin', 'manager'), async (req, r
 ### Role-Based Data Filtering
 
 ```javascript
-if (user.role === 'employee') {
-  assets = await assetDb.getByEmployee(user.email);
-} else if (user.role === 'manager') {
-  const own = await assetDb.getByEmployee(user.email);
-  const team = await assetDb.getByManager(user.email);
-  assets = [...own, ...team];
-} else if (user.role === 'admin') {
-  assets = await assetDb.getAll();
-}
+// Use getScopedForUser for proper role-based filtering
+const assets = await assetDb.getScopedForUser(user);
+// Admin and Manager see all assets
+// Employee sees only own assets
 ```
 
 ### Audit Logging (CRITICAL)

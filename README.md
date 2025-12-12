@@ -37,8 +37,8 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **Password Management** - Change password from profile settings
 - **Role-Based Access Control** - Three roles with distinct permissions:
   - **Employee**: View/edit own assets and audit logs only
-  - **Manager**: View own + direct reports' assets and audit logs; cannot edit employee assets
-  - **Admin**: Full access to all resources
+  - **Manager**: View all assets and audit logs (same as admin); cannot edit employee assets or access admin settings
+  - **Admin**: Full access to all resources including admin settings
 - **Automatic Manager Promotion** - Users listed as a manager are auto-promoted to manager with audit logging
 - **First Admin Setup** - Automatic admin promotion for first user
 - **Profile Management** - Update first/last name, password, MFA settings, passkeys, and manager details
@@ -58,7 +58,7 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 - **Advanced Search** - Filter by employee, manager, client, status
 - **Role-Based Visibility & Authorization**:
   - Employees: View only their own assets; can edit only their own assets
-  - Managers: View own + team assets (direct reports); cannot edit employee assets
+  - Managers: View all assets (same as admins); cannot edit employee assets
   - Admins: View and edit all assets
 - **Automatic Manager Sync** - When an employee's manager changes, all their assets are automatically updated with the new manager reference
 - **Bulk Import/Export** - CSV importers for assets (with separated name fields) and companies plus CSV audit export

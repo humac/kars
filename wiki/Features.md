@@ -158,10 +158,10 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 
 **Manager**
 - All employee capabilities
-- View their own assets
-- View all employee-owned assets (for organizational visibility)
-- Access team audit logs and reports
-- View aggregated team statistics
+- View all assets in the system (same as admin)
+- View all audit logs (same as admin)
+- Access all reports with complete data
+- Cannot access admin settings or user management
 
 **Admin**
 - Full system access
@@ -221,7 +221,7 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
   - Limit results (50, 100, 250, 500, or all)
 - Role-based log visibility:
   - Employees see only their logs
-  - Managers see team logs
+  - Managers see all logs (same as admins)
   - Admins see all logs
 
 **Reporting Features**

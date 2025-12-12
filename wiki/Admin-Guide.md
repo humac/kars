@@ -114,10 +114,10 @@ Total user count displayed at top right.
 - No team or system access
 
 **Manager**
-- Can see their own assets
-- Can see assets of employees they manage
-- Access to team reports and audit logs
+- Can see all assets in the system (same as admin)
+- Access to all reports and audit logs (same as admin)
 - No user or company management
+- No admin settings access
 
 **Admin**
 - Full system access
@@ -306,7 +306,7 @@ docker logs -f asset-registration-backend
 
 Access: **Audit & Reporting** → **Audit Logs** tab
 
-**As admin, you see:**
+**As admin or manager, you see:**
 - All audit logs from all users
 - Complete system activity history
 - No filtering based on user

@@ -876,7 +876,7 @@ GET /api/assets
 
 **Role-Based Filtering:**
 - **Employee:** Only assets where `employee_email` matches user email
-- **Manager:** Assets where `employee_email` OR `manager_email` matches user email
+- **Manager:** All assets (same as admin)
 - **Admin:** All assets
 
 **Response:** `200 OK`
@@ -1251,7 +1251,7 @@ GET /api/audit/logs?action=CREATE&entityType=asset&limit=100
 
 **Role-Based Filtering:**
 - **Employee:** Only logs where `user_email` matches
-- **Manager:** Logs for self and managed employees
+- **Manager:** All logs (same as admin)
 - **Admin:** All logs
 
 **Response:** `200 OK`
@@ -1331,7 +1331,10 @@ Get asset summary with breakdowns.
 GET /api/reports/summary
 ```
 
-**Role-Based Filtering:** Same as Get All Assets
+**Role-Based Filtering:**
+- **Employee:** Only own assets
+- **Manager:** All assets (same as admin)
+- **Admin:** All assets
 
 **Response:** `200 OK`
 ```json

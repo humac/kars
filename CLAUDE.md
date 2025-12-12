@@ -455,7 +455,7 @@ KARS supports **four authentication methods**:
 | Role | Capabilities |
 |------|-------------|
 | **employee** | View/edit own assets only; view own audit logs |
-| **manager** | View own + team assets (read-only on team); view team audit logs |
+| **manager** | View all assets and audit logs (same as admin); no admin settings access |
 | **admin** | Full access to all resources; system configuration |
 
 ### Middleware Pattern
@@ -500,15 +500,16 @@ if (user.role === 'employee') {
   assets = await assetDb.getByEmployee(user.email);
 }
 
-// managers: own assets + all employee-owned assets
+// managers: all assets (same as admins)
 else if (user.role === 'manager') {
   assets = await assetDb.getScopedForUser(user);
-  // Returns: own assets + all assets owned by employees
+  // Returns: all assets
 }
 
-// admins: everything
+// admins: all assets
 else if (user.role === 'admin') {
-  assets = await assetDb.getAll();
+  assets = await assetDb.getScopedForUser(user);
+  // Returns: all assets
 }
 ```
 
@@ -807,19 +808,10 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Protected routes (authenticated)
 app.get('/api/assets', authenticate, async (req, res) => {
-  // Role-based filtering
+  // Role-based filtering using getScopedForUser
   const user = req.user;
-  let assets;
-
-  if (user.role === 'employee') {
-    assets = await assetDb.getByEmployee(user.email);
-  } else if (user.role === 'manager') {
-    const own = await assetDb.getByEmployee(user.email);
-    const team = await assetDb.getByManager(user.email);
-    assets = [...own, ...team];
-  } else {
-    assets = await assetDb.getAll();
-  }
+  const assets = await assetDb.getScopedForUser(user);
+  // Admin and Manager see all assets, Employee sees only own
 
   res.json({ success: true, assets });
 });
