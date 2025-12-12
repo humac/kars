@@ -158,8 +158,8 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 
 **Manager**
 - All employee capabilities
-- View assets where they are listed as manager
-- View assets of employees they manage
+- View their own assets
+- View all employee-owned assets (for organizational visibility)
 - Access team audit logs and reports
 - View aggregated team statistics
 

@@ -500,11 +500,10 @@ if (user.role === 'employee') {
   assets = await assetDb.getByEmployee(user.email);
 }
 
-// managers: own + direct reports
+// managers: own assets + all employee-owned assets
 else if (user.role === 'manager') {
-  const ownAssets = await assetDb.getByEmployee(user.email);
-  const teamAssets = await assetDb.getByManager(user.email);
-  assets = [...ownAssets, ...teamAssets];
+  assets = await assetDb.getScopedForUser(user);
+  // Returns: own assets + all assets owned by employees
 }
 
 // admins: everything

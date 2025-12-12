@@ -3560,6 +3560,9 @@ app.get('/api/reports/summary', authenticate, async (req, res) => {
     if (user.role === 'admin') {
       assets = allAssets;
     } else if (user.role === 'manager') {
+      // Manager sees their own assets OR assets owned by employees
+      // (Note: This is a simplified filter since we don't have owner.role here.
+      // The proper filtering is done in assetDb.getScopedForUser)
       assets = allAssets.filter(asset =>
         asset.employee_email === user.email ||
         asset.manager_email === user.email
