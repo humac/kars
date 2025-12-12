@@ -15,7 +15,7 @@ describe('Performance Optimizations', () => {
     await assetDb.init();
     // Create test company (required for assets with company_id FK)
     const companyResult = await companyDb.create({
-      name: 'Test Company',
+      name: `Test Company ${Date.now()}`,
       description: 'Test company for performance tests'
     });
     testCompany = await companyDb.getById(companyResult.id);
@@ -113,7 +113,7 @@ describe('Performance Optimizations', () => {
           manager_first_name: 'Manager',
           manager_last_name: 'Test',
           manager_email: 'manager@example.com',
-          company_name: 'Test Company',
+          company_name: testCompany.name,
           asset_type: 'laptop',
           serial_number: `SN${Date.now()}${i}`,
           asset_tag: `TAG${Date.now()}${i}`,
@@ -207,7 +207,7 @@ describe('Performance Optimizations', () => {
           manager_first_name: 'Perf',
           manager_last_name: 'Manager',
           manager_email: managerEmail,
-          company_name: 'Test Company',
+          company_name: testCompany.name,
           asset_type: 'laptop',
           serial_number: `PERF${Date.now()}${i}`,
           asset_tag: `PTAG${Date.now()}${i}`,
