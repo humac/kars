@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
-import { userDb, auditDb, assetDb } from './database.js';
+import { userDb, auditDb, assetDb, companyDb } from './database.js';
 import { generateToken } from './auth.js';
 import request from 'supertest';
 import express from 'express';
@@ -60,6 +60,39 @@ app.post('/api/auth/complete-profile', authenticate, async (req, res) => {
       },
       updatedUser.email
     );
+
+    // Sync manager info to existing assets
+    try {
+      const combined_manager_name = `${manager_first_name} ${manager_last_name}`;
+      const updatedAssets = await assetDb.updateManagerForEmployee(
+        updatedUser.email,
+        combined_manager_name,
+        manager_email
+      );
+
+      if (updatedAssets.changes > 0) {
+        console.log(`Updated manager info for ${updatedAssets.changes} assets for employee ${updatedUser.email}`);
+
+        // Log audit for asset manager sync
+        await auditDb.log(
+          'update',
+          'asset',
+          null,
+          `Manager synced for ${updatedUser.email}`,
+          {
+            employee_email: updatedUser.email,
+            new_manager_first_name: manager_first_name,
+            new_manager_last_name: manager_last_name,
+            new_manager_email: manager_email,
+            updated_count: updatedAssets.changes
+          },
+          updatedUser.email
+        );
+      }
+    } catch (syncError) {
+      console.error('Error syncing manager info to assets during profile completion:', syncError);
+      // Don't fail profile completion if asset sync fails
+    }
 
     res.json({
       message: 'Profile completed successfully',
@@ -287,5 +320,95 @@ describe('Profile Completion Flow', () => {
 
     // Cleanup
     await userDb.delete(result.id);
+  });
+
+  test('should sync manager info to preloaded assets when profile is completed', async () => {
+    // Create unique identifiers for this test
+    const timestamp = Date.now();
+    const uniqueEmail = `preload.user.${timestamp}@example.com`;
+    const uniqueName = `Test Company for Assets ${timestamp}`;
+    const uniqueTag = `TEST-PRELOAD-${timestamp}`;
+    const uniqueOidcSub = `oidc_sub_preload_${timestamp}`;
+
+    // Create test company with unique name
+    const companyResult = await companyDb.create({
+      name: uniqueName,
+      description: 'Test company for profile completion asset sync'
+    });
+    const company = await companyDb.getById(companyResult.id);
+
+    // Step 1: Create a preloaded asset for a user who hasn't registered yet
+    const assetResult = await assetDb.create({
+      employee_first_name: 'Preload',
+      employee_last_name: 'User',
+      employee_email: uniqueEmail,
+      manager_first_name: '',
+      manager_last_name: '',
+      manager_email: '',
+      asset_tag: uniqueTag,
+      asset_type: 'Laptop',
+      make: 'Test',
+      model: 'Preload Test',
+      serial_number: `PRELOAD-${timestamp}`,
+      company_id: company.id
+    });
+
+    // Verify asset has no manager info
+    let asset = await assetDb.getById(assetResult.id);
+    expect(asset.manager_first_name).toBeFalsy();
+    expect(asset.manager_last_name).toBeFalsy();
+    expect(asset.manager_email).toBeFalsy();
+
+    // Step 2: User registers via OIDC without manager info (incomplete profile)
+    const userResult = await userDb.createFromOIDC({
+      email: uniqueEmail,
+      name: 'Preload User',
+      first_name: 'Preload',
+      last_name: 'User',
+      role: 'employee',
+      oidcSub: uniqueOidcSub
+    });
+
+    const user = await userDb.getById(userResult.id);
+    expect(user.profile_complete).toBe(0);
+
+    // Generate token
+    const token = generateToken(user);
+
+    // Step 3: Complete profile with manager information
+    const response = await request(app)
+      .post('/api/auth/complete-profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        manager_first_name: 'New',
+        manager_last_name: 'Manager',
+        manager_email: 'newmanager@example.com'
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe('Profile completed successfully');
+
+    // Step 4: Verify the preloaded asset now has manager information
+    asset = await assetDb.getById(assetResult.id);
+    expect(asset.manager_first_name).toBe('New');
+    expect(asset.manager_last_name).toBe('Manager');
+    expect(asset.manager_email).toBe('newmanager@example.com');
+
+    // Step 5: Verify audit log contains asset sync entry
+    const logs = await auditDb.getAll();
+    const assetSyncLog = logs.find(
+      log => log.action === 'update' && 
+             log.entity_type === 'asset' && 
+             log.entity_name && 
+             log.entity_name.includes(`Manager synced for ${uniqueEmail}`)
+    );
+
+    expect(assetSyncLog).toBeDefined();
+    expect(assetSyncLog.user_email).toBe(uniqueEmail);
+
+    // Cleanup
+    await assetDb.delete(assetResult.id);
+    await userDb.delete(userResult.id);
+    await companyDb.delete(company.id);
   });
 });

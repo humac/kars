@@ -717,6 +717,39 @@ app.post('/api/auth/complete-profile', authenticate, async (req, res) => {
       updatedUser.email
     );
 
+    // Sync manager info to existing assets
+    try {
+      const combined_manager_name = `${manager_first_name} ${manager_last_name}`;
+      const updatedAssets = await assetDb.updateManagerForEmployee(
+        updatedUser.email,
+        combined_manager_name,
+        manager_email
+      );
+
+      if (updatedAssets.changes > 0) {
+        console.log(`Updated manager info for ${updatedAssets.changes} assets for employee ${updatedUser.email}`);
+
+        // Log audit for asset manager sync
+        await auditDb.log(
+          'update',
+          'asset',
+          null,
+          `Manager synced for ${updatedUser.email}`,
+          {
+            employee_email: updatedUser.email,
+            new_manager_first_name: manager_first_name,
+            new_manager_last_name: manager_last_name,
+            new_manager_email: manager_email,
+            updated_count: updatedAssets.changes
+          },
+          updatedUser.email
+        );
+      }
+    } catch (syncError) {
+      console.error('Error syncing manager info to assets during profile completion:', syncError);
+      // Don't fail profile completion if asset sync fails
+    }
+
     // Auto-assign manager role if manager exists
     try {
       await autoAssignManagerRole(manager_email, updatedUser.email);
