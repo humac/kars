@@ -498,6 +498,12 @@ const initDb = async () => {
       logo_data TEXT,
       logo_filename TEXT,
       logo_content_type TEXT,
+      site_name TEXT DEFAULT 'KARS',
+      favicon_data TEXT,
+      favicon_filename TEXT,
+      favicon_content_type TEXT,
+      primary_color TEXT DEFAULT '#3B82F6',
+      include_logo_in_emails INTEGER DEFAULT 0,
       updated_at TIMESTAMP NOT NULL,
       updated_by TEXT
     )
@@ -507,6 +513,12 @@ const initDb = async () => {
       logo_data TEXT,
       logo_filename TEXT,
       logo_content_type TEXT,
+      site_name TEXT DEFAULT 'KARS',
+      favicon_data TEXT,
+      favicon_filename TEXT,
+      favicon_content_type TEXT,
+      primary_color TEXT DEFAULT '#3B82F6',
+      include_logo_in_emails INTEGER DEFAULT 0,
       updated_at TEXT NOT NULL,
       updated_by TEXT
     )
@@ -790,13 +802,46 @@ const initDb = async () => {
     `);
   }
 
+  // Migration: Add new branding columns
+  try {
+    const brandingCols = isPostgres
+      ? await dbAll(`
+          SELECT column_name as name
+          FROM information_schema.columns
+          WHERE table_name = 'branding_settings'
+        `)
+      : await dbAll("PRAGMA table_info(branding_settings)");
+
+    const hasNewColumns = brandingCols.some(col => col.name === 'site_name');
+
+    if (!hasNewColumns) {
+      console.log('Migrating branding_settings table: adding new columns...');
+      
+      // Add new columns with defaults
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN site_name TEXT DEFAULT 'KARS'");
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN favicon_data TEXT");
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN favicon_filename TEXT");
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN favicon_content_type TEXT");
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN primary_color TEXT DEFAULT '#3B82F6'");
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN include_logo_in_emails INTEGER DEFAULT 0");
+      
+      // Set defaults for existing row
+      await dbRun("UPDATE branding_settings SET site_name = 'KARS', primary_color = '#3B82F6', include_logo_in_emails = 0 WHERE id = 1");
+      
+      console.log('Migration complete: Added new branding columns');
+    }
+  } catch (err) {
+    console.error('Migration error (branding columns):', err.message);
+    // Don't fail initialization
+  }
+
   // Insert default branding settings if not exists
   const checkBranding = await dbGet('SELECT id FROM branding_settings WHERE id = 1');
   if (!checkBranding) {
     const now = new Date().toISOString();
     await dbRun(`
-      INSERT INTO branding_settings (id, updated_at)
-      VALUES (1, ?)
+      INSERT INTO branding_settings (id, site_name, primary_color, include_logo_in_emails, updated_at)
+      VALUES (1, 'KARS', '#3B82F6', 0, ?)
     `, [now]);
   }
 
@@ -1875,13 +1920,25 @@ export const brandingSettingsDb = {
       SET logo_data = ?,
           logo_filename = ?,
           logo_content_type = ?,
+          site_name = ?,
+          favicon_data = ?,
+          favicon_filename = ?,
+          favicon_content_type = ?,
+          primary_color = ?,
+          include_logo_in_emails = ?,
           updated_at = ?,
           updated_by = ?
       WHERE id = 1
     `, [
-      settings.logo_data || null,
-      settings.logo_filename || null,
-      settings.logo_content_type || null,
+      settings.logo_data !== undefined ? settings.logo_data : null,
+      settings.logo_filename !== undefined ? settings.logo_filename : null,
+      settings.logo_content_type !== undefined ? settings.logo_content_type : null,
+      settings.site_name !== undefined ? settings.site_name : 'KARS',
+      settings.favicon_data !== undefined ? settings.favicon_data : null,
+      settings.favicon_filename !== undefined ? settings.favicon_filename : null,
+      settings.favicon_content_type !== undefined ? settings.favicon_content_type : null,
+      settings.primary_color !== undefined ? settings.primary_color : '#3B82F6',
+      settings.include_logo_in_emails !== undefined ? (settings.include_logo_in_emails ? 1 : 0) : 0,
       now,
       userEmail
     ]);

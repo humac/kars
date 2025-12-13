@@ -35,6 +35,13 @@ const AdminSettingsNew = () => {
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFilename, setLogoFilename] = useState('');
+  
+  // New branding fields
+  const [siteName, setSiteName] = useState('KARS');
+  const [faviconPreview, setFaviconPreview] = useState(null);
+  const [faviconFilename, setFaviconFilename] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('#3B82F6');
+  const [includeLogoInEmails, setIncludeLogoInEmails] = useState(false);
 
   useEffect(() => {
     if (activeView === 'settings') fetchDatabaseSettings();
@@ -78,12 +85,17 @@ const AdminSettingsNew = () => {
       setBrandingSettings(data);
       setLogoPreview(data.logo_data || null);
       setLogoFilename(data.logo_filename || '');
+      setSiteName(data.site_name || 'KARS');
+      setFaviconPreview(data.favicon_data || null);
+      setFaviconFilename(data.favicon_filename || '');
+      setPrimaryColor(data.primary_color || '#3B82F6');
+      setIncludeLogoInEmails(data.include_logo_in_emails === 1 || data.include_logo_in_emails === true);
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setBrandingLoading(false); }
   };
 
-  const handleLogoUpload = async (e) => {
+  const handleLogoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -99,54 +111,105 @@ const AdminSettingsNew = () => {
       return;
     }
 
-    setBrandingLoading(true);
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const logo_data = reader.result;
-        setLogoPreview(logo_data);
-        setLogoFilename(file.name);
-
-        const response = await fetch('/api/admin/branding', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({
-            logo_data,
-            logo_filename: file.name,
-            logo_content_type: file.type
-          })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to upload logo');
-
-        toast({ title: "Success", description: "Logo uploaded successfully", variant: "success" });
-        fetchBrandingSettings();
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-      setBrandingLoading(false);
-    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result);
+      setLogoFilename(file.name);
+      setBrandingSettings({
+        ...brandingSettings,
+        logo_data: reader.result,
+        logo_filename: file.name,
+        logo_content_type: file.type
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleLogoRemove = async () => {
+  const handleFaviconUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match(/^image\/(x-icon|png|vnd.microsoft.icon)$/)) {
+      toast({ title: "Error", description: "Please select a .ico or .png file", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (max 100KB for favicon)
+    if (file.size > 100 * 1024) {
+      toast({ title: "Error", description: "Favicon size must be less than 100KB", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFaviconPreview(reader.result);
+      setFaviconFilename(file.name);
+      setBrandingSettings({
+        ...brandingSettings,
+        favicon_data: reader.result,
+        favicon_filename: file.name,
+        favicon_content_type: file.type
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoRemove = () => {
+    setLogoPreview(null);
+    setLogoFilename('');
+    setBrandingSettings({
+      ...brandingSettings,
+      logo_data: null,
+      logo_filename: null,
+      logo_content_type: null
+    });
+  };
+
+  const handleFaviconRemove = () => {
+    setFaviconPreview(null);
+    setFaviconFilename('');
+    setBrandingSettings({
+      ...brandingSettings,
+      favicon_data: null,
+      favicon_filename: null,
+      favicon_content_type: null
+    });
+  };
+
+  const handleBrandingSave = async () => {
     setBrandingLoading(true);
     try {
       const response = await fetch('/api/admin/branding', {
-        method: 'DELETE',
-        headers: { ...getAuthHeaders() }
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          logo_data: logoPreview,
+          logo_filename: logoFilename || null,
+          logo_content_type: brandingSettings.logo_content_type || null,
+          site_name: siteName,
+          favicon_data: faviconPreview,
+          favicon_filename: faviconFilename || null,
+          favicon_content_type: brandingSettings.favicon_content_type || null,
+          primary_color: primaryColor,
+          include_logo_in_emails: includeLogoInEmails
+        })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to remove logo');
 
-      setLogoPreview(null);
-      setLogoFilename('');
-      toast({ title: "Success", description: "Logo removed successfully", variant: "success" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to save branding settings');
+
+      toast({ title: "Success", description: "Branding settings saved successfully", variant: "success" });
+      
+      // Trigger a custom event to notify App.jsx to reload branding
+      window.dispatchEvent(new CustomEvent('brandingUpdated'));
+      
       fetchBrandingSettings();
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally { setBrandingLoading(false); }
+    } finally { 
+      setBrandingLoading(false); 
+    }
   };
 
 
@@ -225,61 +288,202 @@ const AdminSettingsNew = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="branding" className="space-y-2">
+            <TabsContent value="branding" className="space-y-3">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Company Logo</CardTitle>
-                  <CardDescription className="text-sm">Upload a custom logo to replace the default KARS branding on the login page.</CardDescription>
+                  <CardTitle className="text-base">Branding Settings</CardTitle>
+                  <CardDescription className="text-sm">Customize your application's appearance and branding.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 pt-2">
+                <CardContent className="space-y-4 pt-2">
                   {brandingLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : (
-                    <div className="flex items-center gap-4 pb-2">
-                      <div className="h-20 w-20 flex items-center justify-center rounded-lg border bg-muted/50 overflow-hidden shrink-0">
-                        {logoPreview ? (
-                          <img
-                            src={logoPreview}
-                            alt="Company Logo"
-                            className="max-h-16 max-w-16 object-contain"
-                          />
-                        ) : (
-                          <Image className="h-8 w-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <Label htmlFor="company-logo" className="text-sm">Company Logo</Label>
-                        <Input id="company-logo" type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => document.getElementById('company-logo')?.click()}
-                            disabled={brandingLoading}
-                          >
-                            Choose Image
-                          </Button>
-                          {logoPreview && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={handleLogoRemove}
-                              disabled={brandingLoading}
-                            >
-                              Remove
-                            </Button>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {logoFilename || 'No file selected'}
-                          </span>
+                    <>
+                      {/* Company Logo */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-semibold">Company Logo</Label>
+                        <div className="flex items-center gap-4">
+                          <div className="h-20 w-20 flex items-center justify-center rounded-lg border bg-muted/50 overflow-hidden shrink-0">
+                            {logoPreview ? (
+                              <img
+                                src={logoPreview}
+                                alt="Company Logo"
+                                className="max-h-16 max-w-16 object-contain"
+                              />
+                            ) : (
+                              <Image className="h-8 w-8 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <Input id="company-logo" type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => document.getElementById('company-logo')?.click()}
+                                disabled={brandingLoading}
+                              >
+                                Choose Image
+                              </Button>
+                              {logoPreview && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleLogoRemove}
+                                  disabled={brandingLoading}
+                                >
+                                  Remove
+                                </Button>
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {logoFilename || 'No file selected'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">PNG, JPG, or SVG up to 2MB. Used on login page.</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">PNG, JPG, or SVG up to 2MB.</p>
                       </div>
-                    </div>
+
+                      <Separator />
+
+                      {/* Favicon */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-semibold">Favicon</Label>
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 flex items-center justify-center rounded border bg-muted/50 overflow-hidden shrink-0">
+                            {faviconPreview ? (
+                              <img
+                                src={faviconPreview}
+                                alt="Favicon"
+                                className="max-h-8 max-w-8 object-contain"
+                              />
+                            ) : (
+                              <Image className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <Input id="favicon-upload" type="file" accept=".ico,.png,image/x-icon,image/png" onChange={handleFaviconUpload} className="hidden" />
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => document.getElementById('favicon-upload')?.click()}
+                                disabled={brandingLoading}
+                              >
+                                Choose Favicon
+                              </Button>
+                              {faviconPreview && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleFaviconRemove}
+                                  disabled={brandingLoading}
+                                >
+                                  Remove
+                                </Button>
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {faviconFilename || 'No file selected'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">.ico or .png file, 32×32px recommended</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Site Name */}
+                      <div className="space-y-2">
+                        <Label htmlFor="site-name" className="text-sm font-semibold">Site Name</Label>
+                        <Input
+                          id="site-name"
+                          type="text"
+                          value={siteName}
+                          onChange={(e) => setSiteName(e.target.value)}
+                          placeholder="KARS"
+                          disabled={brandingLoading}
+                          className="max-w-md"
+                        />
+                        <p className="text-xs text-muted-foreground">Replaces "KARS" throughout the application</p>
+                      </div>
+
+                      <Separator />
+
+                      {/* Primary Color */}
+                      <div className="space-y-2">
+                        <Label htmlFor="primary-color" className="text-sm font-semibold">Primary Brand Color</Label>
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="h-10 w-10 rounded-full border-2 border-gray-300 cursor-pointer"
+                            style={{ backgroundColor: primaryColor }}
+                            onClick={() => document.getElementById('primary-color')?.click()}
+                          />
+                          <Input
+                            id="primary-color"
+                            type="color"
+                            value={primaryColor}
+                            onChange={(e) => setPrimaryColor(e.target.value)}
+                            disabled={brandingLoading}
+                            className="w-20 h-10 cursor-pointer"
+                          />
+                          <Input
+                            type="text"
+                            value={primaryColor}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                setPrimaryColor(val);
+                              }
+                            }}
+                            placeholder="#3B82F6"
+                            disabled={brandingLoading}
+                            className="max-w-32"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Used for buttons, links, and highlights.</p>
+                      </div>
+
+                      <Separator />
+
+                      {/* Email Logo Toggle */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="email-logo"
+                            checked={includeLogoInEmails}
+                            onCheckedChange={setIncludeLogoInEmails}
+                            disabled={brandingLoading}
+                          />
+                          <Label htmlFor="email-logo" className="text-sm font-semibold cursor-pointer">
+                            Include logo in email headers
+                          </Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground ml-6">
+                          When enabled, your company logo will appear in email notifications sent via SMTP
+                        </p>
+                      </div>
+
+                      <Separator />
+
+                      {/* Save Button */}
+                      <div className="flex justify-end pt-2">
+                        <Button 
+                          onClick={handleBrandingSave} 
+                          disabled={brandingLoading}
+                          size="default"
+                        >
+                          {brandingLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          Save Changes
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
