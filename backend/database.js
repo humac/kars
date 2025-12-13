@@ -505,6 +505,7 @@ const initDb = async () => {
       favicon_content_type TEXT,
       primary_color TEXT DEFAULT '#3B82F6',
       include_logo_in_emails INTEGER DEFAULT 0,
+      app_url TEXT,
       updated_at TIMESTAMP NOT NULL,
       updated_by TEXT
     )
@@ -521,6 +522,7 @@ const initDb = async () => {
       favicon_content_type TEXT,
       primary_color TEXT DEFAULT '#3B82F6',
       include_logo_in_emails INTEGER DEFAULT 0,
+      app_url TEXT,
       updated_at TEXT NOT NULL,
       updated_by TEXT
     )
@@ -977,6 +979,14 @@ const initDb = async () => {
       await dbRun("UPDATE branding_settings SET site_name = 'KARS', sub_title = 'KeyData Asset Registration System', primary_color = '#3B82F6', include_logo_in_emails = 0 WHERE id = 1");
       
       console.log('Migration complete: Added new branding columns');
+    }
+
+    // Add app_url column if it doesn't exist
+    const hasAppUrl = brandingCols.some(col => col.name === 'app_url');
+    if (!hasAppUrl) {
+      console.log('Migrating branding_settings table: adding app_url column...');
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN app_url TEXT");
+      console.log('Migration complete: Added app_url column');
     }
   } catch (err) {
     console.error('Migration error (branding columns):', err.message);
@@ -2088,6 +2098,7 @@ export const brandingSettingsDb = {
           favicon_content_type = ?,
           primary_color = ?,
           include_logo_in_emails = ?,
+          app_url = ?,
           updated_at = ?,
           updated_by = ?
       WHERE id = 1
@@ -2102,6 +2113,7 @@ export const brandingSettingsDb = {
       settings.favicon_content_type !== undefined ? settings.favicon_content_type : null,
       settings.primary_color !== undefined ? settings.primary_color : '#3B82F6',
       settings.include_logo_in_emails !== undefined ? (settings.include_logo_in_emails ? 1 : 0) : 0,
+      settings.app_url !== undefined ? settings.app_url : null,
       now,
       userEmail
     ]);

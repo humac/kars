@@ -44,6 +44,7 @@ const AdminSettingsNew = () => {
   const [faviconFilename, setFaviconFilename] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#3B82F6');
   const [includeLogoInEmails, setIncludeLogoInEmails] = useState(false);
+  const [appUrl, setAppUrl] = useState('');
 
   useEffect(() => {
     if (activeView === 'settings') fetchDatabaseSettings();
@@ -93,6 +94,7 @@ const AdminSettingsNew = () => {
       setFaviconFilename(data.favicon_filename || '');
       setPrimaryColor(data.primary_color || '#3B82F6');
       setIncludeLogoInEmails(data.include_logo_in_emails === 1 || data.include_logo_in_emails === true);
+      setAppUrl(data.app_url || '');
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setBrandingLoading(false); }
@@ -196,7 +198,8 @@ const AdminSettingsNew = () => {
           favicon_filename: faviconFilename || null,
           favicon_content_type: brandingSettings.favicon_content_type || null,
           primary_color: primaryColor,
-          include_logo_in_emails: includeLogoInEmails
+          include_logo_in_emails: includeLogoInEmails,
+          app_url: appUrl
         })
       });
 
@@ -488,6 +491,26 @@ const AdminSettingsNew = () => {
                         </div>
                         <p className="text-xs text-muted-foreground ml-6">
                           When enabled, your company logo will appear in email notifications sent via SMTP
+                        </p>
+                      </div>
+
+                      <Separator />
+
+                      {/* App URL */}
+                      <div className="space-y-2">
+                        <Label htmlFor="app-url" className="text-sm font-semibold">App URL</Label>
+                        <Input
+                          id="app-url"
+                          type="url"
+                          value={appUrl}
+                          onChange={(e) => setAppUrl(e.target.value)}
+                          placeholder="https://your-domain.com or http://localhost:3000"
+                          disabled={brandingLoading}
+                          className="max-w-md"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Base URL used for links in email notifications (attestation links, password reset, etc.). 
+                          Falls back to FRONTEND_URL environment variable if not set.
                         </p>
                       </div>
 

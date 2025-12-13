@@ -519,13 +519,13 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     // Create new reset token
     await passwordResetTokenDb.create(user.id, resetToken, expiresAt);
     
-    // Build reset URL - use configured origin or default to localhost for development
-    // Only use request origin if it's explicitly allowed for security
+    // Build reset URL - use branding app_url with fallbacks
+    const branding = await brandingSettingsDb.get();
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
     const requestOrigin = req.get('origin');
-    let baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    let baseUrl = branding?.app_url || process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
     
-    // If request origin is in allowed list, use it
+    // If request origin is in allowed list, use it (takes precedence for security)
     if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
       baseUrl = requestOrigin;
     }
@@ -2024,7 +2024,8 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       favicon_filename,
       favicon_content_type,
       primary_color,
-      include_logo_in_emails
+      include_logo_in_emails,
+      app_url
     } = req.body;
 
     console.log('[Branding] Update request received:', {
@@ -2037,7 +2038,8 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       sub_title,
       favicon_filename,
       primary_color,
-      include_logo_in_emails
+      include_logo_in_emails,
+      app_url
     });
 
     // Validate logo data if provided
@@ -2068,7 +2070,8 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       favicon_filename,
       favicon_content_type,
       primary_color,
-      include_logo_in_emails
+      include_logo_in_emails,
+      app_url
     }, req.user.email);
 
     console.log('[Branding] Settings updated successfully in database');
@@ -2081,6 +2084,7 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
     if (sub_title) changes.push(`Subtitle: ${sub_title}`);
     if (primary_color) changes.push(`Color: ${primary_color}`);
     if (include_logo_in_emails !== undefined) changes.push(`Email logo: ${include_logo_in_emails ? 'enabled' : 'disabled'}`);
+    if (app_url !== undefined) changes.push(`App URL: ${app_url || 'cleared'}`);
 
     await auditDb.log(
       'update',
@@ -3984,8 +3988,8 @@ app.post('/api/attestation/campaigns/:id/start', authenticate, authorize('admin'
       if (user.email) {
         try {
           const { sendAttestationLaunchEmail } = await import('./services/smtpMailer.js');
-          const attestationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/my-attestations`;
-          const result = await sendAttestationLaunchEmail(user.email, campaign, attestationUrl);
+          // Email function will use branding app_url with fallbacks
+          const result = await sendAttestationLaunchEmail(user.email, campaign);
           if (result.success) {
             emailsSent++;
           }

@@ -303,10 +303,10 @@ If you didn't request a password reset, please ignore this email or contact supp
  * Sends attestation campaign launch email to an employee
  * @param {string} recipient - Employee email address
  * @param {Object} campaign - Campaign object with name and description
- * @param {string} attestationUrl - Full URL to the attestation page
+ * @param {string} attestationUrl - Full URL to the attestation page (optional, will be constructed if not provided)
  * @returns {Promise<Object>} Result object with success status and message
  */
-export const sendAttestationLaunchEmail = async (recipient, campaign, attestationUrl) => {
+export const sendAttestationLaunchEmail = async (recipient, campaign, attestationUrl = null) => {
   try {
     const settings = await smtpSettingsDb.get();
     
@@ -321,6 +321,12 @@ export const sendAttestationLaunchEmail = async (recipient, campaign, attestatio
     const transport = await createTransport();
     const branding = await brandingSettingsDb.get();
     const siteName = branding?.site_name || 'KARS';
+    
+    // Construct attestation URL using fallback priority: provided URL -> branding app_url -> FRONTEND_URL -> localhost
+    if (!attestationUrl) {
+      const baseUrl = branding?.app_url || process.env.FRONTEND_URL || 'http://localhost:3000';
+      attestationUrl = `${baseUrl}/my-attestations`;
+    }
     
     const emailContent = `
       <h2 style="color: #333;">Asset Attestation Required</h2>
@@ -364,10 +370,10 @@ Complete your attestation here: ${attestationUrl}`,
  * Sends attestation reminder email to an employee
  * @param {string} recipient - Employee email address
  * @param {Object} campaign - Campaign object with name
- * @param {string} attestationUrl - Full URL to the attestation page
+ * @param {string} attestationUrl - Full URL to the attestation page (optional, will be constructed if not provided)
  * @returns {Promise<Object>} Result object with success status and message
  */
-export const sendAttestationReminderEmail = async (recipient, campaign, attestationUrl) => {
+export const sendAttestationReminderEmail = async (recipient, campaign, attestationUrl = null) => {
   try {
     const settings = await smtpSettingsDb.get();
     
@@ -382,6 +388,12 @@ export const sendAttestationReminderEmail = async (recipient, campaign, attestat
     const transport = await createTransport();
     const branding = await brandingSettingsDb.get();
     const siteName = branding?.site_name || 'KARS';
+    
+    // Construct attestation URL using fallback priority: provided URL -> branding app_url -> FRONTEND_URL -> localhost
+    if (!attestationUrl) {
+      const baseUrl = branding?.app_url || process.env.FRONTEND_URL || 'http://localhost:3000';
+      attestationUrl = `${baseUrl}/my-attestations`;
+    }
     
     const emailContent = `
       <h2 style="color: #333;">Reminder: Asset Attestation Pending</h2>
