@@ -3881,13 +3881,14 @@ app.post('/api/attestation/campaigns', authenticate, authorize('admin'), async (
     
     const result = await attestationCampaignDb.create(campaign);
     
-    await auditDb.create({
-      action: 'CREATE',
-      resource_type: 'attestation_campaign',
-      resource_id: result.id.toString(),
-      user_email: req.user.email,
-      details: `Created attestation campaign: ${name} (targeting: ${campaign.target_type}${target_type === 'selected' ? `, ${target_user_ids.length} users` : ''})`
-    });
+    await auditDb.log(
+      'create',
+      'attestation_campaign',
+      result.id,
+      name,
+      `Created attestation campaign: ${name} (targeting: ${campaign.target_type}${target_type === 'selected' ? `, ${target_user_ids.length} users` : ''})`,
+      req.user.email
+    );
     
     res.json({ success: true, campaignId: result.id });
   } catch (error) {
@@ -3952,13 +3953,15 @@ app.put('/api/attestation/campaigns/:id', authenticate, authorize('admin'), asyn
     
     await attestationCampaignDb.update(req.params.id, updates);
     
-    await auditDb.create({
-      action: 'UPDATE',
-      resource_type: 'attestation_campaign',
-      resource_id: req.params.id,
-      user_email: req.user.email,
-      details: `Updated attestation campaign`
-    });
+    const updatedCampaign = await attestationCampaignDb.getById(req.params.id);
+    await auditDb.log(
+      'update',
+      'attestation_campaign',
+      req.params.id,
+      updatedCampaign?.name || 'Unknown',
+      `Updated attestation campaign`,
+      req.user.email
+    );
     
     res.json({ success: true });
   } catch (error) {
@@ -4028,13 +4031,14 @@ app.post('/api/attestation/campaigns/:id/start', authenticate, authorize('admin'
       start_date: new Date().toISOString()
     });
     
-    await auditDb.create({
-      action: 'START',
-      resource_type: 'attestation_campaign',
-      resource_id: campaign.id.toString(),
-      user_email: req.user.email,
-      details: `Started attestation campaign: ${campaign.name} (targeting: ${campaign.target_type}). Created ${recordsCreated} records, sent ${emailsSent} emails`
-    });
+    await auditDb.log(
+      'start',
+      'attestation_campaign',
+      campaign.id,
+      campaign.name,
+      `Started attestation campaign: ${campaign.name} (targeting: ${campaign.target_type}). Created ${recordsCreated} records, sent ${emailsSent} emails`,
+      req.user.email
+    );
     
     res.json({ success: true, recordsCreated, emailsSent });
   } catch (error) {
@@ -4046,15 +4050,17 @@ app.post('/api/attestation/campaigns/:id/start', authenticate, authorize('admin'
 // Cancel campaign (Admin only)
 app.post('/api/attestation/campaigns/:id/cancel', authenticate, authorize('admin'), async (req, res) => {
   try {
+    const campaign = await attestationCampaignDb.getById(req.params.id);
     await attestationCampaignDb.update(req.params.id, { status: 'cancelled' });
     
-    await auditDb.create({
-      action: 'CANCEL',
-      resource_type: 'attestation_campaign',
-      resource_id: req.params.id,
-      user_email: req.user.email,
-      details: 'Cancelled attestation campaign'
-    });
+    await auditDb.log(
+      'cancel',
+      'attestation_campaign',
+      req.params.id,
+      campaign?.name || 'Unknown',
+      'Cancelled attestation campaign',
+      req.user.email
+    );
     
     res.json({ success: true });
   } catch (error) {
@@ -4232,13 +4238,14 @@ app.put('/api/attestation/records/:id/assets/:assetId', authenticate, async (req
     if (attested_status && attested_status !== asset.status) {
       await assetDb.update(asset.id, { status: attested_status });
       
-      await auditDb.create({
-        action: 'UPDATE',
-        resource_type: 'asset',
-        resource_id: asset.id.toString(),
-        user_email: req.user.email,
-        details: `Updated asset status during attestation: ${asset.status} -> ${attested_status}`
-      });
+      await auditDb.log(
+        'update',
+        'asset',
+        asset.id,
+        asset.asset_tag || asset.serial_number || 'Unknown',
+        `Updated asset status during attestation: ${asset.status} -> ${attested_status}`,
+        req.user.email
+      );
     }
     
     res.json({ success: true });
@@ -4288,13 +4295,14 @@ app.post('/api/attestation/records/:id/assets/new', authenticate, async (req, re
       });
     }
     
-    await auditDb.create({
-      action: 'CREATE',
-      resource_type: 'attestation_new_asset',
-      resource_id: record.id.toString(),
-      user_email: req.user.email,
-      details: `Added new asset during attestation: ${asset_type} - ${serial_number}`
-    });
+    await auditDb.log(
+      'create',
+      'attestation_new_asset',
+      record.id,
+      `${asset_type} - ${serial_number}`,
+      `Added new asset during attestation: ${asset_type} - ${serial_number}`,
+      req.user.email
+    );
     
     res.json({ success: true });
   } catch (error) {
@@ -4325,13 +4333,14 @@ app.post('/api/attestation/records/:id/complete', authenticate, async (req, res)
     
     const campaign = await attestationCampaignDb.getById(record.campaign_id);
     
-    await auditDb.create({
-      action: 'COMPLETE',
-      resource_type: 'attestation_record',
-      resource_id: record.id.toString(),
-      user_email: req.user.email,
-      details: `Completed attestation for campaign: ${campaign.name}`
-    });
+    await auditDb.log(
+      'complete',
+      'attestation_record',
+      record.id,
+      campaign?.name || 'Unknown Campaign',
+      `Completed attestation for campaign: ${campaign?.name || 'Unknown'}`,
+      req.user.email
+    );
     
     // Send notification to admins
     try {
