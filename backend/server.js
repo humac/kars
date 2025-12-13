@@ -519,8 +519,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     // Create new reset token
     await passwordResetTokenDb.create(user.id, resetToken, expiresAt);
     
-    // Build reset URL
-    const resetUrl = `${req.get('origin') || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    // Build reset URL - use configured origin or default to localhost for development
+    // Only use request origin if it's explicitly allowed for security
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+    const requestOrigin = req.get('origin');
+    let baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    
+    // If request origin is in allowed list, use it
+    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      baseUrl = requestOrigin;
+    }
+    
+    const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
     
     // Send email
     const emailResult = await sendPasswordResetEmail(user.email, resetToken, resetUrl);
