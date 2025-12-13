@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { smtpSettingsDb } from '../database.js';
+import { smtpSettingsDb, brandingSettingsDb } from '../database.js';
 import { decryptValue } from '../utils/encryption.js';
 
 /**
@@ -75,6 +75,28 @@ const createTransport = async () => {
  * @param {string} recipient - Email address to send the test email to
  * @returns {Promise<Object>} Result object with success status and message
  */
+/**
+ * Builds email HTML with optional logo header
+ * @param {Object} branding - Branding settings with logo_data and include_logo_in_emails
+ * @param {string} siteName - Custom site name or 'KARS'
+ * @param {string} content - Main email content HTML
+ * @returns {string} Complete HTML email template
+ */
+const buildEmailHtml = (branding, siteName, content) => {
+  const logoHeader = branding?.include_logo_in_emails && branding?.logo_data
+    ? `<div style="text-align: center; margin-bottom: 20px;">
+         <img src="${branding.logo_data}" alt="${siteName}" style="max-height: 80px; max-width: 300px; object-fit: contain;" />
+       </div>`
+    : '';
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      ${logoHeader}
+      ${content}
+    </div>
+  `;
+};
+
 export const sendTestEmail = async (recipient) => {
   try {
     const settings = await smtpSettingsDb.get();
@@ -104,28 +126,32 @@ export const sendTestEmail = async (recipient) => {
     
     const transport = await createTransport();
     
+    // Get branding settings for email customization
+    const branding = await brandingSettingsDb.get();
+    const siteName = branding?.site_name || 'KARS';
+    
+    const emailContent = `
+      <h2 style="color: #333;">${siteName} SMTP Test Email</h2>
+      <p>This is a test email from <strong>${siteName} (KeyData Asset Registration System)</strong>.</p>
+      <p>If you received this email, your SMTP settings are configured correctly.</p>
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+      <p style="color: #666; font-size: 12px;">
+        <strong>SMTP Server:</strong> ${settings.host}:${settings.port}<br>
+        <strong>Sent at:</strong> ${new Date().toISOString()}
+      </p>
+    `;
+    
     const mailOptions = {
-      from: `"${settings.from_name || 'KARS Notifications'}" <${settings.from_email}>`,
+      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
       to: toEmail,
-      subject: 'KARS SMTP Test Email',
-      text: `This is a test email from KARS (KeyData Asset Registration System).
+      subject: `${siteName} SMTP Test Email`,
+      text: `This is a test email from ${siteName} (KeyData Asset Registration System).
 
 If you received this email, your SMTP settings are configured correctly.
 
 SMTP Server: ${settings.host}:${settings.port}
 Sent at: ${new Date().toISOString()}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">KARS SMTP Test Email</h2>
-          <p>This is a test email from <strong>KARS (KeyData Asset Registration System)</strong>.</p>
-          <p>If you received this email, your SMTP settings are configured correctly.</p>
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-          <p style="color: #666; font-size: 12px;">
-            <strong>SMTP Server:</strong> ${settings.host}:${settings.port}<br>
-            <strong>Sent at:</strong> ${new Date().toISOString()}
-          </p>
-        </div>
-      `
+      html: buildEmailHtml(branding, siteName, emailContent)
     };
     
     const info = await transport.sendMail(mailOptions);

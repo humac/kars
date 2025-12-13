@@ -23,7 +23,13 @@ describe('Login Component', () => {
     // Mock branding fetch
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ logo_data: null }),
+      json: async () => ({ 
+        logo_data: null,
+        site_name: 'KARS',
+        sub_title: 'KeyData Asset Registration System',
+        primary_color: '#3B82F6',
+        favicon_data: null
+      }),
     });
   });
 
@@ -37,7 +43,8 @@ describe('Login Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('KARS')).toBeInTheDocument();
+      const karsElements = screen.getAllByText('KARS');
+      expect(karsElements.length).toBeGreaterThan(0);
     });
 
     expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();

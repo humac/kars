@@ -6,6 +6,10 @@ const mockSmtpSettingsDb = {
   getPassword: jest.fn()
 };
 
+const mockBrandingSettingsDb = {
+  get: jest.fn()
+};
+
 const mockDecryptValue = jest.fn();
 
 const mockSendMail = jest.fn();
@@ -16,7 +20,8 @@ const mockCreateTransport = jest.fn(() => ({
 }));
 
 jest.unstable_mockModule('../database.js', () => ({
-  smtpSettingsDb: mockSmtpSettingsDb
+  smtpSettingsDb: mockSmtpSettingsDb,
+  brandingSettingsDb: mockBrandingSettingsDb
 }));
 
 jest.unstable_mockModule('../utils/encryption.js', () => ({
@@ -40,6 +45,7 @@ describe('SMTP Mailer Service', () => {
     // Reset mock implementations to defaults to prevent state bleeding between tests
     mockSmtpSettingsDb.get.mockReset();
     mockSmtpSettingsDb.getPassword.mockReset();
+    mockBrandingSettingsDb.get.mockReset();
     mockDecryptValue.mockReset();
     mockSendMail.mockReset();
     mockVerify.mockReset();
@@ -49,6 +55,13 @@ describe('SMTP Mailer Service', () => {
     mockCreateTransport.mockReturnValue({
       sendMail: mockSendMail,
       verify: mockVerify
+    });
+    
+    // Set default branding mock for all tests
+    mockBrandingSettingsDb.get.mockResolvedValue({
+      site_name: 'KARS',
+      logo_data: null,
+      include_logo_in_emails: 0
     });
   });
 

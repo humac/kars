@@ -1807,14 +1807,30 @@ app.get('/api/branding', async (req, res) => {
 
 app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const { logo_data, logo_filename, logo_content_type } = req.body;
+    const { 
+      logo_data, 
+      logo_filename, 
+      logo_content_type,
+      site_name,
+      sub_title,
+      favicon_data,
+      favicon_filename,
+      favicon_content_type,
+      primary_color,
+      include_logo_in_emails
+    } = req.body;
 
     console.log('[Branding] Update request received:', {
       user: req.user.email,
       filename: logo_filename,
       content_type: logo_content_type,
       data_length: logo_data ? logo_data.length : 0,
-      data_prefix: logo_data ? logo_data.substring(0, 50) : 'null'
+      data_prefix: logo_data ? logo_data.substring(0, 50) : 'null',
+      site_name,
+      sub_title,
+      favicon_filename,
+      primary_color,
+      include_logo_in_emails
     });
 
     // Validate logo data if provided
@@ -1823,20 +1839,48 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       return res.status(400).json({ error: 'Invalid logo data format' });
     }
 
+    // Validate favicon data if provided
+    if (favicon_data && !favicon_data.startsWith('data:image/')) {
+      console.error('[Branding] Invalid favicon data format - does not start with data:image/');
+      return res.status(400).json({ error: 'Invalid favicon data format' });
+    }
+
+    // Validate primary color if provided (basic hex color validation)
+    if (primary_color && !/^#[0-9A-Fa-f]{6}$/.test(primary_color)) {
+      console.error('[Branding] Invalid primary color format:', primary_color);
+      return res.status(400).json({ error: 'Invalid primary color format. Use hex format like #3B82F6' });
+    }
+
     await brandingSettingsDb.update({
       logo_data,
       logo_filename,
-      logo_content_type
+      logo_content_type,
+      site_name,
+      sub_title,
+      favicon_data,
+      favicon_filename,
+      favicon_content_type,
+      primary_color,
+      include_logo_in_emails
     }, req.user.email);
 
-    console.log('[Branding] Logo updated successfully in database');
+    console.log('[Branding] Settings updated successfully in database');
+
+    // Build audit log details
+    const changes = [];
+    if (logo_filename) changes.push(`Logo: ${logo_filename}`);
+    if (favicon_filename) changes.push(`Favicon: ${favicon_filename}`);
+    if (site_name) changes.push(`Site name: ${site_name}`);
+    if (sub_title) changes.push(`Subtitle: ${sub_title}`);
+    if (primary_color) changes.push(`Color: ${primary_color}`);
+    if (include_logo_in_emails !== undefined) changes.push(`Email logo: ${include_logo_in_emails ? 'enabled' : 'disabled'}`);
 
     await auditDb.log(
       'update',
       'branding_settings',
       1,
       'Branding Configuration',
-      `Logo uploaded: ${logo_filename || 'unnamed'}`,
+      changes.length > 0 ? changes.join(', ') : 'Branding settings updated',
       req.user.email
     );
 

@@ -34,6 +34,8 @@ const LoginNew = ({ onSwitchToRegister }) => {
     variant: 'outline'
   });
   const [brandingLogo, setBrandingLogo] = useState(null);
+  const [siteName, setSiteName] = useState('KARS');
+  const [subTitle, setSubTitle] = useState('KeyData Asset Registration System');
 
   // Dark mode state - default to light mode
   const [theme, setTheme] = useState(() => {
@@ -86,6 +88,44 @@ const LoginNew = ({ onSwitchToRegister }) => {
       .then(data => {
         if (data.logo_data) {
           setBrandingLogo(data.logo_data);
+        }
+        if (data.site_name) {
+          setSiteName(data.site_name);
+          document.title = data.site_name;
+        }
+        if (data.sub_title) {
+          setSubTitle(data.sub_title);
+        }
+        if (data.primary_color) {
+          // Apply primary color
+          const hex = data.primary_color.replace('#', '');
+          const r = parseInt(hex.substring(0, 2), 16) / 255;
+          const g = parseInt(hex.substring(2, 4), 16) / 255;
+          const b = parseInt(hex.substring(4, 6), 16) / 255;
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          let h = 0, s = 0, l = (max + min) / 2;
+          
+          if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+              case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+              case g: h = ((b - r) / d + 2) / 6; break;
+              case b: h = ((r - g) / d + 4) / 6; break;
+            }
+          }
+          
+          document.documentElement.style.setProperty('--primary', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
+        }
+        if (data.favicon_data) {
+          let link = document.querySelector("link[rel~='icon']");
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+          }
+          link.href = data.favicon_data;
         }
       })
       .catch(err => console.error('Failed to fetch branding:', err));
@@ -307,8 +347,8 @@ const LoginNew = ({ onSwitchToRegister }) => {
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary mb-4 shadow-lg hover:scale-105 transition-transform">
                 <Laptop className="h-10 w-10 text-primary-foreground" />
               </div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">KARS</h1>
-              <p className="text-muted-foreground">KeyData Asset Registration System</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">{siteName}</h1>
+              <p className="text-muted-foreground">{subTitle}</p>
             </>
           )}
         </div>
@@ -317,10 +357,10 @@ const LoginNew = ({ onSwitchToRegister }) => {
           <CardHeader className="space-y-2 pb-4">
             <CardTitle className="text-2xl text-center flex items-center justify-center gap-2">
               <UserCircle className="h-6 w-6" />
-              Welcome to KARS
+              {siteName}
             </CardTitle>
             <CardDescription className="text-center text-base">
-              KeyData Asset Registration System Login 
+              {subTitle}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
