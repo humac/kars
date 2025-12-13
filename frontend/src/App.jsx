@@ -26,6 +26,7 @@ import {
   Loader2,
   Moon,
   Sun,
+  ClipboardCheck,
 } from 'lucide-react';
 import Dashboard from '@/components/Dashboard';
 import AssetsPage from '@/pages/AssetsPage';
@@ -39,6 +40,8 @@ import OIDCCallback from '@/components/OIDCCallback';
 import CompleteProfile from '@/components/CompleteProfile';
 import ForgotPassword from '@/components/ForgotPassword';
 import ResetPassword from '@/components/ResetPassword';
+import AttestationPage from '@/pages/AttestationPage';
+import MyAttestationsPage from '@/pages/MyAttestationsPage';
 
 function AppNew() {
   const { user, logout, loading, isAuthenticated } = useAuth();
@@ -170,6 +173,7 @@ function AppNew() {
     { label: 'Companies', icon: Building2, path: '/companies', roles: ['admin'] },
     { label: 'Users', icon: Users, path: '/users', roles: ['admin', 'manager'] },
     { label: 'Audit & Reports', icon: FileBarChart, path: '/audit' },
+    { label: 'Attestation', icon: ClipboardCheck, path: '/attestation', roles: ['admin'] },
     { label: 'Admin Settings', icon: Settings, path: '/admin', roles: ['admin'] },
   ];
 
@@ -399,8 +403,12 @@ function AppNew() {
           )}
           <Route path="/audit" element={<AuditReporting />} />
           {user?.role === 'admin' && (
+            <Route path="/attestation" element={<AttestationPage />} />
+          )}
+          {user?.role === 'admin' && (
             <Route path="/admin" element={<AdminSettings />} />
           )}
+          <Route path="/my-attestations" element={<MyAttestationsPage />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </main>
