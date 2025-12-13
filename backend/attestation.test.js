@@ -101,4 +101,49 @@ describe('Attestation DB Tables', () => {
     const allCampaigns = await attestationCampaignDb.getAll();
     expect(allCampaigns.length).toBeGreaterThan(0);
   });
+
+  it('should handle empty string end_date by converting to null', async () => {
+    const timestamp = Date.now();
+    
+    // Create admin user
+    const admin = await userDb.create({
+      email: `admin-empty-date-${timestamp}@test.com`,
+      password_hash: 'hash',
+      name: 'Test Admin',
+      role: 'admin'
+    });
+    
+    // Create campaign with empty string end_date (mimics frontend behavior)
+    const campaign = await attestationCampaignDb.create({
+      name: 'Campaign with Empty End Date',
+      description: 'Test empty end_date handling',
+      start_date: new Date().toISOString(),
+      end_date: '', // Empty string that should be converted to null
+      reminder_days: 7,
+      escalation_days: 10,
+      created_by: admin.id
+    });
+    expect(campaign.id).toBeDefined();
+    
+    // Retrieve campaign and verify end_date is null, not empty string
+    const retrievedCampaign = await attestationCampaignDb.getById(campaign.id);
+    expect(retrievedCampaign).toBeDefined();
+    expect(retrievedCampaign.end_date).toBeNull();
+    
+    // Test update with empty string end_date
+    await attestationCampaignDb.update(campaign.id, { end_date: '' });
+    const updatedCampaign = await attestationCampaignDb.getById(campaign.id);
+    expect(updatedCampaign.end_date).toBeNull();
+    
+    // Test update with a valid end_date
+    const validEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await attestationCampaignDb.update(campaign.id, { end_date: validEndDate });
+    const campaignWithDate = await attestationCampaignDb.getById(campaign.id);
+    expect(campaignWithDate.end_date).toBeTruthy();
+    
+    // Test update back to empty string
+    await attestationCampaignDb.update(campaign.id, { end_date: '' });
+    const campaignBackToNull = await attestationCampaignDb.getById(campaign.id);
+    expect(campaignBackToNull.end_date).toBeNull();
+  });
 });

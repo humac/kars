@@ -2660,11 +2660,14 @@ export const passwordResetTokenDb = {
 export const attestationCampaignDb = {
   create: async (campaign) => {
     const now = new Date().toISOString();
+    // Convert empty string end_date to null for PostgreSQL compatibility
+    const endDate = campaign.end_date && campaign.end_date !== '' ? campaign.end_date : null;
+    
     if (isPostgres) {
       const result = await dbRun(
         `INSERT INTO attestation_campaigns (name, description, start_date, end_date, status, reminder_days, escalation_days, target_type, target_user_ids, created_by, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-        [campaign.name, campaign.description, campaign.start_date, campaign.end_date, campaign.status || 'draft', 
+        [campaign.name, campaign.description, campaign.start_date, endDate, campaign.status || 'draft', 
          campaign.reminder_days || 7, campaign.escalation_days || 10, campaign.target_type || 'all', campaign.target_user_ids || null, campaign.created_by, now, now]
       );
       return { id: result.rows[0].id };
@@ -2672,7 +2675,7 @@ export const attestationCampaignDb = {
       const result = await dbRun(
         `INSERT INTO attestation_campaigns (name, description, start_date, end_date, status, reminder_days, escalation_days, target_type, target_user_ids, created_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [campaign.name, campaign.description, campaign.start_date, campaign.end_date, campaign.status || 'draft',
+        [campaign.name, campaign.description, campaign.start_date, endDate, campaign.status || 'draft',
          campaign.reminder_days || 7, campaign.escalation_days || 10, campaign.target_type || 'all', campaign.target_user_ids || null, campaign.created_by, now, now]
       );
       return { id: result.lastInsertRowid };
@@ -2723,7 +2726,8 @@ export const attestationCampaignDb = {
     }
     if (updates.end_date !== undefined) {
       fields.push(isPostgres ? `end_date = $${fields.length + 1}` : 'end_date = ?');
-      params.push(updates.end_date);
+      // Convert empty string end_date to null for PostgreSQL compatibility
+      params.push(updates.end_date && updates.end_date !== '' ? updates.end_date : null);
     }
     if (updates.status !== undefined) {
       fields.push(isPostgres ? `status = $${fields.length + 1}` : 'status = ?');
