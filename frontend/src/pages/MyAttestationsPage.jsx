@@ -250,9 +250,9 @@ export default function MyAttestationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <ClipboardCheck className="h-8 w-8" />
+      <div className="border-b pb-4">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <ClipboardCheck className="h-6 w-6" />
           My Attestations
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -273,10 +273,10 @@ export default function MyAttestationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {attestations.map((attestation) => (
             <Card key={attestation.id}>
-              <CardHeader>
+              <CardHeader className="py-3 px-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>{attestation.campaign?.name}</CardTitle>
@@ -287,7 +287,7 @@ export default function MyAttestationsPage() {
                   {getStatusBadge(attestation.status)}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="py-2 px-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1 text-sm">
                     <p>

@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react';
 import {
   Table,
@@ -84,6 +85,8 @@ export default function AttestationPage() {
   const [campaignToStart, setCampaignToStart] = useState(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [campaignToCancel, setCampaignToCancel] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState(null);
 
   // Helper function to parse target_user_ids
   const parseTargetUserIds = (targetUserIds) => {
@@ -294,6 +297,41 @@ export default function AttestationPage() {
     }
   };
 
+  const handleDeleteCampaignClick = (campaign) => {
+    setCampaignToDelete(campaign);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete) return;
+
+    try {
+      const res = await fetch(`/api/attestation/campaigns/${campaignToDelete.id}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders() }
+      });
+
+      if (!res.ok) throw new Error('Failed to delete campaign');
+
+      toast({
+        title: 'Success',
+        description: 'Campaign deleted successfully'
+      });
+
+      loadCampaigns();
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete campaign',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowDeleteDialog(false);
+      setCampaignToDelete(null);
+    }
+  };
+
   const handleEditCampaignClick = (campaign) => {
     // Parse target_user_ids using helper function
     const targetUserIds = parseTargetUserIds(campaign.target_user_ids);
@@ -441,10 +479,10 @@ export default function AttestationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b pb-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <ClipboardCheck className="h-8 w-8" />
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <ClipboardCheck className="h-6 w-6" />
             Attestation Campaigns
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -542,6 +580,14 @@ export default function AttestationPage() {
                               <PlayCircle className="h-4 w-4 mr-1" />
                               Start
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteCampaignClick(campaign)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
                           </>
                         )}
                         {campaign.status === 'active' && (
@@ -573,14 +619,24 @@ export default function AttestationPage() {
                           </>
                         )}
                         {(campaign.status === 'completed' || campaign.status === 'cancelled') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleExportCampaign(campaign.id, campaign.name)}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Export
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleExportCampaign(campaign.id, campaign.name)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Export
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteCampaignClick(campaign)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -1187,6 +1243,27 @@ export default function AttestationPage() {
             <AlertDialogCancel>Keep Campaign</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancelCampaign} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Cancel Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Campaign Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete the campaign "{campaignToDelete?.name}"?
+              <div className="mt-2 text-sm font-medium text-destructive">
+                This will also remove all attestation records associated with this campaign from all employees. This action cannot be undone.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCampaign} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Campaign
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
