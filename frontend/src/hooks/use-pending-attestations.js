@@ -44,7 +44,7 @@ export function usePendingAttestations() {
     const interval = setInterval(fetchPendingCount, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, getAuthHeaders]);
 
   return { pendingCount, loading, refresh: fetchPendingCount };
 }

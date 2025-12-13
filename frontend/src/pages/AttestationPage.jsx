@@ -119,27 +119,34 @@ export default function AttestationPage() {
       const campaignsData = data.campaigns || [];
       setCampaigns(campaignsData);
       
-      // Load stats for active campaigns
-      const stats = {};
-      for (const campaign of campaignsData) {
-        if (campaign.status === 'active') {
-          try {
-            const statsRes = await fetch(`/api/attestation/campaigns/${campaign.id}/dashboard`, {
-              headers: { ...getAuthHeaders() }
-            });
-            if (statsRes.ok) {
-              const statsData = await statsRes.json();
-              const records = statsData.records || [];
-              const completed = records.filter(r => r.status === 'completed').length;
-              const total = records.length;
-              const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-              stats[campaign.id] = { completed, total, percentage };
-            }
-          } catch (err) {
-            console.error(`Error loading stats for campaign ${campaign.id}:`, err);
+      // Load stats for active campaigns in parallel
+      const activeCampaigns = campaignsData.filter(c => c.status === 'active');
+      const statsPromises = activeCampaigns.map(async (campaign) => {
+        try {
+          const statsRes = await fetch(`/api/attestation/campaigns/${campaign.id}/dashboard`, {
+            headers: { ...getAuthHeaders() }
+          });
+          if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            const records = statsData.records || [];
+            const completed = records.filter(r => r.status === 'completed').length;
+            const total = records.length;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            return { id: campaign.id, stats: { completed, total, percentage } };
           }
+        } catch (err) {
+          console.error(`Error loading stats for campaign ${campaign.id}:`, err);
         }
-      }
+        return null;
+      });
+      
+      const statsResults = await Promise.all(statsPromises);
+      const stats = {};
+      statsResults.forEach(result => {
+        if (result) {
+          stats[result.id] = result.stats;
+        }
+      });
       setCampaignStats(stats);
     } catch (err) {
       console.error(err);
@@ -490,7 +497,7 @@ export default function AttestationPage() {
                     <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                     <TableCell>
                       {campaign.status === 'active' && stats ? (
-                        <div className="space-y-1 min-w-[180px]">
+                        <div className="space-y-1 w-44">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>{stats.completed}/{stats.total} - {stats.percentage}% Complete</span>
                           </div>
