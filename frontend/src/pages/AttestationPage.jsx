@@ -16,7 +16,8 @@ import {
   Users,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Edit
 } from 'lucide-react';
 import {
   Table,
@@ -34,6 +35,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,6 +57,8 @@ export default function AttestationPage() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
@@ -64,6 +77,35 @@ export default function AttestationPage() {
   const [wizardStep, setWizardStep] = useState(1);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  
+  // Alert dialog states
+  const [showStartDialog, setShowStartDialog] = useState(false);
+  const [campaignToStart, setCampaignToStart] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [campaignToCancel, setCampaignToCancel] = useState(null);
+
+  // Helper function to parse target_user_ids
+  const parseTargetUserIds = (targetUserIds) => {
+    if (!targetUserIds) return [];
+    try {
+      return typeof targetUserIds === 'string' ? JSON.parse(targetUserIds) : targetUserIds;
+    } catch (error) {
+      console.error('Error parsing target_user_ids:', error);
+      return [];
+    }
+  };
+
+  // Helper function to get user count message for campaign start
+  const getStartCampaignMessage = (campaign) => {
+    if (!campaign) return '';
+    
+    if (campaign.target_type === 'selected' && campaign.target_user_ids) {
+      const targetIds = parseTargetUserIds(campaign.target_user_ids);
+      const count = targetIds.length;
+      return `Emails will be sent to ${count} selected employee${count !== 1 ? 's' : ''}.`;
+    }
+    return 'Emails will be sent to all employees.';
+  };
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -149,33 +191,16 @@ export default function AttestationPage() {
     }
   };
 
-  const handleStartCampaign = async (campaignId) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    let confirmMessage = 'Are you sure you want to start this campaign? ';
-    
-    if (campaign?.target_type === 'selected' && campaign?.target_user_ids) {
-      try {
-        // Validate target_user_ids is a string before parsing
-        if (typeof campaign.target_user_ids === 'string') {
-          const targetCount = JSON.parse(campaign.target_user_ids).length;
-          confirmMessage += `Emails will be sent to ${targetCount} selected employee${targetCount !== 1 ? 's' : ''}.`;
-        } else {
-          confirmMessage += 'Emails will be sent to selected employees.';
-        }
-      } catch (error) {
-        console.error('Error parsing target_user_ids:', error);
-        confirmMessage += 'Emails will be sent to selected employees.';
-      }
-    } else {
-      confirmMessage += 'Emails will be sent to all employees.';
-    }
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+  const handleStartCampaignClick = (campaign) => {
+    setCampaignToStart(campaign);
+    setShowStartDialog(true);
+  };
+
+  const handleStartCampaign = async () => {
+    if (!campaignToStart) return;
 
     try {
-      const res = await fetch(`/api/attestation/campaigns/${campaignId}/start`, {
+      const res = await fetch(`/api/attestation/campaigns/${campaignToStart.id}/start`, {
         method: 'POST',
         headers: { ...getAuthHeaders() }
       });
@@ -196,16 +221,22 @@ export default function AttestationPage() {
         description: 'Failed to start campaign',
         variant: 'destructive'
       });
+    } finally {
+      setShowStartDialog(false);
+      setCampaignToStart(null);
     }
   };
 
-  const handleCancelCampaign = async (campaignId) => {
-    if (!confirm('Are you sure you want to cancel this campaign?')) {
-      return;
-    }
+  const handleCancelCampaignClick = (campaign) => {
+    setCampaignToCancel(campaign);
+    setShowCancelDialog(true);
+  };
+
+  const handleCancelCampaign = async () => {
+    if (!campaignToCancel) return;
 
     try {
-      const res = await fetch(`/api/attestation/campaigns/${campaignId}/cancel`, {
+      const res = await fetch(`/api/attestation/campaigns/${campaignToCancel.id}/cancel`, {
         method: 'POST',
         headers: { ...getAuthHeaders() }
       });
@@ -223,6 +254,73 @@ export default function AttestationPage() {
       toast({
         title: 'Error',
         description: 'Failed to cancel campaign',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowCancelDialog(false);
+      setCampaignToCancel(null);
+    }
+  };
+
+  const handleEditCampaignClick = (campaign) => {
+    // Parse target_user_ids using helper function
+    const targetUserIds = parseTargetUserIds(campaign.target_user_ids);
+
+    setEditingCampaign(campaign);
+    setFormData({
+      name: campaign.name || '',
+      description: campaign.description || '',
+      start_date: campaign.start_date ? new Date(campaign.start_date).toISOString().split('T')[0] : '',
+      end_date: campaign.end_date ? new Date(campaign.end_date).toISOString().split('T')[0] : '',
+      reminder_days: campaign.reminder_days || 7,
+      escalation_days: campaign.escalation_days || 10,
+      target_type: campaign.target_type || 'all',
+      target_user_ids: targetUserIds
+    });
+    setWizardStep(1);
+    setShowEditModal(true);
+    
+    // Load users if target type is selected
+    if (campaign.target_type === 'selected' && availableUsers.length === 0) {
+      loadUsers();
+    }
+  };
+
+  const handleUpdateCampaign = async () => {
+    try {
+      const res = await fetch(`/api/attestation/campaigns/${editingCampaign.id}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (!res.ok) throw new Error('Failed to update campaign');
+
+      toast({
+        title: 'Success',
+        description: 'Campaign updated successfully'
+      });
+
+      setShowEditModal(false);
+      setWizardStep(1);
+      setEditingCampaign(null);
+      setFormData({
+        name: '',
+        description: '',
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: '',
+        reminder_days: 7,
+        escalation_days: 10,
+        target_type: 'all',
+        target_user_ids: []
+      });
+      setUserSearchQuery('');
+      loadCampaigns();
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update campaign',
         variant: 'destructive'
       });
     }
@@ -375,14 +473,24 @@ export default function AttestationPage() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {campaign.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStartCampaign(campaign.id)}
-                          >
-                            <PlayCircle className="h-4 w-4 mr-1" />
-                            Start
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditCampaignClick(campaign)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStartCampaignClick(campaign)}
+                            >
+                              <PlayCircle className="h-4 w-4 mr-1" />
+                              Start
+                            </Button>
+                          </>
                         )}
                         {campaign.status === 'active' && (
                           <>
@@ -405,7 +513,7 @@ export default function AttestationPage() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleCancelCampaign(campaign.id)}
+                              onClick={() => handleCancelCampaignClick(campaign)}
                             >
                               <XCircle className="h-4 w-4 mr-1" />
                               Cancel
@@ -765,6 +873,271 @@ export default function AttestationPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Campaign Modal - Multi-Step Wizard */}
+      <Dialog open={showEditModal} onOpenChange={(open) => {
+        setShowEditModal(open);
+        if (!open) {
+          setWizardStep(1);
+          setUserSearchQuery('');
+          setEditingCampaign(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Campaign - Step {wizardStep} of 2</DialogTitle>
+            <DialogDescription>
+              {wizardStep === 1 ? 'Update campaign details' : 'Update target employees'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Step 1: Campaign Details */}
+          {wizardStep === 1 && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Campaign Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Q1 2025 Asset Attestation"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Provide additional context for employees..."
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-start_date">Start Date *</Label>
+                  <Input
+                    id="edit-start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-end_date">End Date (Optional)</Label>
+                  <Input
+                    id="edit-end_date"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-reminder_days">Reminder (days)</Label>
+                  <Input
+                    id="edit-reminder_days"
+                    type="number"
+                    min="1"
+                    value={formData.reminder_days}
+                    onChange={(e) => setFormData({ ...formData, reminder_days: parseInt(e.target.value) || 7 })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Send reminder after X days
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="edit-escalation_days">Escalation (days)</Label>
+                  <Input
+                    id="edit-escalation_days"
+                    type="number"
+                    min="1"
+                    value={formData.escalation_days}
+                    onChange={(e) => setFormData({ ...formData, escalation_days: parseInt(e.target.value) || 10 })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Notify manager after X days
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Step 2: Target Selection */}
+          {wizardStep === 2 && (
+            <div className="space-y-4">
+              <RadioGroup
+                value={formData.target_type}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, target_type: value, target_user_ids: [] });
+                  if (value === 'selected' && availableUsers.length === 0) {
+                    loadUsers();
+                  }
+                }}
+              >
+                <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                  <RadioGroupItem value="all" id="edit-target-all" />
+                  <Label htmlFor="edit-target-all" className="flex-1 cursor-pointer">
+                    <div className="font-medium">All Employees (System-wide)</div>
+                    <div className="text-sm text-muted-foreground">
+                      Send attestation request to all registered users
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                  <RadioGroupItem value="selected" id="edit-target-selected" />
+                  <Label htmlFor="edit-target-selected" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Select Specific Employees</div>
+                    <div className="text-sm text-muted-foreground">
+                      Choose individual employees to receive the attestation request
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+              
+              {formData.target_type === 'selected' && (
+                <div className="space-y-3 mt-4">
+                  <div>
+                    <Label htmlFor="edit-user-search">Search Employees</Label>
+                    <Input
+                      id="edit-user-search"
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  {availableUsers.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading users...
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg max-h-64 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        {availableUsers
+                          .filter(u => 
+                            userSearchQuery === '' ||
+                            u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                            u.email?.toLowerCase().includes(userSearchQuery.toLowerCase())
+                          )
+                          .map((u) => (
+                            <div
+                              key={u.id}
+                              className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                              onClick={() => {
+                                const isSelected = formData.target_user_ids.includes(u.id);
+                                setFormData({
+                                  ...formData,
+                                  target_user_ids: isSelected
+                                    ? formData.target_user_ids.filter(id => id !== u.id)
+                                    : [...formData.target_user_ids, u.id]
+                                });
+                              }}
+                            >
+                              <Checkbox
+                                checked={formData.target_user_ids.includes(u.id)}
+                                readOnly
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{u.name}</div>
+                                <div className="text-xs text-muted-foreground">{u.email}</div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {formData.target_user_ids.length > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      Selected: {formData.target_user_ids.length} employee{formData.target_user_ids.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            {wizardStep === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => {
+                  setShowEditModal(false);
+                  setWizardStep(1);
+                  setEditingCampaign(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => setWizardStep(2)} 
+                  disabled={!formData.name || !formData.start_date}
+                >
+                  Next
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setWizardStep(1)}>
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleUpdateCampaign}
+                  disabled={formData.target_type === 'selected' && formData.target_user_ids.length === 0}
+                >
+                  Update Campaign
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Campaign Confirmation Dialog */}
+      <AlertDialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to start the campaign "{campaignToStart?.name}"?
+              {campaignToStart && (
+                <div className="mt-2 text-sm font-medium">
+                  {getStartCampaignMessage(campaignToStart)}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStartCampaign}>
+              Start Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Campaign Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel the campaign "{campaignToCancel?.name}"?
+              <div className="mt-2 text-sm font-medium text-destructive">
+                This action cannot be undone.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Campaign</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelCampaign} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Cancel Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
