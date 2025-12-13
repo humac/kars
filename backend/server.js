@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, smtpSettingsDb, passwordResetTokenDb, syncAssetOwnership, attestationCampaignDb, attestationRecordDb, attestationAssetDb, attestationNewAssetDb } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, smtpSettingsDb, passwordResetTokenDb, syncAssetOwnership, attestationCampaignDb, attestationRecordDb, attestationAssetDb, attestationNewAssetDb, sanitizeDateValue } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
@@ -3870,7 +3870,7 @@ app.post('/api/attestation/campaigns', authenticate, authorize('admin'), async (
       name,
       description,
       start_date,
-      end_date: end_date && end_date !== '' ? end_date : null,
+      end_date: sanitizeDateValue(end_date),
       status: 'draft',
       reminder_days: reminder_days || 7,
       escalation_days: escalation_days || 10,
@@ -3945,7 +3945,7 @@ app.put('/api/attestation/campaigns/:id', authenticate, authorize('admin'), asyn
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (start_date !== undefined) updates.start_date = start_date;
-    if (end_date !== undefined) updates.end_date = end_date && end_date !== '' ? end_date : null;
+    if (end_date !== undefined) updates.end_date = sanitizeDateValue(end_date);
     if (reminder_days !== undefined) updates.reminder_days = reminder_days;
     if (escalation_days !== undefined) updates.escalation_days = escalation_days;
     if (status !== undefined) updates.status = status;

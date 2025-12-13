@@ -1126,6 +1126,17 @@ const normalizeDates = (date = null) => {
   throw new Error(`Unexpected date type: ${typeof date}`);
 };
 
+/**
+ * Sanitize date value by converting empty strings to null for database compatibility.
+ * PostgreSQL TIMESTAMP fields cannot accept empty strings, so we convert them to null.
+ * 
+ * @param {string|null|undefined} dateValue - The date value to sanitize
+ * @returns {string|null} The sanitized date value or null
+ */
+export const sanitizeDateValue = (dateValue) => {
+  return dateValue && dateValue !== '' ? dateValue : null;
+};
+
 export const assetDb = {
   init: initDb,
   create: async (asset) => {
@@ -2660,8 +2671,7 @@ export const passwordResetTokenDb = {
 export const attestationCampaignDb = {
   create: async (campaign) => {
     const now = new Date().toISOString();
-    // Convert empty string end_date to null for PostgreSQL compatibility
-    const endDate = campaign.end_date && campaign.end_date !== '' ? campaign.end_date : null;
+    const endDate = sanitizeDateValue(campaign.end_date);
     
     if (isPostgres) {
       const result = await dbRun(
@@ -2726,8 +2736,7 @@ export const attestationCampaignDb = {
     }
     if (updates.end_date !== undefined) {
       fields.push(isPostgres ? `end_date = $${fields.length + 1}` : 'end_date = ?');
-      // Convert empty string end_date to null for PostgreSQL compatibility
-      params.push(updates.end_date && updates.end_date !== '' ? updates.end_date : null);
+      params.push(sanitizeDateValue(updates.end_date));
     }
     if (updates.status !== undefined) {
       fields.push(isPostgres ? `status = $${fields.length + 1}` : 'status = ?');
