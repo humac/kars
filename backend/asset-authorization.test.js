@@ -8,6 +8,7 @@ describe('Asset Authorization and Manager Sync', () => {
   let adminUser;
   let asset;
   let testCompany;
+  let timestamp;
 
   beforeAll(async () => {
     // Initialize database
@@ -15,7 +16,7 @@ describe('Asset Authorization and Manager Sync', () => {
 
     // Create test company with unique name to avoid UNIQUE constraint failures
     // Using timestamp to ensure uniqueness across multiple test runs
-    const timestamp = Date.now();
+    timestamp = Date.now();
     const companyResult = await companyDb.create({
       name: `Test Company ${timestamp}`,
       description: 'Test company for authorization tests'
@@ -24,18 +25,18 @@ describe('Asset Authorization and Manager Sync', () => {
 
     // Create test users
     const employeeResult = await userDb.create({
-      email: 'employee@test.com',
+      email: `employee-${timestamp}@test.com`,
       password_hash: 'hash1',
       name: 'Test Employee',
       role: 'employee',
       first_name: 'Test',
       last_name: 'Employee',
       manager_name: 'Test Manager',
-      manager_email: 'manager@test.com'
+      manager_email: `manager-${timestamp}@test.com`
     });
 
     const managerResult = await userDb.create({
-      email: 'manager@test.com',
+      email: `manager-${timestamp}@test.com`,
       password_hash: 'hash2',
       name: 'Test Manager',
       role: 'manager',
@@ -44,7 +45,7 @@ describe('Asset Authorization and Manager Sync', () => {
     });
 
     const adminResult = await userDb.create({
-      email: 'admin@test.com',
+      email: `admin-${timestamp}@test.com`,
       password_hash: 'hash3',
       name: 'Test Admin',
       role: 'admin',
@@ -53,22 +54,22 @@ describe('Asset Authorization and Manager Sync', () => {
     });
 
     // Fetch created users
-    employeeUser = await userDb.getByEmail('employee@test.com');
-    managerUser = await userDb.getByEmail('manager@test.com');
-    adminUser = await userDb.getByEmail('admin@test.com');
+    employeeUser = await userDb.getByEmail(`employee-${timestamp}@test.com`);
+    managerUser = await userDb.getByEmail(`manager-${timestamp}@test.com`);
+    adminUser = await userDb.getByEmail(`admin-${timestamp}@test.com`);
 
     // Create a test asset owned by the employee
     const assetResult = await assetDb.create({
       employee_first_name: 'Test',
       employee_last_name: 'Employee',
-      employee_email: 'employee@test.com',
+      employee_email: `employee-${timestamp}@test.com`,
       manager_first_name: 'Test',
       manager_last_name: 'Manager',
-      manager_email: 'manager@test.com',
+      manager_email: `manager-${timestamp}@test.com`,
       company_name: testCompany.name, // Use the unique test company name
       asset_type: 'laptop',
-      serial_number: 'SN12345',
-      asset_tag: 'TAG12345',
+      serial_number: `SN12345-${timestamp}`,
+      asset_tag: `TAG12345-${timestamp}`,
       status: 'active'
     });
 
@@ -156,7 +157,7 @@ describe('Asset Authorization and Manager Sync', () => {
     it('should update asset manager_id when employee manager changes', async () => {
       // Create a new manager
       await userDb.create({
-        email: 'newmanager@test.com',
+        email: `newmanager-${timestamp}@test.com`,
         password_hash: 'hash4',
         name: 'New Manager',
         role: 'manager',
@@ -164,13 +165,13 @@ describe('Asset Authorization and Manager Sync', () => {
         last_name: 'Manager'
       });
 
-      const newManager = await userDb.getByEmail('newmanager@test.com');
+      const newManager = await userDb.getByEmail(`newmanager-${timestamp}@test.com`);
 
       // Update employee's manager
       await assetDb.updateManagerForEmployee(
         employeeUser.email,
         'New Manager',
-        'newmanager@test.com'
+        `newmanager-${timestamp}@test.com`
       );
 
       // Fetch the asset again
@@ -178,7 +179,7 @@ describe('Asset Authorization and Manager Sync', () => {
 
       // Check that manager_id was updated
       expect(updatedAsset.manager_id).toBe(newManager.id);
-      expect(updatedAsset.manager_email).toBe('newmanager@test.com');
+      expect(updatedAsset.manager_email).toBe(`newmanager-${timestamp}@test.com`);
 
       // Clean up
       await userDb.delete(newManager.id);
@@ -187,7 +188,7 @@ describe('Asset Authorization and Manager Sync', () => {
       await assetDb.updateManagerForEmployee(
         employeeUser.email,
         'Test Manager',
-        'manager@test.com'
+        `manager-${timestamp}@test.com`
       );
     });
 
@@ -196,14 +197,14 @@ describe('Asset Authorization and Manager Sync', () => {
       await assetDb.updateManagerForEmployee(
         employeeUser.email,
         'John Doe Smith', // This parameter is now ignored
-        'manager@test.com'
+        `manager-${timestamp}@test.com`
       );
 
       const updatedAsset = await assetDb.getById(asset.id);
       // Manager names should come from the user record via JOIN, not from denormalized fields
       expect(updatedAsset.manager_first_name).toBe('Test'); // From managerUser.first_name
       expect(updatedAsset.manager_last_name).toBe('Manager'); // From managerUser.last_name
-      expect(updatedAsset.manager_email).toBe('manager@test.com');
+      expect(updatedAsset.manager_email).toBe(`manager-${timestamp}@test.com`);
     });
   });
 
@@ -211,7 +212,7 @@ describe('Asset Authorization and Manager Sync', () => {
     it('should update owner_id when employee email changes', async () => {
       // Create another employee
       await userDb.create({
-        email: 'employee2@test.com',
+        email: `employee2-${timestamp}@test.com`,
         password_hash: 'hash5',
         name: 'Employee Two',
         role: 'employee',
@@ -219,12 +220,12 @@ describe('Asset Authorization and Manager Sync', () => {
         last_name: 'Two'
       });
 
-      const employee2 = await userDb.getByEmail('employee2@test.com');
+      const employee2 = await userDb.getByEmail(`employee2-${timestamp}@test.com`);
 
       // Update asset to assign to new employee
       await assetDb.update(asset.id, {
         ...asset,
-        employee_email: 'employee2@test.com',
+        employee_email: `employee2-${timestamp}@test.com`,
         employee_first_name: 'Employee',
         employee_last_name: 'Two'
       });
@@ -235,7 +236,7 @@ describe('Asset Authorization and Manager Sync', () => {
       // Restore
       await assetDb.update(asset.id, {
         ...asset,
-        employee_email: 'employee@test.com',
+        employee_email: `employee-${timestamp}@test.com`,
         employee_first_name: 'Test',
         employee_last_name: 'Employee'
       });
