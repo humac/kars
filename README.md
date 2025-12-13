@@ -4,13 +4,25 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A comprehensive SOC2-compliant web application for tracking and managing client assets assigned to consultants, with full authentication, role-based access control, and automated deployment.
+A web application that supports organizational SOC2 compliance by tracking client assets assigned to consultants, with full authentication, role-based access control, and automated deployment.
 
 🌐 **Live Demo:** [https://kars.jvhlabs.com](https://kars.jvhlabs.com)
 
 📖 **Documentation:** [View Wiki](../../wiki)
 
 🔄 **Schema Update:** [Migration Guide](SCHEMA-MIGRATION.md) - Important: Now supports multiple asset types (laptops, mobile phones). Breaking change - requires fresh database.
+
+---
+
+## 🎯 Purpose
+
+KARS helps consulting organizations maintain accountability for client-owned assets (laptops, mobile devices) assigned to their consultants. This supports:
+
+- **SOC2 Audit Requirements** - Demonstrable tracking of client assets under your custody
+- **Regular Attestation** - Automated workflows for employees to certify assets they hold
+- **Client Trust** - Transparent asset stewardship reporting
+- **Risk Management** - Quick identification of lost, damaged, or unreturned equipment
+- **Compliance Evidence** - Exportable audit trails and attestation records for auditor review
 
 ---
 
@@ -40,6 +52,16 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
   - Time-limited tokens (1-hour expiration)
   - One-time use tokens with automatic cleanup
   - Audit logging for all password reset events
+
+### ✅ Attestation Workflow
+- **Campaign-Based Certification** - Admins create attestation campaigns with configurable schedules
+- **Employee Self-Service** - Employees review and confirm assets in their possession
+- **Automated Reminders** - Email notifications for pending attestations
+- **Manager Escalation** - Automatic escalation to managers for overdue attestations
+- **Compliance Reporting** - Export attestation records for auditor review
+- **New Asset Discovery** - Employees can report unregistered assets during attestation
+
+### 🔐 Additional Security Features
 - **Role-Based Access Control** - Three roles with distinct permissions (see detailed matrix below):
   - **Employee**: View/edit own assets and audit logs only
   - **Manager**: View all assets and audit logs; bulk import assets; read-only access to users page; cannot edit other users' assets or access admin settings
@@ -76,6 +98,14 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 | View all audit logs | ❌ | ✅ | ✅ |
 | Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
 | View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
+| **Attestations** | | | |
+| View own pending attestations | ✅ | ✅ | ✅ |
+| Submit attestations | ✅ | ✅ | ✅ |
+| View own attestation history | ✅ | ✅ | ✅ |
+| View team attestation status | ❌ | ✅ | ✅ |
+| View all attestation reports | ❌ | ❌ | ✅ |
+| Create/manage campaigns | ❌ | ❌ | ✅ |
+| Export attestation records | ❌ | ❌ | ✅ |
 | **Profile & Security** | | | |
 | Update own profile | ✅ | ✅ | ✅ |
 | Change own password | ✅ | ✅ | ✅ |
@@ -121,7 +151,7 @@ A comprehensive SOC2-compliant web application for tracking and managing client 
 
 ### 📊 Audit & Compliance
 - **Complete Audit Trail** - All actions logged with user attribution
-- **SOC2 Compliance** - Meets audit requirements
+- **SOC2 Compliance Support** - Provides audit evidence for organizational compliance
 - **Comprehensive Logging** - CREATE, UPDATE, STATUS_CHANGE, DELETE
 - **CSV Export** - Role-filtered audit log downloads for compliance
 - **Summary Reports** - Asset statistics by status, company, manager
@@ -164,6 +194,19 @@ This application supports multiple architectures:
 - **ARM64** - ARM processors (Raspberry Pi, AWS Graviton, Apple Silicon)
 
 Docker images are automatically built for both platforms during CI/CD.
+
+---
+
+## 📋 Prerequisites
+
+**For Development:**
+- **Node.js 18.x** (required for backend native modules like better-sqlite3)
+- npm or yarn package manager
+- Git
+
+**For Production Deployment:**
+- Docker and Docker Compose
+- (Optional) Portainer for container management
 
 ---
 
@@ -264,6 +307,21 @@ Email notifications (including password reset emails) require SMTP configuration
 
 **Security Note:** SMTP passwords are encrypted using AES-256-GCM before storage. The `KARS_MASTER_KEY` must remain secure and consistent across deployments.
 
+### Configure Attestation Scheduler
+
+For automated attestation reminders and escalations:
+
+```bash
+# Add to backend/.env
+RUN_ATTESTATION_SCHEDULER=true  # Enable automated scheduler
+FRONTEND_URL=http://localhost:5173  # Base URL for email links (adjust for production)
+```
+
+**Note:** The attestation scheduler runs daily checks for:
+- Sending reminder emails to employees with pending attestations
+- Escalating overdue attestations to managers
+- Auto-closing campaigns past their end date
+
 ---
 
 ## 🐛 Troubleshooting
@@ -324,7 +382,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built for SOC2 compliance requirements
+- Built to support organizational SOC2 compliance requirements
 - Designed for consulting firms managing client assets
 - Automated deployment via GitHub Actions
 - Secure access via Cloudflare Tunnel
@@ -349,7 +407,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Database-Backed SSO Configuration
 - [x] WebAuthn/Passkey Support
 - [x] PostgreSQL Database Support
-- [ ] Email Notifications
+- [x] Email Notifications
+- [x] Password Reset Flow
+- [x] Attestation Workflow
 - [ ] Advanced Reporting Dashboard
 - [ ] Mobile App
 - [ ] API Rate Limiting

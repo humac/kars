@@ -1,6 +1,6 @@
 # KARS (KeyData Asset Registration System) Wiki
 
-Welcome to the documentation for the **KeyData Asset Registration System (KARS)** — a SOC2-focused web app for tracking client assets with strong authentication, imports/exports, and admin controls.
+Welcome to the documentation for the **KeyData Asset Registration System (KARS)** — a web application that supports organizational SOC2 compliance by tracking client assets with strong authentication, imports/exports, and admin controls.
 
 ## 🎯 Overview
 - **Asset visibility by role** with employee, manager, and admin scopes (see [Role/Permissions Matrix](Features#role-based-access-control-rbac))

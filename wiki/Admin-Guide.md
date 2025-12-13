@@ -141,6 +141,14 @@ Understanding the permissions for each role is crucial for effective user manage
 | View all audit logs | ❌ | ✅ | ✅ |
 | Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
 | View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
+| **Attestations** | | | |
+| View own pending attestations | ✅ | ✅ | ✅ |
+| Submit attestations | ✅ | ✅ | ✅ |
+| View own attestation history | ✅ | ✅ | ✅ |
+| View team attestation status | ❌ | ✅ | ✅ |
+| View all attestation reports | ❌ | ❌ | ✅ |
+| Create/manage campaigns | ❌ | ❌ | ✅ |
+| Export attestation records | ❌ | ❌ | ✅ |
 | **Profile & Security** | | | |
 | Update own profile | ✅ | ✅ | ✅ |
 | Change own password | ✅ | ✅ | ✅ |
@@ -263,6 +271,140 @@ All users (including employees and managers) can see company names in the dropdo
 - Add new companies
 - Edit existing companies
 - Delete companies
+
+## Attestation Management
+
+Access: **Attestation** tab (admin-only)
+
+Attestation campaigns enable you to periodically verify that employees still possess the assets assigned to them, supporting compliance and accurate record-keeping.
+
+### Creating a Campaign
+
+**To create a new attestation campaign:**
+
+1. Navigate to the **Attestation** page
+2. Click **Create Campaign** button
+3. Fill in campaign details:
+   - **Name** - Descriptive campaign name (e.g., "Q1 2024 Asset Attestation")
+   - **Description** - Purpose and instructions for employees
+   - **Start Date** - When the campaign begins
+   - **End Date** - When the campaign ends (optional, for auto-closure)
+   - **Reminder Days** - Days after start to send reminder email (default: 7)
+   - **Escalation Days** - Days after start to escalate to managers (default: 10)
+4. Click **Save** to create as draft
+
+**Campaign Status:**
+- **Draft** - Not yet started, can be edited
+- **Active** - Running, employees can submit attestations
+- **Completed** - Ended, records are final
+- **Cancelled** - Terminated early
+
+### Starting a Campaign
+
+**To launch a campaign:**
+
+1. Select a draft campaign from the list
+2. Click **Start Campaign**
+3. System automatically:
+   - Creates attestation records for all active employees
+   - Sends launch emails to all employees with their unique attestation links
+   - Changes campaign status to "active"
+
+**What employees receive:**
+- Email notification with campaign details
+- Direct link to their attestation page
+- List of assets requiring confirmation
+
+### Monitoring Campaign Progress
+
+**Dashboard view shows:**
+- **Total Employees** - Number of participants
+- **Completed** - Employees who finished attestation
+- **Pending** - Employees who haven't completed
+- **Completion Rate** - Percentage complete
+- **Reminders Sent** - Count of reminder emails
+- **Escalations Sent** - Count of manager escalations
+
+**Employee records table:**
+- Employee name and email
+- Status (pending, in_progress, completed)
+- Completion date
+- Number of assets attested
+- Number of new assets reported
+
+### Automated Reminders and Escalations
+
+The attestation scheduler (if enabled with `RUN_ATTESTATION_SCHEDULER=true`) runs daily:
+
+**Reminders:**
+- Sent after `reminder_days` from campaign start
+- Only to employees with pending attestations
+- Includes link to attestation page
+
+**Escalations:**
+- Sent after `escalation_days` from campaign start
+- Email goes to employee's manager
+- Notifies manager of overdue attestation
+- Includes employee name and pending status
+
+**Auto-Close:**
+- Campaigns with end_date are automatically closed when date passes
+- Status changes to "completed"
+- No further actions allowed
+
+### Exporting Results
+
+**To export campaign data:**
+
+1. Select an active or completed campaign
+2. Click **Export to CSV**
+3. File downloads with:
+   - Employee names and emails
+   - Attestation status
+   - Completion dates
+   - Asset counts
+   - New assets reported
+
+**Use cases for exports:**
+- SOC2 audit evidence
+- Compliance reporting
+- Management review
+- Asset accuracy verification
+
+### Cancelling a Campaign
+
+**To cancel an active campaign:**
+
+1. Select the campaign
+2. Click **Cancel Campaign**
+3. Confirm cancellation
+4. Campaign status changes to "cancelled"
+5. No further actions or emails sent
+
+**Note:** Cancelled campaigns cannot be restarted. Create a new campaign if needed.
+
+### Best Practices
+
+**Campaign Timing:**
+- Run quarterly attestations for SOC2 compliance
+- Schedule during low-activity periods
+- Allow 2-3 weeks for completion
+- Send reminders at 50% mark
+- Escalate at 75% mark
+
+**Employee Communication:**
+- Clear campaign descriptions
+- Instructions on asset status updates
+- How to report missing/new assets
+- Point of contact for questions
+- Deadline importance
+
+**Follow-up Actions:**
+- Review new assets reported
+- Register untracked assets in system
+- Follow up on status changes (lost, damaged)
+- Update asset records based on feedback
+- Close out campaign after 100% completion or end date
 
 ## System Monitoring
 
@@ -397,7 +539,9 @@ Access: **Audit & Reporting** → **Summary Report**
 - Entity type statistics
 - Time-based filtering
 
-### SOC2 Compliance Features
+### SOC2 Compliance Support Features
+
+KARS provides evidence and controls to support your organization's SOC2 compliance:
 
 ✅ **Asset Tracking** - Complete laptop inventory
 ✅ **User Attribution** - Every action tied to a user
@@ -406,6 +550,7 @@ Access: **Audit & Reporting** → **Summary Report**
 ✅ **Access Control** - Role-based permissions
 ✅ **Data Export** - Compliance report generation
 ✅ **Change Tracking** - Status change history
+✅ **Attestation Workflow** - Regular employee certification of assets
 
 ## Security Best Practices
 

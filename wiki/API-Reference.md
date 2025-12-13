@@ -1360,6 +1360,425 @@ GET /api/reports/summary
 
 ---
 
+## Attestation Endpoints
+
+### Create Campaign (Admin)
+
+Create a new attestation campaign.
+
+```http
+POST /api/attestation/campaigns
+```
+
+**Permissions:** Admin only
+
+**Headers:**
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "Q1 2024 Asset Attestation",
+  "description": "Please review and confirm all assets in your possession",
+  "start_date": "2024-01-01",
+  "end_date": "2024-01-31",
+  "reminder_days": 7,
+  "escalation_days": 10
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "message": "Campaign created successfully",
+  "campaign": {
+    "id": 1,
+    "name": "Q1 2024 Asset Attestation",
+    "description": "Please review and confirm all assets in your possession",
+    "start_date": "2024-01-01",
+    "end_date": "2024-01-31",
+    "reminder_days": 7,
+    "escalation_days": 10,
+    "status": "draft",
+    "created_at": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Errors:**
+- `400` - Missing required fields
+- `403` - Not an admin
+
+---
+
+### List Campaigns (Admin)
+
+Get all attestation campaigns.
+
+```http
+GET /api/attestation/campaigns
+```
+
+**Permissions:** Admin only
+
+**Response:** `200 OK`
+```json
+{
+  "campaigns": [
+    {
+      "id": 1,
+      "name": "Q1 2024 Asset Attestation",
+      "description": "Please review and confirm all assets in your possession",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-31",
+      "reminder_days": 7,
+      "escalation_days": 10,
+      "status": "active",
+      "created_at": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### Get Campaign Details (Admin)
+
+Get details of a specific campaign.
+
+```http
+GET /api/attestation/campaigns/:id
+```
+
+**Permissions:** Admin only
+
+**Response:** `200 OK`
+```json
+{
+  "id": 1,
+  "name": "Q1 2024 Asset Attestation",
+  "description": "Please review and confirm all assets in your possession",
+  "start_date": "2024-01-01",
+  "end_date": "2024-01-31",
+  "reminder_days": 7,
+  "escalation_days": 10,
+  "status": "active",
+  "created_at": "2024-01-01T00:00:00.000Z"
+}
+```
+
+**Errors:**
+- `404` - Campaign not found
+
+---
+
+### Update Campaign (Admin)
+
+Update a draft campaign.
+
+```http
+PUT /api/attestation/campaigns/:id
+```
+
+**Permissions:** Admin only
+
+**Request Body:**
+```json
+{
+  "name": "Updated Campaign Name",
+  "description": "Updated description",
+  "start_date": "2024-01-05",
+  "end_date": "2024-02-05",
+  "reminder_days": 10,
+  "escalation_days": 14
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Campaign updated successfully"
+}
+```
+
+**Errors:**
+- `400` - Cannot update non-draft campaign
+- `404` - Campaign not found
+
+---
+
+### Start Campaign (Admin)
+
+Launch an attestation campaign.
+
+```http
+POST /api/attestation/campaigns/:id/start
+```
+
+**Permissions:** Admin only
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Campaign started successfully",
+  "recordsCreated": 25
+}
+```
+
+**What happens:**
+- Creates attestation records for all active employees
+- Sends launch emails to all employees
+- Changes campaign status to "active"
+
+**Errors:**
+- `400` - Campaign already started or not in draft status
+- `404` - Campaign not found
+
+---
+
+### Cancel Campaign (Admin)
+
+Cancel an active campaign.
+
+```http
+POST /api/attestation/campaigns/:id/cancel
+```
+
+**Permissions:** Admin only
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Campaign cancelled successfully"
+}
+```
+
+**Errors:**
+- `400` - Campaign not active
+- `404` - Campaign not found
+
+---
+
+### Get Campaign Dashboard (Admin)
+
+Get campaign statistics and employee records.
+
+```http
+GET /api/attestation/campaigns/:id/dashboard
+```
+
+**Permissions:** Admin only
+
+**Response:** `200 OK`
+```json
+{
+  "campaign": {
+    "id": 1,
+    "name": "Q1 2024 Asset Attestation",
+    "status": "active"
+  },
+  "stats": {
+    "total_employees": 25,
+    "completed": 18,
+    "pending": 7,
+    "completion_rate": 72,
+    "reminders_sent": 5,
+    "escalations_sent": 2
+  },
+  "records": [
+    {
+      "id": 1,
+      "user_email": "john@example.com",
+      "user_name": "John Doe",
+      "status": "completed",
+      "assets_attested": 3,
+      "new_assets_reported": 0,
+      "completed_at": "2024-01-05T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### Export Campaign Results (Admin)
+
+Download campaign results as CSV.
+
+```http
+GET /api/attestation/campaigns/:id/export
+```
+
+**Permissions:** Admin only
+
+**Response:** `200 OK`
+```
+Content-Type: text/csv
+Content-Disposition: attachment; filename=attestation-campaign-1.csv
+
+User Email,User Name,Status,Assets Attested,New Assets Reported,Completed At
+john@example.com,John Doe,completed,3,0,2024-01-05T10:30:00.000Z
+```
+
+---
+
+### Get My Attestations (All Users)
+
+Get pending attestations for current user.
+
+```http
+GET /api/attestation/my-attestations
+```
+
+**Response:** `200 OK`
+```json
+{
+  "attestations": [
+    {
+      "id": 1,
+      "campaign_id": 1,
+      "campaign_name": "Q1 2024 Asset Attestation",
+      "campaign_description": "Please review and confirm all assets in your possession",
+      "status": "pending",
+      "created_at": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### Get Attestation Details (All Users)
+
+Get details of a specific attestation record.
+
+```http
+GET /api/attestation/records/:id
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": 1,
+  "campaign_id": 1,
+  "campaign_name": "Q1 2024 Asset Attestation",
+  "status": "in_progress",
+  "assets": [
+    {
+      "id": 1,
+      "asset_id": 101,
+      "laptop_make": "Apple",
+      "laptop_model": "MacBook Pro 16\"",
+      "laptop_serial_number": "SN123456",
+      "laptop_asset_tag": "ASSET-001",
+      "current_status": "active",
+      "attested": false
+    }
+  ],
+  "new_assets": []
+}
+```
+
+**Errors:**
+- `403` - Not your attestation record
+- `404` - Record not found
+
+---
+
+### Attest Asset (All Users)
+
+Confirm or update an asset during attestation.
+
+```http
+PUT /api/attestation/records/:id/assets/:assetId
+```
+
+**Request Body:**
+```json
+{
+  "status": "active",
+  "notes": "Asset in good condition"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Asset attested successfully"
+}
+```
+
+**Errors:**
+- `403` - Not your attestation record
+- `404` - Record or asset not found
+
+---
+
+### Add New Asset During Attestation (All Users)
+
+Report an unregistered asset discovered during attestation.
+
+```http
+POST /api/attestation/records/:id/assets/new
+```
+
+**Request Body:**
+```json
+{
+  "asset_type": "laptop",
+  "laptop_make": "Dell",
+  "laptop_model": "Latitude 5420",
+  "laptop_serial_number": "SN789012",
+  "laptop_asset_tag": "ASSET-999",
+  "notes": "Found this device that wasn't in the system"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "message": "New asset reported successfully",
+  "id": 5
+}
+```
+
+**Errors:**
+- `403` - Not your attestation record
+- `404` - Record not found
+
+---
+
+### Complete Attestation (All Users)
+
+Mark attestation as complete.
+
+```http
+POST /api/attestation/records/:id/complete
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Attestation completed successfully"
+}
+```
+
+**What happens:**
+- Changes status to "completed"
+- Records completion timestamp
+- Sends notification to admin
+- Prevents further modifications
+
+**Errors:**
+- `400` - Not all assets attested
+- `403` - Not your attestation record
+- `404` - Record not found
+
+---
+
 ## Utility Endpoints
 
 ### Health Check

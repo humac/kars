@@ -145,6 +145,63 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 - Profile data validation
 - Four-tab layout: Account Info, Security (Password + MFA), Passkeys, Manager Info
 
+### Attestation Workflow
+
+The Attestation Workflow system enables administrators to create periodic campaigns where employees certify the assets in their possession, ensuring accurate records and supporting compliance requirements.
+
+**Campaign Management (Admin Only)**
+- Create attestation campaigns with custom names and descriptions
+- Configure start and end dates for campaigns
+- Set reminder schedules (e.g., send reminder after 7 days)
+- Set escalation schedules (e.g., escalate to manager after 10 days)
+- Dashboard showing campaign progress:
+  - Total employees participating
+  - Completion statistics
+  - Pending attestation count
+  - Reminder and escalation tracking
+- Export campaign results to CSV for audit evidence
+
+**Employee Attestation Process**
+- Receive email notification when campaign starts
+- Access "My Attestations" page to see pending campaigns
+- Review list of assigned assets requiring confirmation
+- For each asset:
+  - Confirm current status
+  - Update status if changed (active, returned, lost, damaged)
+  - Add notes about asset condition
+- Report new/unregistered assets discovered during review:
+  - Full asset details (type, make, model, serial number, asset tag)
+  - Assets flagged for admin registration
+- Complete attestation when all assets reviewed
+- Admin notified upon completion
+
+**Automated Notifications**
+- **Launch emails** - Sent to all employees when campaign starts
+- **Reminder emails** - Automated reminders for pending attestations
+- **Escalation emails** - Sent to managers for overdue employee attestations
+- **Completion notifications** - Admin notified when employees complete
+- All emails include direct links to attestation page
+- Custom branding applied to email templates
+
+**Compliance Features**
+- Complete audit trail of all attestation actions
+- Attestation records linked to specific campaigns
+- Asset status changes tracked with timestamps
+- New asset discoveries logged for follow-up
+- Exportable records for auditor review
+- Role-based visibility:
+  - Employees: View only own attestations
+  - Managers: View team attestation status
+  - Admins: Full visibility and campaign management
+
+**Scheduler Configuration**
+The attestation scheduler runs daily automated tasks:
+- Send reminder emails based on campaign settings
+- Escalate overdue attestations to managers
+- Auto-close campaigns past their end date
+- Enable with `RUN_ATTESTATION_SCHEDULER=true` environment variable
+- Configure `FRONTEND_URL` for email links
+
 ### Role-Based Access Control (RBAC)
 
 **Three User Roles:**
@@ -182,6 +239,14 @@ KARS implements a comprehensive role-based access control system with three dist
 | View all audit logs | ❌ | ✅ | ✅ |
 | Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
 | View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
+| **Attestations** | | | |
+| View own pending attestations | ✅ | ✅ | ✅ |
+| Submit attestations | ✅ | ✅ | ✅ |
+| View own attestation history | ✅ | ✅ | ✅ |
+| View team attestation status | ❌ | ✅ | ✅ |
+| View all attestation reports | ❌ | ❌ | ✅ |
+| Create/manage campaigns | ❌ | ❌ | ✅ |
+| Export attestation records | ❌ | ❌ | ✅ |
 | **Profile & Security** | | | |
 | Update own profile | ✅ | ✅ | ✅ |
 | Change own password | ✅ | ✅ | ✅ |
@@ -368,7 +433,7 @@ KARS implements a comprehensive role-based access control system with three dist
 - User attribution for all actions
 - Timestamp tracking
 - Immutable audit trail
-- SOC2 compliance support
+- Supports organizational SOC2 compliance requirements
 - Export capabilities for audits
 
 ## 🎨 User Interface Features
@@ -558,4 +623,4 @@ While not currently implemented, the architecture supports:
 
 ---
 
-**Next:** Learn how to install and run the system locally → [Installation Guide](Installation)
+**Next:** Learn how to install and run the system locally → [Quick Start Guide](Quick-Start)
