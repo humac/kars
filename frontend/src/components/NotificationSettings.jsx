@@ -8,7 +8,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Info, Send } from 'lucide-react';
+import EmailTemplates from './EmailTemplates';
 
 const NotificationSettings = () => {
   const { getAuthHeaders } = useAuth();
@@ -211,9 +213,15 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* SMTP Email Notifications - Main Container */}
-      <div className="rounded-lg border p-4">
+    <Tabs defaultValue="smtp" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsTrigger value="smtp">SMTP Settings</TabsTrigger>
+        <TabsTrigger value="templates">Email Templates</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="smtp" className="space-y-4">
+        {/* SMTP Email Notifications - Main Container */}
+        <div className="rounded-lg border p-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold">SMTP Email Notifications</h3>
@@ -373,51 +381,56 @@ const NotificationSettings = () => {
         </form>
       </div>
 
-      {/* Security Notice */}
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription className="text-sm">
-          <strong>Security:</strong> SMTP passwords are encrypted at rest using AES-256-GCM encryption.
-          Ensure the <code className="bg-muted px-1 py-0.5 rounded">KARS_MASTER_KEY</code> environment variable is set and kept secure.
-        </AlertDescription>
-      </Alert>
+        {/* Security Notice */}
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            <strong>Security:</strong> SMTP passwords are encrypted at rest using AES-256-GCM encryption.
+            Ensure the <code className="bg-muted px-1 py-0.5 rounded">KARS_MASTER_KEY</code> environment variable is set and kept secure.
+          </AlertDescription>
+        </Alert>
 
-      {/* Test Email Dialog */}
-      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Test Email</DialogTitle>
-            <DialogDescription>
-              Enter an email address to receive a test notification.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="test_recipient">Recipient Email</Label>
-            <Input
-              id="test_recipient"
-              type="email"
-              value={testRecipient}
-              onChange={(e) => setTestRecipient(e.target.value)}
-              placeholder="user@example.com"
-              disabled={testing}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setTestDialogOpen(false)}
-              disabled={testing}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSendTest} disabled={testing}>
-              {testing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Send Test
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {/* Test Email Dialog */}
+        <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Test Email</DialogTitle>
+              <DialogDescription>
+                Enter an email address to receive a test notification.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="test_recipient">Recipient Email</Label>
+              <Input
+                id="test_recipient"
+                type="email"
+                value={testRecipient}
+                onChange={(e) => setTestRecipient(e.target.value)}
+                placeholder="user@example.com"
+                disabled={testing}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setTestDialogOpen(false)}
+                disabled={testing}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSendTest} disabled={testing}>
+                {testing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Send Test
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </TabsContent>
+
+      <TabsContent value="templates">
+        <EmailTemplates />
+      </TabsContent>
+    </Tabs>
   );
 };
 
