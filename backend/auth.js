@@ -75,6 +75,11 @@ export const authorize = (...allowedRoles) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    // Check if user has a role defined
+    if (!req.user.role) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     // Normalize allowed roles and user role to lowercase for case-insensitive comparison
     const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
     const userRole = req.user.role.toLowerCase();

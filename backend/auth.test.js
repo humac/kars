@@ -393,5 +393,25 @@ describe('Auth Module', () => {
       expect(jsonMock).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
       expect(next).not.toHaveBeenCalled();
     });
+
+    it('should return 403 when user has no role defined', () => {
+      req.user = { id: 4, email: 'norole@example.com' };
+      const middleware = authorize('admin');
+      middleware(req, res, next);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 when user role is null', () => {
+      req.user = { id: 4, email: 'norole@example.com', role: null };
+      const middleware = authorize('admin');
+      middleware(req, res, next);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
+      expect(next).not.toHaveBeenCalled();
+    });
   });
 });
