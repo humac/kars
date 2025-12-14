@@ -1,11 +1,29 @@
 import nodemailer from 'nodemailer';
-import { smtpSettingsDb, brandingSettingsDb } from '../database.js';
+import { smtpSettingsDb, brandingSettingsDb, emailTemplateDb } from '../database.js';
 import { decryptValue } from '../utils/encryption.js';
 
 /**
  * SMTP Mailer Service
  * Handles sending emails via SMTP using stored settings
  */
+
+/**
+ * Substitutes variables in a template string with provided values
+ * Variables use {{variableName}} syntax
+ * @param {string} template - Template string with {{variable}} placeholders
+ * @param {Object} variables - Object with variable names as keys and values
+ * @returns {string} Template with variables replaced
+ */
+const substituteVariables = (template, variables) => {
+  if (!template) return '';
+  
+  let result = template;
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    result = result.replace(regex, value || '');
+  }
+  return result;
+};
 
 /**
  * Gets the app URL with fallback chain: branding.app_url -> FRONTEND_URL -> BASE_URL -> localhost
@@ -139,27 +157,50 @@ export const sendTestEmail = async (recipient) => {
     const branding = await brandingSettingsDb.get();
     const siteName = branding?.site_name || 'KARS';
     
-    const emailContent = `
-      <h2 style="color: #333;">${siteName} SMTP Test Email</h2>
-      <p>This is a test email from <strong>${siteName} (KeyData Asset Registration System)</strong>.</p>
-      <p>If you received this email, your SMTP settings are configured correctly.</p>
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p style="color: #666; font-size: 12px;">
-        <strong>SMTP Server:</strong> ${settings.host}:${settings.port}<br>
-        <strong>Sent at:</strong> ${new Date().toISOString()}
-      </p>
-    `;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('test_email');
     
-    const mailOptions = {
-      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
-      to: toEmail,
-      subject: `${siteName} SMTP Test Email`,
-      text: `This is a test email from ${siteName} (KeyData Asset Registration System).
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      smtpHost: settings.host,
+      smtpPort: settings.port,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `${siteName} SMTP Test Email`;
+      emailContent = `
+        <h2 style="color: #333;">${siteName} SMTP Test Email</h2>
+        <p>This is a test email from <strong>${siteName} (KeyData Asset Registration System)</strong>.</p>
+        <p>If you received this email, your SMTP settings are configured correctly.</p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">
+          <strong>SMTP Server:</strong> ${settings.host}:${settings.port}<br>
+          <strong>Sent at:</strong> ${new Date().toISOString()}
+        </p>
+      `;
+      textContent = `This is a test email from ${siteName} (KeyData Asset Registration System).
 
 If you received this email, your SMTP settings are configured correctly.
 
 SMTP Server: ${settings.host}:${settings.port}
-Sent at: ${new Date().toISOString()}`,
+Sent at: ${new Date().toISOString()}`;
+    }
+    
+    const mailOptions = {
+      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
+      to: toEmail,
+      subject,
+      text: textContent,
       html: buildEmailHtml(branding, siteName, emailContent)
     };
     
@@ -249,35 +290,57 @@ export const sendPasswordResetEmail = async (recipient, resetToken, resetUrl) =>
     const branding = await brandingSettingsDb.get();
     const siteName = branding?.site_name || 'KARS';
     
-    const emailContent = `
-      <h2 style="color: #333;">Password Reset Request</h2>
-      <p>You recently requested to reset your password for your <strong>${siteName}</strong> account.</p>
-      <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${resetUrl}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Reset Password</a>
-      </div>
-      <p style="color: #666; font-size: 14px;">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${resetUrl}" style="color: #3B82F6; word-break: break-all;">${resetUrl}</a>
-      </p>
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p style="color: #999; font-size: 12px;">
-        If you didn't request a password reset, please ignore this email or contact support if you have concerns.<br>
-        This link will expire in 1 hour for security reasons.
-      </p>
-    `;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('password_reset');
     
-    const mailOptions = {
-      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
-      to: recipient,
-      subject: `Password Reset Request - ${siteName}`,
-      text: `You recently requested to reset your password for your ${siteName} account.
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      resetUrl,
+      expiryTime: '1 hour'
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Password Reset Request - ${siteName}`;
+      emailContent = `
+        <h2 style="color: #333;">Password Reset Request</h2>
+        <p>You recently requested to reset your password for your <strong>${siteName}</strong> account.</p>
+        <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${resetUrl}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Reset Password</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${resetUrl}" style="color: #3B82F6; word-break: break-all;">${resetUrl}</a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">
+          If you didn't request a password reset, please ignore this email or contact support if you have concerns.<br>
+          This link will expire in 1 hour for security reasons.
+        </p>
+      `;
+      textContent = `You recently requested to reset your password for your ${siteName} account.
 
 Click the link below to reset your password. This link will expire in 1 hour.
 
 ${resetUrl}
 
-If you didn't request a password reset, please ignore this email or contact support if you have concerns.`,
+If you didn't request a password reset, please ignore this email or contact support if you have concerns.`;
+    }
+    
+    const mailOptions = {
+      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
+      to: recipient,
+      subject,
+      text: textContent,
       html: buildEmailHtml(branding, siteName, emailContent)
     };
     
@@ -337,33 +400,56 @@ export const sendAttestationLaunchEmail = async (recipient, campaign, attestatio
       attestationUrl = `${baseUrl}/my-attestations`;
     }
     
-    const emailContent = `
-      <h2 style="color: #333;">Asset Attestation Required</h2>
-      <p>A new asset attestation campaign has been launched: <strong>${campaign.name}</strong></p>
-      ${campaign.description ? `<p>${campaign.description}</p>` : ''}
-      <p>Please review and attest to the status of all your registered assets. You can also add any missing assets that aren't currently registered.</p>
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${attestationUrl}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Complete Attestation</a>
-      </div>
-      <p style="color: #666; font-size: 14px;">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${attestationUrl}" style="color: #3B82F6; word-break: break-all;">${attestationUrl}</a>
-      </p>
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p style="color: #999; font-size: 12px;">
-        This attestation is required to maintain accurate asset records. Please complete it at your earliest convenience.
-      </p>
-    `;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_launch');
+    
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      campaignName: campaign.name,
+      campaignDescription: campaign.description || '',
+      attestationUrl
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Action Required: Asset Attestation - ${campaign.name}`;
+      emailContent = `
+        <h2 style="color: #333;">Asset Attestation Required</h2>
+        <p>A new asset attestation campaign has been launched: <strong>${campaign.name}</strong></p>
+        ${campaign.description ? `<p>${campaign.description}</p>` : ''}
+        <p>Please review and attest to the status of all your registered assets. You can also add any missing assets that aren't currently registered.</p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${attestationUrl}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Complete Attestation</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${attestationUrl}" style="color: #3B82F6; word-break: break-all;">${attestationUrl}</a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">
+          This attestation is required to maintain accurate asset records. Please complete it at your earliest convenience.
+        </p>
+      `;
+      textContent = `A new asset attestation campaign has been launched: ${campaign.name}
+${campaign.description ? '\n' + campaign.description + '\n' : ''}
+Please review and attest to the status of all your registered assets. You can also add any missing assets that aren't currently registered.
+
+Complete your attestation here: ${attestationUrl}`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
       to: recipient,
-      subject: `Action Required: Asset Attestation - ${campaign.name}`,
-      text: `A new asset attestation campaign has been launched: ${campaign.name}
-${campaign.description ? '\n' + campaign.description + '\n' : ''}
-Please review and attest to the status of all your registered assets. You can also add any missing assets that aren't currently registered.
-
-Complete your attestation here: ${attestationUrl}`,
+      subject,
+      text: textContent,
       html: buildEmailHtml(branding, siteName, emailContent)
     };
     
@@ -404,28 +490,50 @@ export const sendAttestationReminderEmail = async (recipient, campaign, attestat
       attestationUrl = `${baseUrl}/my-attestations`;
     }
     
-    const emailContent = `
-      <h2 style="color: #333;">Reminder: Asset Attestation Pending</h2>
-      <p>This is a friendly reminder that you have a pending asset attestation for: <strong>${campaign.name}</strong></p>
-      <p>Please complete your attestation as soon as possible to help us maintain accurate asset records.</p>
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${attestationUrl}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Complete Attestation Now</a>
-      </div>
-      <p style="color: #666; font-size: 14px;">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${attestationUrl}" style="color: #3B82F6; word-break: break-all;">${attestationUrl}</a>
-      </p>
-    `;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_reminder');
+    
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      campaignName: campaign.name,
+      attestationUrl
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Reminder: Asset Attestation Pending - ${campaign.name}`;
+      emailContent = `
+        <h2 style="color: #333;">Reminder: Asset Attestation Pending</h2>
+        <p>This is a friendly reminder that you have a pending asset attestation for: <strong>${campaign.name}</strong></p>
+        <p>Please complete your attestation as soon as possible to help us maintain accurate asset records.</p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${attestationUrl}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Complete Attestation Now</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${attestationUrl}" style="color: #3B82F6; word-break: break-all;">${attestationUrl}</a>
+        </p>
+      `;
+      textContent = `This is a friendly reminder that you have a pending asset attestation for: ${campaign.name}
+
+Please complete your attestation as soon as possible to help us maintain accurate asset records.
+
+Complete your attestation here: ${attestationUrl}`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
       to: recipient,
-      subject: `Reminder: Asset Attestation Pending - ${campaign.name}`,
-      text: `This is a friendly reminder that you have a pending asset attestation for: ${campaign.name}
-
-Please complete your attestation as soon as possible to help us maintain accurate asset records.
-
-Complete your attestation here: ${attestationUrl}`,
+      subject,
+      text: textContent,
       html: buildEmailHtml(branding, siteName, emailContent)
     };
     
@@ -461,32 +569,56 @@ export const sendAttestationEscalationEmail = async (managerEmail, employeeName,
     const branding = await brandingSettingsDb.get();
     const siteName = branding?.site_name || 'KARS';
     
-    const emailContent = `
-      <h2 style="color: #333;">Action Required: Team Member Attestation Outstanding</h2>
-      <p>This is a notification that one of your team members has not yet completed their asset attestation.</p>
-      <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <p style="margin: 5px 0;"><strong>Employee:</strong> ${employeeName} (${employeeEmail})</p>
-        <p style="margin: 5px 0;"><strong>Campaign:</strong> ${campaign.name}</p>
-      </div>
-      <p>Please follow up with this team member to ensure they complete their asset attestation promptly.</p>
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p style="color: #999; font-size: 12px;">
-        This is an automated escalation notification sent because the attestation has been outstanding for ${campaign.escalation_days} days.
-      </p>
-    `;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_escalation');
     
-    const mailOptions = {
-      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
-      to: managerEmail,
-      subject: `Team Attestation Outstanding: ${employeeName} - ${campaign.name}`,
-      text: `This is a notification that one of your team members has not yet completed their asset attestation.
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      campaignName: campaign.name,
+      employeeName,
+      employeeEmail,
+      escalationDays: campaign.escalation_days || 10
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Team Attestation Outstanding: ${employeeName} - ${campaign.name}`;
+      emailContent = `
+        <h2 style="color: #333;">Action Required: Team Member Attestation Outstanding</h2>
+        <p>This is a notification that one of your team members has not yet completed their asset attestation.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Employee:</strong> ${employeeName} (${employeeEmail})</p>
+          <p style="margin: 5px 0;"><strong>Campaign:</strong> ${campaign.name}</p>
+        </div>
+        <p>Please follow up with this team member to ensure they complete their asset attestation promptly.</p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">
+          This is an automated escalation notification sent because the attestation has been outstanding for ${campaign.escalation_days} days.
+        </p>
+      `;
+      textContent = `This is a notification that one of your team members has not yet completed their asset attestation.
 
 Employee: ${employeeName} (${employeeEmail})
 Campaign: ${campaign.name}
 
 Please follow up with this team member to ensure they complete their asset attestation promptly.
 
-This is an automated escalation notification sent because the attestation has been outstanding for ${campaign.escalation_days} days.`,
+This is an automated escalation notification sent because the attestation has been outstanding for ${campaign.escalation_days} days.`;
+    }
+    
+    const mailOptions = {
+      from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
+      to: managerEmail,
+      subject,
+      text: textContent,
       html: buildEmailHtml(branding, siteName, emailContent)
     };
     
@@ -522,25 +654,49 @@ export const sendAttestationCompleteAdminNotification = async (adminEmails, empl
     const branding = await brandingSettingsDb.get();
     const siteName = branding?.site_name || 'KARS';
     
-    const emailContent = `
-      <h2 style="color: #333;">Asset Attestation Completed</h2>
-      <p>An employee has completed their asset attestation.</p>
-      <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <p style="margin: 5px 0;"><strong>Employee:</strong> ${employeeName} (${employeeEmail})</p>
-        <p style="margin: 5px 0;"><strong>Campaign:</strong> ${campaign.name}</p>
-        <p style="margin: 5px 0;"><strong>Completed:</strong> ${new Date().toLocaleString()}</p>
-      </div>
-    `;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_complete');
+    
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      campaignName: campaign.name,
+      employeeName,
+      employeeEmail,
+      completedAt: new Date().toLocaleString()
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Attestation Completed: ${employeeName} - ${campaign.name}`;
+      emailContent = `
+        <h2 style="color: #333;">Asset Attestation Completed</h2>
+        <p>An employee has completed their asset attestation.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Employee:</strong> ${employeeName} (${employeeEmail})</p>
+          <p style="margin: 5px 0;"><strong>Campaign:</strong> ${campaign.name}</p>
+          <p style="margin: 5px 0;"><strong>Completed:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+      `;
+      textContent = `An employee has completed their asset attestation.
+
+Employee: ${employeeName} (${employeeEmail})
+Campaign: ${campaign.name}
+Completed: ${new Date().toLocaleString()}`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
       to: adminEmails.join(', '),
-      subject: `Attestation Completed: ${employeeName} - ${campaign.name}`,
-      text: `An employee has completed their asset attestation.
-
-Employee: ${employeeName} (${employeeEmail})
-Campaign: ${campaign.name}
-Completed: ${new Date().toLocaleString()}`,
+      subject,
+      text: textContent,
       html: buildEmailHtml(branding, siteName, emailContent)
     };
     

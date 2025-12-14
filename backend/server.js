@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, smtpSettingsDb, passwordResetTokenDb, syncAssetOwnership, attestationCampaignDb, attestationRecordDb, attestationAssetDb, attestationNewAssetDb, assetTypeDb, sanitizeDateValue } from './database.js';
+import { assetDb, companyDb, auditDb, userDb, oidcSettingsDb, brandingSettingsDb, passkeySettingsDb, databaseSettings, databaseEngine, importSqliteDatabase, passkeyDb, hubspotSettingsDb, hubspotSyncLogDb, smtpSettingsDb, passwordResetTokenDb, syncAssetOwnership, attestationCampaignDb, attestationRecordDb, attestationAssetDb, attestationNewAssetDb, assetTypeDb, emailTemplateDb, sanitizeDateValue } from './database.js';
 import { authenticate, authorize, hashPassword, comparePassword, generateToken } from './auth.js';
 import { initializeOIDC, getAuthorizationUrl, handleCallback, getUserInfo, extractUserData, isOIDCEnabled } from './oidc.js';
 import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } from './mfa.js';
@@ -2580,6 +2580,203 @@ app.post('/api/admin/notification-settings/test', authenticate, authorize('admin
       error: 'Failed to send test email',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// ===== Email Template Management Endpoints =====
+
+// Get all email templates
+app.get('/api/admin/email-templates', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const templates = await emailTemplateDb.getAll();
+    res.json({ success: true, templates });
+  } catch (error) {
+    console.error('Get email templates error:', error);
+    res.status(500).json({ error: 'Failed to load email templates' });
+  }
+});
+
+// Get single email template by key
+app.get('/api/admin/email-templates/:key', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const template = await emailTemplateDb.getByKey(key);
+    
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    
+    res.json({ success: true, template });
+  } catch (error) {
+    console.error('Get email template error:', error);
+    res.status(500).json({ error: 'Failed to load email template' });
+  }
+});
+
+// Update email template
+app.put('/api/admin/email-templates/:key', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { subject, html_body, text_body } = req.body;
+    
+    // Validate required fields
+    if (!subject || !html_body || !text_body) {
+      return res.status(400).json({ error: 'Subject, HTML body, and text body are required' });
+    }
+    
+    // Check if template exists
+    const existing = await emailTemplateDb.getByKey(key);
+    if (!existing) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    
+    // Update template
+    await emailTemplateDb.update(key, { subject, html_body, text_body }, req.user.email);
+    
+    // Log the action
+    await auditDb.log(
+      'update',
+      'email_template',
+      existing.id,
+      existing.name,
+      `Updated email template: ${existing.name}`,
+      req.user.email
+    );
+    
+    res.json({ success: true, message: 'Email template updated successfully' });
+  } catch (error) {
+    console.error('Update email template error:', error);
+    res.status(500).json({ error: 'Failed to update email template' });
+  }
+});
+
+// Reset email template to default
+app.post('/api/admin/email-templates/:key/reset', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    // Check if template exists
+    const existing = await emailTemplateDb.getByKey(key);
+    if (!existing) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    
+    // Reset template to default values
+    await emailTemplateDb.reset(key);
+    
+    // Log the action
+    await auditDb.log(
+      'reset',
+      'email_template',
+      existing.id,
+      existing.name,
+      `Reset email template to default: ${existing.name}`,
+      req.user.email
+    );
+    
+    res.json({ success: true, message: 'Email template reset to default values' });
+  } catch (error) {
+    console.error('Reset email template error:', error);
+    res.status(500).json({ error: 'Failed to reset email template' });
+  }
+});
+
+// Preview email template with sample data
+app.post('/api/admin/email-templates/:key/preview', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { subject, html_body, text_body } = req.body;
+    
+    // Get branding settings for preview
+    const branding = await brandingSettingsDb.get();
+    const siteName = branding?.site_name || 'KARS';
+    
+    // Define sample variables for each template type
+    const sampleVariables = {
+      test_email: {
+        siteName,
+        smtpHost: 'smtp.example.com',
+        smtpPort: '587',
+        timestamp: new Date().toISOString()
+      },
+      password_reset: {
+        siteName,
+        resetUrl: 'https://example.com/reset-password?token=sample-token-123',
+        expiryTime: '1 hour'
+      },
+      attestation_launch: {
+        siteName,
+        campaignName: 'Q4 2024 Asset Attestation',
+        campaignDescription: 'Please review and confirm all assets assigned to you for the fourth quarter.',
+        attestationUrl: 'https://example.com/my-attestations'
+      },
+      attestation_reminder: {
+        siteName,
+        campaignName: 'Q4 2024 Asset Attestation',
+        attestationUrl: 'https://example.com/my-attestations'
+      },
+      attestation_escalation: {
+        siteName,
+        campaignName: 'Q4 2024 Asset Attestation',
+        employeeName: 'John Doe',
+        employeeEmail: 'john.doe@example.com',
+        escalationDays: '10'
+      },
+      attestation_complete: {
+        siteName,
+        campaignName: 'Q4 2024 Asset Attestation',
+        employeeName: 'John Doe',
+        employeeEmail: 'john.doe@example.com',
+        completedAt: new Date().toLocaleString()
+      }
+    };
+    
+    const variables = sampleVariables[key] || { siteName };
+    
+    // Substitute variables in the provided content
+    const substituteVariables = (template, vars) => {
+      let result = template || '';
+      for (const [varKey, value] of Object.entries(vars)) {
+        const regex = new RegExp(`\\{\\{${varKey}\\}\\}`, 'g');
+        result = result.replace(regex, value || '');
+      }
+      return result;
+    };
+    
+    const previewSubject = substituteVariables(subject, variables);
+    const previewHtml = substituteVariables(html_body, variables);
+    const previewText = substituteVariables(text_body, variables);
+    
+    // Wrap HTML with branding (simulating actual email)
+    const buildEmailHtml = (branding, siteName, content) => {
+      const logoHeader = branding?.include_logo_in_emails && branding?.logo_data
+        ? `<div style="text-align: center; margin-bottom: 20px;">
+             <img src="${branding.logo_data}" alt="${siteName}" style="max-height: 80px; max-width: 300px; object-fit: contain;" />
+           </div>`
+        : '';
+    
+      return `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          ${logoHeader}
+          ${content}
+        </div>
+      `;
+    };
+    
+    const wrappedHtml = buildEmailHtml(branding, siteName, previewHtml);
+    
+    res.json({
+      success: true,
+      preview: {
+        subject: previewSubject,
+        html: wrappedHtml,
+        text: previewText,
+        variables: Object.keys(variables)
+      }
+    });
+  } catch (error) {
+    console.error('Preview email template error:', error);
+    res.status(500).json({ error: 'Failed to generate preview' });
   }
 });
 

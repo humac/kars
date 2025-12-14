@@ -10,6 +10,10 @@ const mockBrandingSettingsDb = {
   get: jest.fn()
 };
 
+const mockEmailTemplateDb = {
+  getByKey: jest.fn()
+};
+
 const mockDecryptValue = jest.fn();
 
 const mockSendMail = jest.fn();
@@ -21,7 +25,8 @@ const mockCreateTransport = jest.fn(() => ({
 
 jest.unstable_mockModule('../database.js', () => ({
   smtpSettingsDb: mockSmtpSettingsDb,
-  brandingSettingsDb: mockBrandingSettingsDb
+  brandingSettingsDb: mockBrandingSettingsDb,
+  emailTemplateDb: mockEmailTemplateDb
 }));
 
 jest.unstable_mockModule('../utils/encryption.js', () => ({
@@ -46,6 +51,7 @@ describe('SMTP Mailer Service', () => {
     mockSmtpSettingsDb.get.mockReset();
     mockSmtpSettingsDb.getPassword.mockReset();
     mockBrandingSettingsDb.get.mockReset();
+    mockEmailTemplateDb.getByKey.mockReset();
     mockDecryptValue.mockReset();
     mockSendMail.mockReset();
     mockVerify.mockReset();
@@ -63,6 +69,9 @@ describe('SMTP Mailer Service', () => {
       logo_data: null,
       include_logo_in_emails: 0
     });
+    
+    // Set default emailTemplateDb mock to return null (use fallback templates)
+    mockEmailTemplateDb.getByKey.mockResolvedValue(null);
   });
 
   afterEach(() => {
