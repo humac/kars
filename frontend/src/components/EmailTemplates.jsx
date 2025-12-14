@@ -34,9 +34,14 @@ const EmailTemplates = () => {
 
   // Helper function for consistent error handling
   const getErrorMessage = (err, defaultMessage) => {
-    return err instanceof TypeError
-      ? 'Unable to connect to server. Please check your connection.'
-      : defaultMessage;
+    // TypeError is thrown by fetch for network errors (connection refused, DNS failures, etc.)
+    // Other error types are typically application errors, so we use the default message
+    if (err instanceof TypeError) {
+      return 'Unable to connect to server. Please check your connection.';
+    }
+    // Log original error for debugging while showing generic message to user
+    console.error('API Error:', err);
+    return defaultMessage;
   };
 
   useEffect(() => {
@@ -59,9 +64,11 @@ const EmailTemplates = () => {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const errorData = await response.json();
-            // Sanitize error message: ensure it's a string and limit length
+            // Sanitize error message: ensure it's a string, limit length, and strip HTML tags
             if (errorData.error && typeof errorData.error === 'string') {
-              errorMessage = errorData.error.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+              // Strip HTML/script tags to prevent XSS
+              const sanitized = errorData.error.replace(/<[^>]*>/g, '');
+              errorMessage = sanitized.substring(0, MAX_ERROR_MESSAGE_LENGTH);
             }
           }
         } catch (parseError) {
