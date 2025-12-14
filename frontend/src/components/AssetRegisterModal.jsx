@@ -79,8 +79,10 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
   const [emailError, setEmailError] = useState('');
   const [companies, setCompanies] = useState([]);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const [assetTypes, setAssetTypes] = useState([]);
+  const [loadingAssetTypes, setLoadingAssetTypes] = useState(true);
 
-  // Fetch companies on mount
+  // Fetch companies and asset types on mount
   React.useEffect(() => {
     async function fetchCompanies() {
       try {
@@ -101,7 +103,33 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
         setLoadingCompanies(false);
       }
     }
+    
+    async function fetchAssetTypes() {
+      try {
+        const response = await fetch('/api/asset-types', {
+          headers: getAuthHeaders(),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAssetTypes(data);
+          // Set default asset type if available
+          if (data.length > 0 && !form.asset_type) {
+            setForm(prev => ({ ...prev, asset_type: data[0].name }));
+          }
+        } else {
+          console.error('Failed to fetch asset types');
+          setAssetTypes([]);
+        }
+      } catch (error) {
+        console.error('Error fetching asset types:', error);
+        setAssetTypes([]);
+      } finally {
+        setLoadingAssetTypes(false);
+      }
+    }
+    
     fetchCompanies();
+    fetchAssetTypes();
   }, [getAuthHeaders]);
 
   // Field max length configuration
@@ -383,18 +411,33 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
               
               <div className="space-y-2">
                 <Label htmlFor="asset_type">Asset Type *</Label>
-                <Select 
-                  value={form.asset_type} 
-                  onValueChange={(value) => setForm(prev => ({ ...prev, asset_type: value }))}
-                >
-                  <SelectTrigger id="asset_type">
-                    <SelectValue placeholder="Select asset type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="laptop">Laptop</SelectItem>
-                    <SelectItem value="mobile_phone">Mobile Phone</SelectItem>
-                  </SelectContent>
-                </Select>
+                {loadingAssetTypes ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading asset types...
+                  </div>
+                ) : assetTypes.length > 0 ? (
+                  <Select 
+                    value={form.asset_type} 
+                    onValueChange={(value) => setForm(prev => ({ ...prev, asset_type: value }))}
+                    required
+                  >
+                    <SelectTrigger id="asset_type">
+                      <SelectValue placeholder="Select asset type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assetTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.name}>
+                          {type.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    No asset types available. Please contact an administrator.
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

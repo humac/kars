@@ -58,6 +58,8 @@ export default function MyAttestationsPage() {
     asset_tag: '',
     notes: ''
   });
+  const [assetTypes, setAssetTypes] = useState([]);
+  const [loadingAssetTypes, setLoadingAssetTypes] = useState(false);
 
   const loadAttestations = async () => {
     setLoading(true);
@@ -82,7 +84,27 @@ export default function MyAttestationsPage() {
 
   useEffect(() => {
     loadAttestations();
+    fetchAssetTypes();
   }, []);
+
+  const fetchAssetTypes = async () => {
+    setLoadingAssetTypes(true);
+    try {
+      const response = await fetch('/api/asset-types', {
+        headers: getAuthHeaders(),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAssetTypes(data);
+      } else {
+        console.error('Failed to fetch asset types');
+      }
+    } catch (error) {
+      console.error('Error fetching asset types:', error);
+    } finally {
+      setLoadingAssetTypes(false);
+    }
+  };
 
   const handleStartAttestation = async (attestation) => {
     setSelectedAttestation(attestation);
@@ -465,22 +487,32 @@ export default function MyAttestationsPage() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="asset_type">Asset Type *</Label>
-              <Select
-                value={newAssetForm.asset_type}
-                onValueChange={(value) => setNewAssetForm({ ...newAssetForm, asset_type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Laptop">Laptop</SelectItem>
-                  <SelectItem value="Desktop">Desktop</SelectItem>
-                  <SelectItem value="Monitor">Monitor</SelectItem>
-                  <SelectItem value="Phone">Phone</SelectItem>
-                  <SelectItem value="Tablet">Tablet</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              {loadingAssetTypes ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading asset types...
+                </div>
+              ) : assetTypes.length > 0 ? (
+                <Select
+                  value={newAssetForm.asset_type}
+                  onValueChange={(value) => setNewAssetForm({ ...newAssetForm, asset_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assetTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.name}>
+                        {type.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No asset types available
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

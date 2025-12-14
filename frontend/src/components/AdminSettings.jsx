@@ -20,11 +20,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import TablePaginationControls from '@/components/TablePaginationControls';
 import { cn } from '@/lib/utils';
-import { Settings, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Plug, Bell } from 'lucide-react';
+import { Settings, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Plug, Bell, Laptop } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 import SecuritySettings from './SecuritySettings';
 import HubSpotSettings from './HubSpotSettings';
 import NotificationSettings from './NotificationSettings';
+import AssetTypesSettings from './AssetTypesSettings';
 
 const AdminSettingsNew = () => {
   const { getAuthHeaders, user } = useAuth();
@@ -246,6 +247,7 @@ const AdminSettingsNew = () => {
           <Tabs value={activeView} onValueChange={setActiveView}>
             <TabsList className="mb-3">
               <TabsTrigger value="branding" className="gap-2"><Image className="h-4 w-4" />Branding</TabsTrigger>
+              <TabsTrigger value="asset-types" className="gap-2"><Laptop className="h-4 w-4" />Asset Types</TabsTrigger>
               <TabsTrigger value="security" className="gap-2"><Shield className="h-4 w-4" />Security</TabsTrigger>
               <TabsTrigger value="notifications" className="gap-2"><Bell className="h-4 w-4" />Notifications</TabsTrigger>
               <TabsTrigger value="integrations" className="gap-2"><Plug className="h-4 w-4" />Integrations</TabsTrigger>
@@ -531,6 +533,10 @@ const AdminSettingsNew = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="asset-types">
+              <AssetTypesSettings />
             </TabsContent>
 
             <TabsContent value="security">
