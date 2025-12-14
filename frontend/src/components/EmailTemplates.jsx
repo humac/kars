@@ -29,6 +29,21 @@ const EmailTemplates = () => {
     text_body: ''
   });
 
+  // Constants
+  const MAX_ERROR_MESSAGE_LENGTH = 200;
+
+  // Helper function for consistent error handling
+  const getErrorMessage = (err, defaultMessage) => {
+    // TypeError is thrown by fetch for network errors (connection refused, DNS failures, etc.)
+    // Other error types are typically application errors, so we use the default message
+    if (err instanceof TypeError) {
+      return 'Unable to connect to server. Please check your connection.';
+    }
+    // Log original error for debugging while showing generic message to user
+    console.error('API Error:', err);
+    return defaultMessage;
+  };
+
   useEffect(() => {
     fetchTemplates();
   }, []);
@@ -38,13 +53,33 @@ const EmailTemplates = () => {
       const response = await fetch('/api/admin/email-templates', {
         headers: getAuthHeaders()
       });
-
+      
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);
+      } else {
+        // Try to parse error response, but handle cases where it's not JSON
+        let errorMessage = 'Failed to load email templates';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            // Sanitize error message: ensure it's a string and limit length
+            // Note: We use the error as-is since it comes from our backend API
+            // The toast component will handle text rendering safely
+            if (errorData.error && typeof errorData.error === 'string') {
+              errorMessage = errorData.error.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+            }
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use generic message
+          console.error('Failed to parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
     } catch (err) {
-      toast({ title: "Error", description: 'Failed to load email templates', variant: "destructive" });
+      const userMessage = getErrorMessage(err, 'Failed to load email templates. Please try again.');
+      toast({ title: "Error", description: userMessage, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -86,11 +121,11 @@ const EmailTemplates = () => {
         setEditDialogOpen(false);
         fetchTemplates();
       } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update template');
+        throw new Error('Failed to update template');
       }
     } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      const userMessage = getErrorMessage(err, 'Failed to save template. Please try again.');
+      toast({ title: "Error", description: userMessage, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -110,11 +145,11 @@ const EmailTemplates = () => {
         setEditDialogOpen(false);
         fetchTemplates();
       } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to reset template');
+        throw new Error('Failed to reset template');
       }
     } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      const userMessage = getErrorMessage(err, 'Failed to reset template. Please try again.');
+      toast({ title: "Error", description: userMessage, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -137,11 +172,11 @@ const EmailTemplates = () => {
         setPreview(data.preview);
         setPreviewDialogOpen(true);
       } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to generate preview');
+        throw new Error('Failed to generate preview');
       }
     } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      const userMessage = getErrorMessage(err, 'Failed to generate preview. Please try again.');
+      toast({ title: "Error", description: userMessage, variant: "destructive" });
     } finally {
       setPreviewing(false);
     }
@@ -183,34 +218,42 @@ const EmailTemplates = () => {
       </div>
 
       <div className="grid gap-3">
-        {templates.map((template) => (
-          <div key={template.id} className="rounded-lg border p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-sm font-medium">{template.name}</h4>
-                  {template.is_custom ? (
-                    <Badge variant="secondary" className="text-xs">Custom</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">Default</Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">{template.description}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <strong>Subject:</strong> {template.subject}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEdit(template)}
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                Edit
-              </Button>
-            </div>
+        {templates.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              No email templates found. Please check your configuration or refresh the page.
+            </p>
           </div>
-        ))}
+        ) : (
+          templates.map((template) => (
+            <div key={template.id} className="rounded-lg border p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-sm font-medium">{template.name}</h4>
+                    {template.is_custom ? (
+                      <Badge variant="secondary" className="text-xs">Custom</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">Default</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{template.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <strong>Subject:</strong> {template.subject}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEdit(template)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Edit Dialog */}
