@@ -37,6 +37,12 @@ export default function ComplianceChecklist({ items, title = 'SOC2 Compliance Ch
     );
   }
 
+  // Compliance thresholds
+  const COMPLIANCE_THRESHOLDS = {
+    EXCELLENT: 80,
+    GOOD: 60
+  };
+
   // Calculate completion stats
   const passCount = items.filter(item => item.status === 'pass').length;
   const warnCount = items.filter(item => item.status === 'warn').length;
@@ -52,8 +58,8 @@ export default function ComplianceChecklist({ items, title = 'SOC2 Compliance Ch
           <div className="text-sm font-medium">
             <span className="text-muted-foreground">Completion: </span>
             <span className={cn(
-              completionRate >= 80 ? 'text-green-600' : 
-              completionRate >= 60 ? 'text-yellow-600' : 
+              completionRate >= COMPLIANCE_THRESHOLDS.EXCELLENT ? 'text-green-600' : 
+              completionRate >= COMPLIANCE_THRESHOLDS.GOOD ? 'text-yellow-600' : 
               'text-red-600'
             )}>
               {completionRate}%

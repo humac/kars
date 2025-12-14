@@ -65,7 +65,7 @@ export default function MetricsComparison({ current, previous, title = 'Metrics 
   const formatValue = (value) => {
     if (typeof value === 'number') {
       // If it's a rate/percentage (between 0 and 1), format as percentage
-      if (value > 0 && value < 1 && value % 1 !== 0) {
+      if (value > 0 && value < 1) {
         return `${(value * 100).toFixed(1)}%`;
       }
       return value.toLocaleString();

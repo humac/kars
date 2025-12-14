@@ -98,13 +98,17 @@ const AuditReportingNew = () => {
   };
 
   const fetchStatsEnhanced = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ period: statsPeriod.toString() });
       const response = await fetch(`/api/reports/statistics-enhanced?${params}`, { headers: { ...getAuthHeaders() } });
       if (!response.ok) throw new Error('Failed to fetch enhanced statistics');
       setStatsEnhanced(await response.json());
     } catch (err) {
-      console.error('Error fetching enhanced statistics:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 

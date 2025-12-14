@@ -403,14 +403,14 @@ const CompanyManagementNew = () => {
                         <TableCell className="hidden md:table-cell text-muted-foreground">{company.description || '-'}</TableCell>
                         <TableCell className="hidden md:table-cell text-center">{assetCountByCompany[company.name] || 0}</TableCell>
                         <TableCell className="hidden md:table-cell">{formatDate(company.created_date)}</TableCell>
-                        <TableCell className="text-right">
-                          {canManageCompanies && (
+                        {canManageCompanies && (
+                          <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
                               <Button variant="ghost" size="icon" onClick={() => handleEdit(company)}><Edit className="h-4 w-4" /></Button>
                               <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog({ open: true, company })}><Trash2 className="h-4 w-4" /></Button>
                             </div>
-                          )}
-                        </TableCell>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

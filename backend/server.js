@@ -4169,37 +4169,53 @@ app.get('/api/reports/trends', authenticate, async (req, res) => {
       assets = allAssets.filter(asset => asset.employee_email === user.email);
     }
 
-    // Asset growth over time
+    // Asset growth over time - optimized approach
     const now = new Date();
     const startDate = new Date(now - period * 24 * 60 * 60 * 1000);
+    
+    // Sort assets by creation date once
+    const sortedAssets = [...assets].sort((a, b) => 
+      new Date(a.created_date) - new Date(b.created_date)
+    );
+    
+    const sampleInterval = Math.max(1, Math.floor(period / 30));
     const assetGrowth = [];
     
+    let assetIndex = 0;
     for (let i = 0; i <= period; i++) {
+      if (i % sampleInterval !== 0 && i !== period) continue;
+      
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
-      const count = assets.filter(a => new Date(a.created_date) <= date).length;
       
-      // Sample every few days to reduce data points
-      if (i % Math.max(1, Math.floor(period / 30)) === 0 || i === period) {
-        assetGrowth.push({ date: dateStr, count });
+      // Count assets up to this date using sorted array
+      while (assetIndex < sortedAssets.length && 
+             new Date(sortedAssets[assetIndex].created_date) <= date) {
+        assetIndex++;
       }
+      
+      assetGrowth.push({ date: dateStr, count: assetIndex });
     }
 
-    // Status changes over time
+    // Status changes over time - optimized
     const statusChanges = [];
-    for (let i = 0; i <= period; i += Math.max(1, Math.floor(period / 30))) {
+    for (let i = 0; i <= period; i += sampleInterval) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const dayAssets = assets.filter(a => new Date(a.created_date) <= date);
       const statusCount = { date: dateStr, active: 0, returned: 0, lost: 0, damaged: 0, retired: 0 };
-      dayAssets.forEach(a => {
-        if (statusCount.hasOwnProperty(a.status)) {
-          statusCount[a.status]++;
+      
+      // Count only assets created before or on this date
+      for (const asset of assets) {
+        if (new Date(asset.created_date) <= date) {
+          if (statusCount.hasOwnProperty(asset.status)) {
+            statusCount[asset.status]++;
+          }
         }
-      });
+      }
+      
       statusChanges.push(statusCount);
     }
 
