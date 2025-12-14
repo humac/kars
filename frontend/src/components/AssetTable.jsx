@@ -45,7 +45,9 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const [companyFilter, setCompanyFilter] = useState('all');
   const [employeeFilter, setEmployeeFilter] = useState('all');
   const [managerFilter, setManagerFilter] = useState('all');
+  const [assetTypeFilter, setAssetTypeFilter] = useState('all');
   const [companies, setCompanies] = useState([]);
+  const [assetTypes, setAssetTypes] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
@@ -54,7 +56,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Fetch companies for filter dropdown
+  // Fetch companies and asset types for filter dropdowns
   useEffect(() => {
     async function fetchCompanies() {
       try {
@@ -69,7 +71,23 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
         console.error('Failed to fetch companies:', err);
       }
     }
+    
+    async function fetchAssetTypes() {
+      try {
+        const res = await fetch('/api/asset-types', {
+          headers: { ...getAuthHeaders() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAssetTypes(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch asset types:', err);
+      }
+    }
+    
     fetchCompanies();
+    fetchAssetTypes();
   }, [getAuthHeaders]);
 
   async function handleDeleteConfirm() {
@@ -242,8 +260,13 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
       filtered = filtered.filter(asset => asset._managerDisplayName === managerFilter);
     }
 
+    // Asset type filter
+    if (assetTypeFilter && assetTypeFilter !== 'all') {
+      filtered = filtered.filter(asset => asset.asset_type === assetTypeFilter);
+    }
+
     return filtered;
-  }, [assetsWithManagerData, searchTerm, statusFilter, companyFilter, employeeFilter, managerFilter]);
+  }, [assetsWithManagerData, searchTerm, statusFilter, companyFilter, employeeFilter, managerFilter, assetTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize) || 1);
   
@@ -291,6 +314,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     setCompanyFilter('all');
     setEmployeeFilter('all');
     setManagerFilter('all');
+    setAssetTypeFilter('all');
   };
 
   const handleBulkStatusUpdate = async () => {
@@ -343,7 +367,8 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
            statusFilter !== 'all' || 
            companyFilter !== 'all' || 
            employeeFilter !== 'all' || 
-           managerFilter !== 'all';
+           managerFilter !== 'all' ||
+           assetTypeFilter !== 'all';
   };
 
   const handleExportSelected = () => {
@@ -434,7 +459,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           </div>
 
           {/* Filter Dropdowns Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Status Filter */}
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Status</Label>
@@ -449,6 +474,24 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                   <SelectItem value="lost">Lost</SelectItem>
                   <SelectItem value="damaged">Damaged</SelectItem>
                   <SelectItem value="retired">Retired</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Asset Type Filter */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Asset Type</Label>
+              <Select value={assetTypeFilter} onValueChange={setAssetTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {assetTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.name}>
+                      {type.display_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
