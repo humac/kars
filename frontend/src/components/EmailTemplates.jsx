@@ -64,13 +64,11 @@ const EmailTemplates = () => {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const errorData = await response.json();
-            // Sanitize error message: ensure it's a string, limit length, and strip HTML
+            // Sanitize error message: ensure it's a string and limit length
+            // Note: We use the error as-is since it comes from our backend API
+            // The toast component will handle text rendering safely
             if (errorData.error && typeof errorData.error === 'string') {
-              // Use textContent to safely strip all HTML/script tags and decode entities
-              const tempDiv = document.createElement('div');
-              tempDiv.textContent = errorData.error;
-              const sanitized = tempDiv.innerHTML;
-              errorMessage = sanitized.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+              errorMessage = errorData.error.substring(0, MAX_ERROR_MESSAGE_LENGTH);
             }
           }
         } catch (parseError) {
