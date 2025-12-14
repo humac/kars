@@ -3347,7 +3347,7 @@ export const assetTypeDb = {
     // Count attestation new assets with this type
     const attestationCount = await dbGet('SELECT COUNT(*) as count FROM attestation_new_assets WHERE asset_type = ?', [assetType.name]);
     
-    return (assetCount?.count || 0) + (attestationCount?.count || 0);
+    return Number(assetCount?.count || 0) + Number(attestationCount?.count || 0);
   },
 
   reorder: async (orderedIds) => {
