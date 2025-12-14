@@ -112,9 +112,11 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
         if (response.ok) {
           const data = await response.json();
           setAssetTypes(data);
-          // Set default asset type if available
+          // Set default asset type to 'laptop' if available, otherwise first item
           if (data.length > 0 && !form.asset_type) {
-            setForm(prev => ({ ...prev, asset_type: data[0].name }));
+            const laptopType = data.find(t => t.name === 'laptop');
+            const defaultType = laptopType ? laptopType.name : data[0].name;
+            setForm(prev => ({ ...prev, asset_type: defaultType }));
           }
         } else {
           console.error('Failed to fetch asset types');

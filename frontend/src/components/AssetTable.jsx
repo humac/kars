@@ -459,7 +459,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           </div>
 
           {/* Filter Dropdowns Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {/* Status Filter */}
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Status</Label>
