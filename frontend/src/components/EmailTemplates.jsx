@@ -64,10 +64,12 @@ const EmailTemplates = () => {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const errorData = await response.json();
-            // Sanitize error message: ensure it's a string, limit length, and strip HTML tags
+            // Sanitize error message: ensure it's a string, limit length, and strip HTML
             if (errorData.error && typeof errorData.error === 'string') {
-              // Strip HTML/script tags to prevent XSS
-              const sanitized = errorData.error.replace(/<[^>]*>/g, '');
+              // Use textContent to safely strip all HTML/script tags and decode entities
+              const tempDiv = document.createElement('div');
+              tempDiv.textContent = errorData.error;
+              const sanitized = tempDiv.innerHTML;
               errorMessage = sanitized.substring(0, MAX_ERROR_MESSAGE_LENGTH);
             }
           }
