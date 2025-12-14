@@ -49,7 +49,10 @@ const EmailTemplates = () => {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
+            // Sanitize error message: ensure it's a string and limit length
+            if (errorData.error && typeof errorData.error === 'string') {
+              errorMessage = errorData.error.substring(0, 200);
+            }
           }
         } catch (parseError) {
           // If JSON parsing fails, use generic message
@@ -59,7 +62,8 @@ const EmailTemplates = () => {
       }
     } catch (err) {
       // Use generic error message for better security
-      const userMessage = err.message === 'Failed to fetch' 
+      // Check for network errors using TypeError (thrown by fetch for network issues)
+      const userMessage = err instanceof TypeError
         ? 'Unable to connect to server. Please check your connection.'
         : 'Failed to load email templates. Please try again.';
       toast({ title: "Error", description: userMessage, variant: "destructive" });
