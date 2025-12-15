@@ -5233,6 +5233,41 @@ app.post('/api/attestation/records/:id/complete', authenticate, async (req, res)
       return res.status(403).json({ error: 'Access denied' });
     }
     
+    // Get newly added assets during attestation
+    const newAssets = await attestationNewAssetDb.getByRecordId(record.id);
+    
+    // Transfer new assets to the main assets table
+    for (const newAsset of newAssets) {
+      try {
+        await assetDb.create({
+          employee_email: req.user.email,
+          employee_first_name: req.user.first_name || '',
+          employee_last_name: req.user.last_name || '',
+          manager_email: req.user.manager_email || null,
+          company_id: newAsset.company_id,
+          asset_type: newAsset.asset_type,
+          make: newAsset.make || '',
+          model: newAsset.model || '',
+          serial_number: newAsset.serial_number,
+          asset_tag: newAsset.asset_tag,
+          status: 'active',
+          notes: newAsset.notes || ''
+        });
+        
+        await auditDb.log(
+          'create',
+          'asset',
+          newAsset.serial_number,
+          `${newAsset.asset_type} - ${newAsset.serial_number}`,
+          `Asset created from attestation: ${newAsset.asset_type} - ${newAsset.serial_number}`,
+          req.user.email
+        );
+      } catch (assetError) {
+        console.error('Error creating asset from attestation:', assetError);
+        // Continue with other assets even if one fails
+      }
+    }
+    
     // Mark as completed
     await attestationRecordDb.update(record.id, {
       status: 'completed',
