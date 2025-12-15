@@ -439,6 +439,131 @@ Employee: {{employeeName}} ({{employeeEmail}})
 Campaign: {{campaignName}}
 Completed: {{completedAt}}`,
     variables: JSON.stringify(['siteName', 'campaignName', 'employeeName', 'employeeEmail', 'completedAt'])
+  },
+  {
+    template_key: 'attestation_registration_invite',
+    name: 'Attestation Registration Invite',
+    description: 'Sent to unregistered asset owners inviting them to register and complete attestation',
+    subject: '{{siteName}} - Action Required: Register to Complete Asset Attestation',
+    html_body: `<h2>Asset Attestation Required</h2>
+<p>Hello {{firstName}},</p>
+<p>You have <strong>{{assetCount}}</strong> asset(s) assigned to you that require attestation as part of the "<strong>{{campaignName}}</strong>" campaign.</p>
+<p>To complete your attestation, you'll need to create an account in {{siteName}}.</p>
+{{#if ssoEnabled}}
+<div style="margin: 20px 0; padding: 15px; background-color: #f0f9ff; border-radius: 8px;">
+  <h3 style="margin-top: 0;">Option 1: Sign in with SSO (Recommended)</h3>
+  <p>If your organization uses Single Sign-On, simply click the button below. Your account will be created automatically.</p>
+  <p><a href="{{loginUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #22c55e; color: white; text-decoration: none; border-radius: 6px;">{{ssoButtonText}}</a></p>
+</div>
+<div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
+  <h3 style="margin-top: 0;">Option 2: Register Manually</h3>
+  <p>Create an account with your email address:</p>
+  <p><a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register Account</a></p>
+</div>
+{{else}}
+<p><a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register to Complete Attestation</a></p>
+{{/if}}
+<p>This attestation campaign {{#if endDate}}runs until <strong>{{endDate}}</strong>{{else}}is currently active{{/if}}.</p>
+<p>If you have any questions, please contact your administrator.</p>`,
+    text_body: `Asset Attestation Required
+
+Hello {{firstName}},
+
+You have {{assetCount}} asset(s) assigned to you that require attestation as part of the "{{campaignName}}" campaign.
+
+To complete your attestation, you'll need to create an account in {{siteName}}.
+
+Register here: {{registerUrl}}
+
+This attestation campaign {{#if endDate}}runs until {{endDate}}{{else}}is currently active{{/if}}.
+
+If you have any questions, please contact your administrator.`,
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl', 'loginUrl', 'ssoEnabled', 'ssoButtonText'])
+  },
+  {
+    template_key: 'attestation_unregistered_reminder',
+    name: 'Attestation Unregistered Reminder',
+    description: 'Reminder sent to unregistered asset owners who have not yet registered',
+    subject: '{{siteName}} - Reminder: Register to Complete Asset Attestation',
+    html_body: `<h2>Reminder: Asset Attestation Pending</h2>
+<p>Hello {{firstName}},</p>
+<p>This is a reminder that you have <strong>{{assetCount}}</strong> asset(s) requiring attestation for the "<strong>{{campaignName}}</strong>" campaign.</p>
+<p>You have not yet registered your account. Please register as soon as possible to complete your attestation.</p>
+{{#if ssoEnabled}}
+<p><a href="{{loginUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #22c55e; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px;">{{ssoButtonText}}</a>
+<a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register Manually</a></p>
+{{else}}
+<p><a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register Now</a></p>
+{{/if}}
+{{#if endDate}}<p><strong>Deadline:</strong> {{endDate}}</p>{{/if}}`,
+    text_body: `Reminder: Asset Attestation Pending
+
+Hello {{firstName}},
+
+This is a reminder that you have {{assetCount}} asset(s) requiring attestation for the "{{campaignName}}" campaign.
+
+You have not yet registered your account. Please register as soon as possible to complete your attestation.
+
+Register here: {{registerUrl}}
+
+{{#if endDate}}Deadline: {{endDate}}{{/if}}`,
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl', 'loginUrl', 'ssoEnabled', 'ssoButtonText'])
+  },
+  {
+    template_key: 'attestation_unregistered_escalation',
+    name: 'Attestation Unregistered Escalation',
+    description: 'Sent to managers when their team members have not registered to complete attestation',
+    subject: '{{siteName}} - Action Required: Team Member Has Not Registered for Attestation',
+    html_body: `<h2>Team Member Registration Required</h2>
+<p>Hello {{managerName}},</p>
+<p>One of your team members has not yet registered to complete their asset attestation:</p>
+<div style="margin: 20px 0; padding: 15px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+  <p><strong>Employee:</strong> {{employeeName}}</p>
+  <p><strong>Email:</strong> {{employeeEmail}}</p>
+  <p><strong>Campaign:</strong> {{campaignName}}</p>
+  <p><strong>Assets Pending:</strong> {{assetCount}}</p>
+</div>
+<p>Please remind them to register their account so they can complete their asset attestation.</p>
+{{#if endDate}}<p><strong>Campaign Deadline:</strong> {{endDate}}</p>{{/if}}`,
+    text_body: `Team Member Registration Required
+
+Hello {{managerName}},
+
+One of your team members has not yet registered to complete their asset attestation:
+
+Employee: {{employeeName}}
+Email: {{employeeEmail}}
+Campaign: {{campaignName}}
+Assets Pending: {{assetCount}}
+
+Please remind them to register their account so they can complete their asset attestation.
+
+{{#if endDate}}Campaign Deadline: {{endDate}}{{/if}}`,
+    variables: JSON.stringify(['siteName', 'managerName', 'employeeName', 'employeeEmail', 'campaignName', 'assetCount', 'endDate'])
+  },
+  {
+    template_key: 'attestation_ready',
+    name: 'Attestation Ready',
+    description: 'Sent after a user registers, confirming their attestation is ready to complete',
+    subject: '{{siteName}} - Your Asset Attestation is Ready',
+    html_body: `<h2>Welcome! Your Attestation is Ready</h2>
+<p>Hello {{firstName}},</p>
+<p>Thank you for registering your account. You can now complete your asset attestation for the "<strong>{{campaignName}}</strong>" campaign.</p>
+<p><a href="{{attestationUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Complete Your Attestation</a></p>
+{{#if endDate}}<p><strong>Deadline:</strong> {{endDate}}</p>{{/if}}
+<p>If you have any questions, please contact your administrator.</p>`,
+    text_body: `Welcome! Your Attestation is Ready
+
+Hello {{firstName}},
+
+Thank you for registering your account. You can now complete your asset attestation for the "{{campaignName}}" campaign.
+
+Complete your attestation here: {{attestationUrl}}
+
+{{#if endDate}}Deadline: {{endDate}}{{/if}}
+
+If you have any questions, please contact your administrator.`,
+    variables: JSON.stringify(['siteName', 'firstName', 'campaignName', 'endDate', 'attestationUrl'])
   }
 ];
 

@@ -45,7 +45,7 @@ describe('Email Templates Seeding', () => {
     const templates = await emailTemplateDb.getAll();
     
     expect(templates).toBeDefined();
-    expect(templates.length).toBe(6);
+    expect(templates.length).toBe(10);
     
     // Verify all expected templates exist
     const templateKeys = templates.map(t => t.template_key);
@@ -55,6 +55,10 @@ describe('Email Templates Seeding', () => {
     expect(templateKeys).toContain('attestation_reminder');
     expect(templateKeys).toContain('attestation_escalation');
     expect(templateKeys).toContain('attestation_complete');
+    expect(templateKeys).toContain('attestation_registration_invite');
+    expect(templateKeys).toContain('attestation_unregistered_reminder');
+    expect(templateKeys).toContain('attestation_unregistered_escalation');
+    expect(templateKeys).toContain('attestation_ready');
   });
 
   it('should have correct structure for each template', async () => {
@@ -97,7 +101,7 @@ describe('Email Templates Seeding', () => {
     const countAfter = templatesAfter.length;
     
     expect(countAfter).toBe(countBefore);
-    expect(countAfter).toBe(6);
+    expect(countAfter).toBe(10);
   });
 
   it('should allow retrieval of individual templates by key', async () => {
@@ -120,14 +124,14 @@ describe('Email Templates Seeding', () => {
     // This test verifies that parseInt with radix 10 handles various input types
     
     // Test with numeric count (SQLite returns this as number)
-    const numericCount = 6;
+    const numericCount = 10;
     const count1 = parseInt(numericCount, 10) || 0;
-    expect(count1).toBe(6);
+    expect(count1).toBe(10);
     
     // Test with string count (PostgreSQL might return this as string)
-    const stringCount = '6';
+    const stringCount = '10';
     const count2 = parseInt(stringCount, 10) || 0;
-    expect(count2).toBe(6);
+    expect(count2).toBe(10);
     
     // Test with undefined (edge case)
     const count3 = parseInt(undefined, 10) || 0;
