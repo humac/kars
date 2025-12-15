@@ -72,6 +72,7 @@ export default function AttestationPage() {
     end_date: '',
     reminder_days: 7,
     escalation_days: 10,
+    unregistered_reminder_days: 7,
     target_type: 'all',
     target_user_ids: [],
     target_company_ids: []
@@ -259,6 +260,7 @@ export default function AttestationPage() {
         end_date: '',
         reminder_days: 7,
         escalation_days: 10,
+        unregistered_reminder_days: 7,
         target_type: 'all',
         target_user_ids: [],
         target_company_ids: []
@@ -395,6 +397,7 @@ export default function AttestationPage() {
       end_date: campaign.end_date ? new Date(campaign.end_date).toISOString().split('T')[0] : '',
       reminder_days: campaign.reminder_days || 7,
       escalation_days: campaign.escalation_days || 10,
+      unregistered_reminder_days: campaign.unregistered_reminder_days || 7,
       target_type: campaign.target_type || 'all',
       target_user_ids: targetUserIds,
       target_company_ids: targetCompanyIds
@@ -438,6 +441,7 @@ export default function AttestationPage() {
         end_date: '',
         reminder_days: 7,
         escalation_days: 10,
+        unregistered_reminder_days: 7,
         target_type: 'all',
         target_user_ids: [],
         target_company_ids: []
@@ -802,7 +806,7 @@ export default function AttestationPage() {
                     onChange={(e) => setFormData({ ...formData, reminder_days: parseInt(e.target.value) || 7 })}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Send reminder after X days
+                    Send reminder to registered users after X days
                   </p>
                 </div>
                 <div>
@@ -818,6 +822,19 @@ export default function AttestationPage() {
                     Notify manager after X days
                   </p>
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="unregistered_reminder_days">Unregistered Owner Reminder (days)</Label>
+                <Input
+                  id="unregistered_reminder_days"
+                  type="number"
+                  min="1"
+                  value={formData.unregistered_reminder_days}
+                  onChange={(e) => setFormData({ ...formData, unregistered_reminder_days: parseInt(e.target.value) || 7 })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Send reminder to unregistered asset owners after X days
+                </p>
               </div>
             </div>
           )}
@@ -1210,7 +1227,7 @@ export default function AttestationPage() {
                     onChange={(e) => setFormData({ ...formData, reminder_days: parseInt(e.target.value) || 7 })}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Send reminder after X days
+                    Send reminder to registered users after X days
                   </p>
                 </div>
                 <div>
@@ -1226,6 +1243,19 @@ export default function AttestationPage() {
                     Notify manager after X days
                   </p>
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="edit-unregistered_reminder_days">Unregistered Owner Reminder (days)</Label>
+                <Input
+                  id="edit-unregistered_reminder_days"
+                  type="number"
+                  min="1"
+                  value={formData.unregistered_reminder_days}
+                  onChange={(e) => setFormData({ ...formData, unregistered_reminder_days: parseInt(e.target.value) || 7 })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Send reminder to unregistered asset owners after X days
+                </p>
               </div>
             </div>
           )}
