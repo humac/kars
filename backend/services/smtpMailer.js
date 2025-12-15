@@ -748,6 +748,14 @@ export const sendAttestationRegistrationInvite = async (email, firstName, lastNa
     const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'there';
     const assetText = assetCount === 1 ? '1 asset' : `${assetCount} assets`;
     
+    // Pre-process conditional values
+    const endDateText = campaign.end_date 
+      ? `runs until <strong>${new Date(campaign.end_date).toLocaleDateString()}</strong>`
+      : 'is currently active';
+    const endDateTextPlain = campaign.end_date
+      ? `runs until ${new Date(campaign.end_date).toLocaleDateString()}`
+      : 'is currently active';
+    
     // Try to get template from database
     const template = await emailTemplateDb.getByKey('attestation_registration_invite');
     
@@ -762,6 +770,8 @@ export const sendAttestationRegistrationInvite = async (email, firstName, lastNa
       campaignName: campaign.name,
       campaignDescription: campaign.description || '',
       endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      endDateText,
+      endDateTextPlain,
       registerUrl: manualRegisterUrl,
       ssoLoginUrl,
       ssoButtonText,
@@ -903,6 +913,14 @@ export const sendAttestationUnregisteredReminder = async (email, firstName, last
     const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'there';
     const assetText = assetCount === 1 ? '1 asset' : `${assetCount} assets`;
     
+    // Pre-process conditional values
+    const deadlineHtml = campaign.end_date 
+      ? `<p><strong>Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>`
+      : '';
+    const deadlineText = campaign.end_date
+      ? `Deadline: ${new Date(campaign.end_date).toLocaleDateString()}`
+      : '';
+    
     // Try to get template from database
     const template = await emailTemplateDb.getByKey('attestation_unregistered_reminder');
     
@@ -916,6 +934,8 @@ export const sendAttestationUnregisteredReminder = async (email, firstName, last
       assetText,
       campaignName: campaign.name,
       endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      deadlineHtml,
+      deadlineText,
       registerUrl: manualRegisterUrl,
       ssoLoginUrl,
       ssoButtonText,
@@ -1021,6 +1041,14 @@ export const sendAttestationUnregisteredEscalation = async (managerEmail, manage
     
     const assetText = assetCount === 1 ? '1 asset' : `${assetCount} assets`;
     
+    // Pre-process conditional values
+    const deadlineHtml = campaign.end_date 
+      ? `<p><strong>Campaign Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>`
+      : '';
+    const deadlineText = campaign.end_date
+      ? `Campaign Deadline: ${new Date(campaign.end_date).toLocaleDateString()}`
+      : '';
+    
     // Try to get template from database
     const template = await emailTemplateDb.getByKey('attestation_unregistered_escalation');
     
@@ -1032,7 +1060,10 @@ export const sendAttestationUnregisteredEscalation = async (managerEmail, manage
       employeeName,
       campaignName: campaign.name,
       assetCount,
-      assetText
+      assetText,
+      endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      deadlineHtml,
+      deadlineText
     };
     
     // Use template if available, otherwise fall back to hardcoded default
@@ -1121,6 +1152,14 @@ export const sendAttestationReadyEmail = async (email, firstName, campaign) => {
     const baseUrl = await getAppUrl();
     const attestationUrl = `${baseUrl}/my-attestations`;
     
+    // Pre-process conditional values
+    const deadlineHtml = campaign.end_date 
+      ? `<p><strong>Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>`
+      : '';
+    const deadlineText = campaign.end_date
+      ? `Deadline: ${new Date(campaign.end_date).toLocaleDateString()}`
+      : '';
+    
     // Try to get template from database
     const template = await emailTemplateDb.getByKey('attestation_ready');
     
@@ -1131,6 +1170,8 @@ export const sendAttestationReadyEmail = async (email, firstName, campaign) => {
       campaignName: campaign.name,
       campaignDescription: campaign.description || '',
       endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      deadlineHtml,
+      deadlineText,
       attestationUrl
     };
     

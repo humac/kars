@@ -453,7 +453,7 @@ Completed: {{completedAt}}`,
   <a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Register to Complete Attestation</a>
 </div>
 <p style="color: #666; font-size: 14px;">If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.</p>
-<p>This attestation campaign {{#if endDate}}runs until <strong>{{endDate}}</strong>{{else}}is currently active{{/if}}.</p>
+<p>This attestation campaign {{endDateText}}.</p>
 <p>If you have any questions, please contact your administrator.</p>`,
     text_body: `Asset Attestation Required
 
@@ -467,10 +467,10 @@ Register here: {{registerUrl}}
 
 If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.
 
-This attestation campaign {{#if endDate}}runs until {{endDate}}{{else}}is currently active{{/if}}.
+This attestation campaign {{endDateTextPlain}}.
 
 If you have any questions, please contact your administrator.`,
-    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl'])
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'endDateText', 'endDateTextPlain', 'registerUrl'])
   },
   {
     template_key: 'attestation_unregistered_reminder',
@@ -485,7 +485,7 @@ If you have any questions, please contact your administrator.`,
   <a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Register Now</a>
 </div>
 <p style="color: #666; font-size: 14px;">If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.</p>
-{{#if endDate}}<p><strong>Deadline:</strong> {{endDate}}</p>{{/if}}`,
+{{deadlineHtml}}`,
     text_body: `Reminder: Asset Attestation Pending
 
 Hello {{firstName}},
@@ -498,8 +498,8 @@ Register here: {{registerUrl}}
 
 If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.
 
-{{#if endDate}}Deadline: {{endDate}}{{/if}}`,
-    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl'])
+{{deadlineText}}`,
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'deadlineHtml', 'deadlineText', 'registerUrl'])
   },
   {
     template_key: 'attestation_unregistered_escalation',
@@ -516,7 +516,7 @@ If your organization uses Single Sign-On (SSO), you can also use that option whe
   <p><strong>Assets Pending:</strong> {{assetCount}}</p>
 </div>
 <p>Please remind them to register their account so they can complete their asset attestation.</p>
-{{#if endDate}}<p><strong>Campaign Deadline:</strong> {{endDate}}</p>{{/if}}`,
+{{deadlineHtml}}`,
     text_body: `Team Member Registration Required
 
 Hello {{managerName}},
@@ -530,8 +530,8 @@ Assets Pending: {{assetCount}}
 
 Please remind them to register their account so they can complete their asset attestation.
 
-{{#if endDate}}Campaign Deadline: {{endDate}}{{/if}}`,
-    variables: JSON.stringify(['siteName', 'managerName', 'employeeName', 'employeeEmail', 'campaignName', 'assetCount', 'endDate'])
+{{deadlineText}}`,
+    variables: JSON.stringify(['siteName', 'managerName', 'employeeName', 'employeeEmail', 'campaignName', 'assetCount', 'endDate', 'deadlineHtml', 'deadlineText'])
   },
   {
     template_key: 'attestation_ready',
@@ -542,7 +542,7 @@ Please remind them to register their account so they can complete their asset at
 <p>Hello {{firstName}},</p>
 <p>Thank you for registering your account. You can now complete your asset attestation for the "<strong>{{campaignName}}</strong>" campaign.</p>
 <p><a href="{{attestationUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Complete Your Attestation</a></p>
-{{#if endDate}}<p><strong>Deadline:</strong> {{endDate}}</p>{{/if}}
+{{deadlineHtml}}
 <p>If you have any questions, please contact your administrator.</p>`,
     text_body: `Welcome! Your Attestation is Ready
 
@@ -552,10 +552,10 @@ Thank you for registering your account. You can now complete your asset attestat
 
 Complete your attestation here: {{attestationUrl}}
 
-{{#if endDate}}Deadline: {{endDate}}{{/if}}
+{{deadlineText}}
 
 If you have any questions, please contact your administrator.`,
-    variables: JSON.stringify(['siteName', 'firstName', 'campaignName', 'endDate', 'attestationUrl'])
+    variables: JSON.stringify(['siteName', 'firstName', 'campaignName', 'endDate', 'deadlineHtml', 'deadlineText', 'attestationUrl'])
   }
 ];
 
@@ -1521,6 +1521,54 @@ const initDb = async () => {
     console.log(`Seeded ${seededCount} missing email template(s)`);
   } else {
     console.log('All email templates already exist');
+  }
+
+  // Migrate existing templates that have Handlebars block helpers
+  console.log('Checking for templates with Handlebars block helpers...');
+  const templatesNeedingUpdate = [
+    'attestation_registration_invite',
+    'attestation_unregistered_reminder', 
+    'attestation_unregistered_escalation',
+    'attestation_ready'
+  ];
+  
+  let migratedCount = 0;
+  for (const templateKey of templatesNeedingUpdate) {
+    try {
+      const selectQuery = isPostgres
+        ? 'SELECT id, html_body FROM email_templates WHERE template_key = $1'
+        : 'SELECT id, html_body FROM email_templates WHERE template_key = ?';
+      
+      const existing = await dbGet(selectQuery, [templateKey]);
+      
+      if (existing && existing.html_body && existing.html_body.includes('{{#if')) {
+        // Template has old syntax, update it
+        const defaultTemplate = DEFAULT_EMAIL_TEMPLATES.find(t => t.template_key === templateKey);
+        
+        if (defaultTemplate) {
+          const updateQuery = isPostgres
+            ? `UPDATE email_templates SET html_body = $1, text_body = $2, variables = $3, updated_at = $4 WHERE template_key = $5`
+            : `UPDATE email_templates SET html_body = ?, text_body = ?, variables = ?, updated_at = ? WHERE template_key = ?`;
+          
+          await dbRun(updateQuery, [
+            defaultTemplate.html_body,
+            defaultTemplate.text_body,
+            defaultTemplate.variables,
+            new Date().toISOString(),
+            templateKey
+          ]);
+          console.log(`Updated email template to remove Handlebars conditionals: ${templateKey}`);
+          migratedCount++;
+        }
+      }
+    } catch (err) {
+      console.error(`Error migrating email template ${templateKey}:`, err.message);
+      // Continue with other templates even if one fails
+    }
+  }
+  
+  if (migratedCount > 0) {
+    console.log(`Migrated ${migratedCount} email template(s) to remove Handlebars conditionals`);
   }
 
   // Indexes
