@@ -161,8 +161,16 @@ function AppNew() {
     );
   }
 
+  // Handle register route (public, but redirect if authenticated)
+  if (location.pathname === '/register') {
+    if (isAuthenticated) {
+      return <Navigate to="/" replace />;
+    }
+    return <AuthPage initialMode="register" />;
+  }
+
   if (!isAuthenticated) {
-    return <AuthPage />;
+    return <AuthPage initialMode="login" />;
   }
 
   // Check if user needs to complete profile

@@ -198,10 +198,11 @@ const RegisterNew = ({ onSwitchToLogin }) => {
                         }
                         window.location.href = '/api/auth/oidc/login';
                       }}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      variant={oidcConfig?.button_variant || 'outline'}
+                      className="w-full"
                       size="lg"
                     >
-                      🔐 {oidcConfig.button_text || 'Sign In with SSO'}
+                      🔐 {oidcConfig?.button_text || 'Sign In with SSO'}
                     </Button>
                     <p className="text-xs text-muted-foreground mt-2">Your account will be created automatically</p>
                   </div>

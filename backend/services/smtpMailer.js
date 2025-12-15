@@ -744,59 +744,88 @@ export const sendAttestationRegistrationInvite = async (email, firstName, lastNa
     const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'there';
     const assetText = assetCount === 1 ? '1 asset' : `${assetCount} assets`;
     
-    const subject = `Action Required: Register for Asset Attestation - ${campaign.name}`;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_registration_invite');
     
-    const ssoSection = ssoEnabled ? `
-      <div style="margin: 30px 0;">
-        <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">Option 1: Sign in with SSO (Recommended)</h3>
-        <p>Your account will be created automatically when you sign in:</p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${ssoLoginUrl}" style="background-color: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">🔐 ${ssoButtonText}</a>
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      firstName: firstName || 'there',
+      lastName: lastName || '',
+      fullName,
+      assetCount,
+      assetText,
+      campaignName: campaign.name,
+      campaignDescription: campaign.description || '',
+      endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      registerUrl: manualRegisterUrl,
+      ssoLoginUrl,
+      ssoButtonText,
+      ssoEnabled: ssoEnabled ? 'true' : 'false'
+    };
+    
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Action Required: Register for Asset Attestation - ${campaign.name}`;
+      
+      const ssoSection = ssoEnabled ? `
+        <div style="margin: 30px 0;">
+          <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">Option 1: Sign in with SSO (Recommended)</h3>
+          <p>Your account will be created automatically when you sign in:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${ssoLoginUrl}" style="background-color: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">🔐 ${ssoButtonText}</a>
+          </div>
+          <p style="color: #666; font-size: 14px; text-align: center; margin-top: 10px;">
+            Your account will be created automatically
+          </p>
         </div>
-        <p style="color: #666; font-size: 14px; text-align: center; margin-top: 10px;">
-          Your account will be created automatically
+        <div style="margin: 30px 0; text-align: center;">
+          <div style="border-top: 1px solid #ddd; padding-top: 20px;">
+            <span style="background: white; padding: 0 15px; color: #666;">OR</span>
+          </div>
+        </div>
+        <div style="margin: 30px 0;">
+          <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">Option 2: Register Manually</h3>
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Create Account</a>
+          </div>
+        </div>
+      ` : `
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Create Your Account</a>
+        </div>
+      `;
+      
+      emailContent = `
+        <h2 style="color: #333;">Asset Attestation Required</h2>
+        <p>Hello ${fullName},</p>
+        <p>You have been identified as the owner of <strong>${assetText}</strong> that require attestation for the campaign: <strong>${campaign.name}</strong></p>
+        ${campaign.description ? `<p style="color: #666;">${campaign.description}</p>` : ''}
+        <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #92400E;"><strong>📋 What is attestation?</strong></p>
+          <p style="margin: 5px 0 0 0; color: #92400E;">Asset attestation is a process where you review and confirm the status of all assets assigned to you. This helps us maintain accurate records of company equipment.</p>
+        </div>
+        <p>To complete your attestation, you'll need to register for a ${siteName} account first:</p>
+        ${ssoSection}
+        <p style="color: #666; font-size: 14px;">
+          If the buttons don't work, you can copy and paste these links into your browser:<br>
+          ${ssoEnabled ? `<strong>SSO Login:</strong> <a href="${ssoLoginUrl}" style="color: #3B82F6; word-break: break-all;">${ssoLoginUrl}</a><br>` : ''}
+          <strong>Manual Registration:</strong> <a href="${manualRegisterUrl}" style="color: #3B82F6; word-break: break-all;">${manualRegisterUrl}</a>
         </p>
-      </div>
-      <div style="margin: 30px 0; text-align: center;">
-        <div style="border-top: 1px solid #ddd; padding-top: 20px;">
-          <span style="background: white; padding: 0 15px; color: #666;">OR</span>
-        </div>
-      </div>
-      <div style="margin: 30px 0;">
-        <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">Option 2: Register Manually</h3>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Create Account</a>
-        </div>
-      </div>
-    ` : `
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Create Your Account</a>
-      </div>
-    `;
-    
-    const emailContent = `
-      <h2 style="color: #333;">Asset Attestation Required</h2>
-      <p>Hello ${fullName},</p>
-      <p>You have been identified as the owner of <strong>${assetText}</strong> that require attestation for the campaign: <strong>${campaign.name}</strong></p>
-      ${campaign.description ? `<p style="color: #666;">${campaign.description}</p>` : ''}
-      <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0; color: #92400E;"><strong>📋 What is attestation?</strong></p>
-        <p style="margin: 5px 0 0 0; color: #92400E;">Asset attestation is a process where you review and confirm the status of all assets assigned to you. This helps us maintain accurate records of company equipment.</p>
-      </div>
-      <p>To complete your attestation, you'll need to register for a ${siteName} account first:</p>
-      ${ssoSection}
-      <p style="color: #666; font-size: 14px;">
-        If the buttons don't work, you can copy and paste these links into your browser:<br>
-        ${ssoEnabled ? `<strong>SSO Login:</strong> <a href="${ssoLoginUrl}" style="color: #3B82F6; word-break: break-all;">${ssoLoginUrl}</a><br>` : ''}
-        <strong>Manual Registration:</strong> <a href="${manualRegisterUrl}" style="color: #3B82F6; word-break: break-all;">${manualRegisterUrl}</a>
-      </p>
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p style="color: #999; font-size: 12px;">
-        This invitation is valid until the campaign ends${campaign.end_date ? ` on ${new Date(campaign.end_date).toLocaleDateString()}` : ''}. Please register and complete your attestation as soon as possible.
-      </p>
-    `;
-    
-    const textContent = `Asset Attestation Required
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">
+          This invitation is valid until the campaign ends${campaign.end_date ? ` on ${new Date(campaign.end_date).toLocaleDateString()}` : ''}. Please register and complete your attestation as soon as possible.
+        </p>
+      `;
+      
+      textContent = `Asset Attestation Required
 
 Hello ${fullName},
 
@@ -816,6 +845,7 @@ Option 2: Register Manually
 ` : ''}Create your account here: ${manualRegisterUrl}
 
 This invitation is valid until the campaign ends${campaign.end_date ? ` on ${new Date(campaign.end_date).toLocaleDateString()}` : ''}. Please register and complete your attestation as soon as possible.`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
@@ -869,38 +899,66 @@ export const sendAttestationUnregisteredReminder = async (email, firstName, last
     const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'there';
     const assetText = assetCount === 1 ? '1 asset' : `${assetCount} assets`;
     
-    const subject = `Reminder: Register for Asset Attestation - ${campaign.name}`;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_unregistered_reminder');
     
-    const ssoSection = ssoEnabled ? `
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${ssoLoginUrl}" style="background-color: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; margin: 0 10px;">🔐 ${ssoButtonText}</a>
-        <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; margin: 0 10px;">Register Manually</a>
-      </div>
-    ` : `
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Register Now</a>
-      </div>
-    `;
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      firstName: firstName || 'there',
+      lastName: lastName || '',
+      fullName,
+      assetCount,
+      assetText,
+      campaignName: campaign.name,
+      endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      registerUrl: manualRegisterUrl,
+      ssoLoginUrl,
+      ssoButtonText,
+      ssoEnabled: ssoEnabled ? 'true' : 'false'
+    };
     
-    const emailContent = `
-      <h2 style="color: #333;">⏰ Attestation Reminder</h2>
-      <p>Hello ${fullName},</p>
-      <p>This is a friendly reminder that you still need to register to complete your asset attestation.</p>
-      <div style="background-color: #DBEAFE; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0; color: #1E40AF;"><strong>Campaign:</strong> ${campaign.name}</p>
-        <p style="margin: 5px 0 0 0; color: #1E40AF;"><strong>Assets awaiting attestation:</strong> ${assetText}</p>
-        ${campaign.end_date ? `<p style="margin: 5px 0 0 0; color: #1E40AF;"><strong>Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>` : ''}
-      </div>
-      <p>Please register for your ${siteName} account to complete your attestation:</p>
-      ${ssoSection}
-      <p style="color: #666; font-size: 14px;">
-        If the buttons don't work, you can copy and paste these links:<br>
-        ${ssoEnabled ? `SSO: <a href="${ssoLoginUrl}" style="color: #3B82F6;">${ssoLoginUrl}</a><br>` : ''}
-        Manual: <a href="${manualRegisterUrl}" style="color: #3B82F6;">${manualRegisterUrl}</a>
-      </p>
-    `;
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
     
-    const textContent = `Attestation Reminder
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Reminder: Register for Asset Attestation - ${campaign.name}`;
+      
+      const ssoSection = ssoEnabled ? `
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${ssoLoginUrl}" style="background-color: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; margin: 0 10px;">🔐 ${ssoButtonText}</a>
+          <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; margin: 0 10px;">Register Manually</a>
+        </div>
+      ` : `
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${manualRegisterUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Register Now</a>
+        </div>
+      `;
+      
+      emailContent = `
+        <h2 style="color: #333;">⏰ Attestation Reminder</h2>
+        <p>Hello ${fullName},</p>
+        <p>This is a friendly reminder that you still need to register to complete your asset attestation.</p>
+        <div style="background-color: #DBEAFE; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #1E40AF;"><strong>Campaign:</strong> ${campaign.name}</p>
+          <p style="margin: 5px 0 0 0; color: #1E40AF;"><strong>Assets awaiting attestation:</strong> ${assetText}</p>
+          ${campaign.end_date ? `<p style="margin: 5px 0 0 0; color: #1E40AF;"><strong>Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>` : ''}
+        </div>
+        <p>Please register for your ${siteName} account to complete your attestation:</p>
+        ${ssoSection}
+        <p style="color: #666; font-size: 14px;">
+          If the buttons don't work, you can copy and paste these links:<br>
+          ${ssoEnabled ? `SSO: <a href="${ssoLoginUrl}" style="color: #3B82F6;">${ssoLoginUrl}</a><br>` : ''}
+          Manual: <a href="${manualRegisterUrl}" style="color: #3B82F6;">${manualRegisterUrl}</a>
+        </p>
+      `;
+      
+      textContent = `Attestation Reminder
 
 Hello ${fullName},
 
@@ -913,6 +971,7 @@ ${campaign.end_date ? `Deadline: ${new Date(campaign.end_date).toLocaleDateStrin
 Please register for your ${siteName} account to complete your attestation:
 
 ${ssoEnabled ? `SSO Login: ${ssoLoginUrl}\n\n` : ''}Register Manually: ${manualRegisterUrl}`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
@@ -958,26 +1017,49 @@ export const sendAttestationUnregisteredEscalation = async (managerEmail, manage
     
     const assetText = assetCount === 1 ? '1 asset' : `${assetCount} assets`;
     
-    const subject = `Manager Alert: Team Member Not Registered for Attestation - ${campaign.name}`;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_unregistered_escalation');
     
-    const emailContent = `
-      <h2 style="color: #333;">👤 Team Member Registration Required</h2>
-      <p>Hello ${managerName || 'Manager'},</p>
-      <p>One of your team members has not yet registered for ${siteName} to complete their asset attestation.</p>
-      <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0; color: #92400E;"><strong>Team Member:</strong> ${employeeName} (${employeeEmail})</p>
-        <p style="margin: 5px 0 0 0; color: #92400E;"><strong>Campaign:</strong> ${campaign.name}</p>
-        <p style="margin: 5px 0 0 0; color: #92400E;"><strong>Assets pending attestation:</strong> ${assetText}</p>
-      </div>
-      <p>Please remind <strong>${employeeName}</strong> to register and complete their asset attestation. They should have received an invitation email with registration instructions.</p>
-      <p style="color: #666; font-size: 14px;">If they did not receive the invitation email, they can contact support or use the registration link provided in the campaign details.</p>
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p style="color: #999; font-size: 12px;">
-        This is an automated escalation notification to help ensure timely completion of asset attestations.
-      </p>
-    `;
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      managerName: managerName || 'Manager',
+      employeeEmail,
+      employeeName,
+      campaignName: campaign.name,
+      assetCount,
+      assetText
+    };
     
-    const textContent = `Team Member Registration Required
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Manager Alert: Team Member Not Registered for Attestation - ${campaign.name}`;
+      
+      emailContent = `
+        <h2 style="color: #333;">👤 Team Member Registration Required</h2>
+        <p>Hello ${managerName || 'Manager'},</p>
+        <p>One of your team members has not yet registered for ${siteName} to complete their asset attestation.</p>
+        <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #92400E;"><strong>Team Member:</strong> ${employeeName} (${employeeEmail})</p>
+          <p style="margin: 5px 0 0 0; color: #92400E;"><strong>Campaign:</strong> ${campaign.name}</p>
+          <p style="margin: 5px 0 0 0; color: #92400E;"><strong>Assets pending attestation:</strong> ${assetText}</p>
+        </div>
+        <p>Please remind <strong>${employeeName}</strong> to register and complete their asset attestation. They should have received an invitation email with registration instructions.</p>
+        <p style="color: #666; font-size: 14px;">If they did not receive the invitation email, they can contact support or use the registration link provided in the campaign details.</p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">
+          This is an automated escalation notification to help ensure timely completion of asset attestations.
+        </p>
+      `;
+      
+      textContent = `Team Member Registration Required
 
 Hello ${managerName || 'Manager'},
 
@@ -990,6 +1072,7 @@ Assets pending attestation: ${assetText}
 Please remind ${employeeName} to register and complete their asset attestation. They should have received an invitation email with registration instructions.
 
 This is an automated escalation notification to help ensure timely completion of asset attestations.`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,
@@ -1034,28 +1117,50 @@ export const sendAttestationReadyEmail = async (email, firstName, campaign) => {
     const baseUrl = await getAppUrl();
     const attestationUrl = `${baseUrl}/my-attestations`;
     
-    const subject = `Welcome! Your Attestation is Ready - ${campaign.name}`;
+    // Try to get template from database
+    const template = await emailTemplateDb.getByKey('attestation_ready');
     
-    const emailContent = `
-      <h2 style="color: #333;">✅ Account Created Successfully</h2>
-      <p>Welcome ${firstName}!</p>
-      <p>Your ${siteName} account has been created and your pending attestation is now ready to complete.</p>
-      <div style="background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0; color: #065F46;"><strong>Campaign:</strong> ${campaign.name}</p>
-        ${campaign.description ? `<p style="margin: 5px 0 0 0; color: #065F46;">${campaign.description}</p>` : ''}
-        ${campaign.end_date ? `<p style="margin: 5px 0 0 0; color: #065F46;"><strong>Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>` : ''}
-      </div>
-      <p>You can now log in and complete your asset attestation:</p>
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${attestationUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Complete Attestation</a>
-      </div>
-      <p style="color: #666; font-size: 14px;">
-        If the button doesn't work, copy and paste this link:<br>
-        <a href="${attestationUrl}" style="color: #3B82F6; word-break: break-all;">${attestationUrl}</a>
-      </p>
-    `;
+    // Prepare variables for substitution
+    const variables = {
+      siteName,
+      firstName: firstName || '',
+      campaignName: campaign.name,
+      campaignDescription: campaign.description || '',
+      endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : '',
+      attestationUrl
+    };
     
-    const textContent = `Account Created Successfully
+    // Use template if available, otherwise fall back to hardcoded default
+    let subject, emailContent, textContent;
+    
+    if (template) {
+      subject = substituteVariables(template.subject, variables);
+      emailContent = substituteVariables(template.html_body, variables);
+      textContent = substituteVariables(template.text_body, variables);
+    } else {
+      // Fallback to hardcoded template
+      subject = `Welcome! Your Attestation is Ready - ${campaign.name}`;
+      
+      emailContent = `
+        <h2 style="color: #333;">✅ Account Created Successfully</h2>
+        <p>Welcome ${firstName}!</p>
+        <p>Your ${siteName} account has been created and your pending attestation is now ready to complete.</p>
+        <div style="background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #065F46;"><strong>Campaign:</strong> ${campaign.name}</p>
+          ${campaign.description ? `<p style="margin: 5px 0 0 0; color: #065F46;">${campaign.description}</p>` : ''}
+          ${campaign.end_date ? `<p style="margin: 5px 0 0 0; color: #065F46;"><strong>Deadline:</strong> ${new Date(campaign.end_date).toLocaleDateString()}</p>` : ''}
+        </div>
+        <p>You can now log in and complete your asset attestation:</p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${attestationUrl}" style="background-color: #3B82F6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">Complete Attestation</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">
+          If the button doesn't work, copy and paste this link:<br>
+          <a href="${attestationUrl}" style="color: #3B82F6; word-break: break-all;">${attestationUrl}</a>
+        </p>
+      `;
+      
+      textContent = `Account Created Successfully
 
 Welcome ${firstName}!
 
@@ -1065,6 +1170,7 @@ Campaign: ${campaign.name}
 ${campaign.description ? campaign.description + '\n' : ''}${campaign.end_date ? `Deadline: ${new Date(campaign.end_date).toLocaleDateString()}` : ''}
 
 You can now log in and complete your asset attestation: ${attestationUrl}`;
+    }
     
     const mailOptions = {
       from: `"${settings.from_name || `${siteName} Notifications`}" <${settings.from_email}>`,

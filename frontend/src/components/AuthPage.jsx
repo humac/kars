@@ -2,8 +2,8 @@ import { useState } from 'react';
 import Login from './Login';
 import Register from './Register';
 
-const AuthPage = () => {
-  const [showLogin, setShowLogin] = useState(true);
+const AuthPage = ({ initialMode = 'login' }) => {
+  const [showLogin, setShowLogin] = useState(initialMode === 'login');
 
   return showLogin ? (
     <Login onSwitchToRegister={() => setShowLogin(false)} />
