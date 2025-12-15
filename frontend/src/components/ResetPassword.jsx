@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, CheckCircle2, Lock, Loader2 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -15,7 +15,10 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState(false);
   const navigate = useNavigate();
-  const { token } = useParams();
+  const location = useLocation();
+  
+  // Extract token from pathname since this route is not handled by React Router
+  const token = location.pathname.split('/reset-password/')[1];
 
   useEffect(() => {
     const verifyToken = async () => {

@@ -27,11 +27,14 @@ const substituteVariables = (template, variables) => {
 
 /**
  * Gets the app URL with fallback chain: branding.app_url -> FRONTEND_URL -> BASE_URL -> localhost
+ * Ensures no trailing slash is present
  * @returns {Promise<string>} The app URL to use for email links
  */
 export const getAppUrl = async () => {
   const branding = await brandingSettingsDb.get();
-  return branding?.app_url || process.env.FRONTEND_URL || process.env.BASE_URL || 'http://localhost:3000';
+  const url = branding?.app_url || process.env.FRONTEND_URL || process.env.BASE_URL || 'http://localhost:3000';
+  // Remove trailing slash to prevent double slashes in constructed URLs
+  return url.replace(/\/+$/, '');
 };
 
 /**
