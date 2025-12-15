@@ -146,4 +146,123 @@ describe('Attestation DB Tables', () => {
     const campaignBackToNull = await attestationCampaignDb.getById(campaign.id);
     expect(campaignBackToNull.end_date).toBeNull();
   });
+
+  it('should create and manage company-scoped campaigns', async () => {
+    const timestamp = Date.now();
+    
+    // Create admin user
+    const admin = await userDb.create({
+      email: `admin-companies-${timestamp}@test.com`,
+      password_hash: 'hash',
+      name: 'Test Admin',
+      role: 'admin'
+    });
+    expect(admin.id).toBeDefined();
+
+    // Create employee users
+    const employee1Email = `employee1-${timestamp}@test.com`;
+    const employee1 = await userDb.create({
+      email: employee1Email,
+      password_hash: 'hash',
+      name: 'Employee 1',
+      role: 'employee',
+      first_name: 'Employee',
+      last_name: 'One'
+    });
+    
+    const employee2Email = `employee2-${timestamp}@test.com`;
+    const employee2 = await userDb.create({
+      email: employee2Email,
+      password_hash: 'hash',
+      name: 'Employee 2',
+      role: 'employee',
+      first_name: 'Employee',
+      last_name: 'Two'
+    });
+
+    // Create companies
+    const { companyDb } = await import('./database.js');
+    const company1 = await companyDb.create({ name: `Company A ${timestamp}` });
+    const company2 = await companyDb.create({ name: `Company B ${timestamp}` });
+    expect(company1.id).toBeDefined();
+    expect(company2.id).toBeDefined();
+
+    // Create assets for employees in different companies
+    const asset1 = await assetDb.create({
+      employee_email: employee1Email,
+      employee_first_name: 'Employee',
+      employee_last_name: 'One',
+      company_id: company1.id,
+      asset_type: 'Laptop',
+      make: 'Dell',
+      model: 'XPS',
+      serial_number: `SN-${timestamp}-1`,
+      asset_tag: `TAG-${timestamp}-1`,
+      status: 'active'
+    });
+
+    const asset2 = await assetDb.create({
+      employee_email: employee2Email,
+      employee_first_name: 'Employee',
+      employee_last_name: 'Two',
+      company_id: company2.id,
+      asset_type: 'Laptop',
+      make: 'HP',
+      model: 'ProBook',
+      serial_number: `SN-${timestamp}-2`,
+      asset_tag: `TAG-${timestamp}-2`,
+      status: 'active'
+    });
+    
+    expect(asset1.id).toBeDefined();
+    expect(asset2.id).toBeDefined();
+
+    // Test: Create campaign targeting Company A only
+    const campaign = await attestationCampaignDb.create({
+      name: 'Company A Campaign',
+      description: 'Campaign for Company A employees only',
+      start_date: new Date().toISOString(),
+      end_date: null,
+      reminder_days: 7,
+      escalation_days: 10,
+      target_type: 'companies',
+      target_company_ids: JSON.stringify([company1.id]),
+      created_by: admin.id
+    });
+    expect(campaign.id).toBeDefined();
+
+    // Retrieve campaign and verify target_company_ids
+    const retrievedCampaign = await attestationCampaignDb.getById(campaign.id);
+    expect(retrievedCampaign).toBeDefined();
+    expect(retrievedCampaign.target_type).toBe('companies');
+    expect(retrievedCampaign.target_company_ids).toBe(JSON.stringify([company1.id]));
+
+    // Test: Get registered owners by company IDs
+    const ownersCompany1 = await assetDb.getRegisteredOwnersByCompanyIds([company1.id]);
+    expect(ownersCompany1.length).toBe(1);
+    expect(ownersCompany1[0].email).toBe(employee1Email);
+
+    const ownersCompany2 = await assetDb.getRegisteredOwnersByCompanyIds([company2.id]);
+    expect(ownersCompany2.length).toBe(1);
+    expect(ownersCompany2[0].email).toBe(employee2Email);
+
+    const ownersAllCompanies = await assetDb.getRegisteredOwnersByCompanyIds([company1.id, company2.id]);
+    expect(ownersAllCompanies.length).toBe(2);
+
+    // Test: Update campaign to target both companies
+    await attestationCampaignDb.update(campaign.id, {
+      target_company_ids: JSON.stringify([company1.id, company2.id])
+    });
+    const updatedCampaign = await attestationCampaignDb.getById(campaign.id);
+    expect(updatedCampaign.target_company_ids).toBe(JSON.stringify([company1.id, company2.id]));
+
+    // Test: Update campaign to change target_type back to 'all'
+    await attestationCampaignDb.update(campaign.id, {
+      target_type: 'all',
+      target_company_ids: null
+    });
+    const campaignAll = await attestationCampaignDb.getById(campaign.id);
+    expect(campaignAll.target_type).toBe('all');
+    expect(campaignAll.target_company_ids).toBeNull();
+  });
 });

@@ -819,6 +819,7 @@ const initDb = async () => {
       escalation_days INTEGER DEFAULT 10,
       target_type TEXT NOT NULL DEFAULT 'all',
       target_user_ids TEXT,
+      target_company_ids TEXT,
       created_by INTEGER NOT NULL REFERENCES users(id),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -835,6 +836,7 @@ const initDb = async () => {
       escalation_days INTEGER DEFAULT 10,
       target_type TEXT NOT NULL DEFAULT 'all',
       target_user_ids TEXT,
+      target_company_ids TEXT,
       created_by INTEGER NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -1219,6 +1221,14 @@ const initDb = async () => {
       await dbRun("ALTER TABLE attestation_campaigns ADD COLUMN target_type TEXT NOT NULL DEFAULT 'all'");
       await dbRun("ALTER TABLE attestation_campaigns ADD COLUMN target_user_ids TEXT");
       console.log('Migration complete: Added target_type and target_user_ids columns');
+    }
+    
+    // Add target_company_ids column
+    const hasTargetCompanyIds = campaignCols.some(col => col.name === 'target_company_ids');
+    if (!hasTargetCompanyIds) {
+      console.log('Migrating attestation_campaigns table: adding target_company_ids column...');
+      await dbRun("ALTER TABLE attestation_campaigns ADD COLUMN target_company_ids TEXT");
+      console.log('Migration complete: Added target_company_ids column');
     }
   } catch (err) {
     console.error('Migration error (attestation_campaigns targeting columns):', err.message);
@@ -1694,6 +1704,31 @@ export const assetDb = {
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
+  },
+  getRegisteredOwnersByCompanyIds: async (companyIds) => {
+    // Get unique registered users (via owner_id) who own assets in the specified companies
+    if (!companyIds || companyIds.length === 0) {
+      return [];
+    }
+    
+    // Validate that all company IDs are valid integers
+    const validatedIds = companyIds.filter(id => Number.isInteger(Number(id)) && Number(id) > 0);
+    if (validatedIds.length === 0) {
+      return [];
+    }
+    
+    const placeholders = validatedIds.map((_, i) => isPostgres ? `$${i + 1}` : '?').join(', ');
+    const query = `
+      SELECT DISTINCT users.*
+      FROM users
+      INNER JOIN assets ON users.id = assets.owner_id
+      WHERE assets.company_id IN (${placeholders})
+        AND users.id IS NOT NULL
+      ORDER BY users.email
+    `;
+    
+    const rows = await dbAll(query, validatedIds);
+    return rows;
   },
   linkAssetsToUser: async (employeeEmail, managerFirstName, managerLastName, managerEmail) => {
     const now = new Date().toISOString();
@@ -2950,18 +2985,18 @@ export const attestationCampaignDb = {
     
     if (isPostgres) {
       const result = await dbRun(
-        `INSERT INTO attestation_campaigns (name, description, start_date, end_date, status, reminder_days, escalation_days, target_type, target_user_ids, created_by, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+        `INSERT INTO attestation_campaigns (name, description, start_date, end_date, status, reminder_days, escalation_days, target_type, target_user_ids, target_company_ids, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
         [campaign.name, campaign.description, campaign.start_date, endDate, campaign.status || 'draft', 
-         campaign.reminder_days || 7, campaign.escalation_days || 10, campaign.target_type || 'all', campaign.target_user_ids || null, campaign.created_by, now, now]
+         campaign.reminder_days || 7, campaign.escalation_days || 10, campaign.target_type || 'all', campaign.target_user_ids || null, campaign.target_company_ids || null, campaign.created_by, now, now]
       );
       return { id: result.rows[0].id };
     } else {
       const result = await dbRun(
-        `INSERT INTO attestation_campaigns (name, description, start_date, end_date, status, reminder_days, escalation_days, target_type, target_user_ids, created_by, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO attestation_campaigns (name, description, start_date, end_date, status, reminder_days, escalation_days, target_type, target_user_ids, target_company_ids, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [campaign.name, campaign.description, campaign.start_date, endDate, campaign.status || 'draft',
-         campaign.reminder_days || 7, campaign.escalation_days || 10, campaign.target_type || 'all', campaign.target_user_ids || null, campaign.created_by, now, now]
+         campaign.reminder_days || 7, campaign.escalation_days || 10, campaign.target_type || 'all', campaign.target_user_ids || null, campaign.target_company_ids || null, campaign.created_by, now, now]
       );
       return { id: result.lastInsertRowid };
     }
@@ -3024,6 +3059,18 @@ export const attestationCampaignDb = {
     if (updates.escalation_days !== undefined) {
       fields.push(isPostgres ? `escalation_days = $${fields.length + 1}` : 'escalation_days = ?');
       params.push(updates.escalation_days);
+    }
+    if (updates.target_type !== undefined) {
+      fields.push(isPostgres ? `target_type = $${fields.length + 1}` : 'target_type = ?');
+      params.push(updates.target_type);
+    }
+    if (updates.target_user_ids !== undefined) {
+      fields.push(isPostgres ? `target_user_ids = $${fields.length + 1}` : 'target_user_ids = ?');
+      params.push(updates.target_user_ids);
+    }
+    if (updates.target_company_ids !== undefined) {
+      fields.push(isPostgres ? `target_company_ids = $${fields.length + 1}` : 'target_company_ids = ?');
+      params.push(updates.target_company_ids);
     }
     
     fields.push(isPostgres ? `updated_at = $${fields.length + 1}` : 'updated_at = ?');

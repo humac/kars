@@ -4683,20 +4683,25 @@ app.get('/api/reports/trends', authenticate, async (req, res) => {
 // Create new attestation campaign (Admin only)
 app.post('/api/attestation/campaigns', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const { name, description, start_date, end_date, reminder_days, escalation_days, target_type, target_user_ids } = req.body;
+    const { name, description, start_date, end_date, reminder_days, escalation_days, target_type, target_user_ids, target_company_ids } = req.body;
     
     if (!name || !start_date) {
       return res.status(400).json({ error: 'Campaign name and start date are required' });
     }
     
     // Validate target_type
-    if (target_type && !['all', 'selected'].includes(target_type)) {
-      return res.status(400).json({ error: 'Invalid target_type. Must be "all" or "selected"' });
+    if (target_type && !['all', 'selected', 'companies'].includes(target_type)) {
+      return res.status(400).json({ error: 'Invalid target_type. Must be "all", "selected", or "companies"' });
     }
     
     // Validate target_user_ids if target_type is 'selected'
     if (target_type === 'selected' && (!target_user_ids || !Array.isArray(target_user_ids) || target_user_ids.length === 0)) {
       return res.status(400).json({ error: 'target_user_ids is required when target_type is "selected"' });
+    }
+    
+    // Validate target_company_ids if target_type is 'companies'
+    if (target_type === 'companies' && (!target_company_ids || !Array.isArray(target_company_ids) || target_company_ids.length === 0)) {
+      return res.status(400).json({ error: 'target_company_ids is required when target_type is "companies"' });
     }
     
     const campaign = {
@@ -4709,17 +4714,25 @@ app.post('/api/attestation/campaigns', authenticate, authorize('admin'), async (
       escalation_days: escalation_days || 10,
       target_type: target_type || 'all',
       target_user_ids: target_type === 'selected' ? JSON.stringify(target_user_ids) : null,
+      target_company_ids: target_type === 'companies' ? JSON.stringify(target_company_ids) : null,
       created_by: req.user.id
     };
     
     const result = await attestationCampaignDb.create(campaign);
+    
+    let targetingInfo = campaign.target_type;
+    if (target_type === 'selected') {
+      targetingInfo += `, ${target_user_ids.length} users`;
+    } else if (target_type === 'companies') {
+      targetingInfo += `, ${target_company_ids.length} companies`;
+    }
     
     await auditDb.log(
       'create',
       'attestation_campaign',
       result.id,
       name,
-      `Created attestation campaign: ${name} (targeting: ${campaign.target_type}${target_type === 'selected' ? `, ${target_user_ids.length} users` : ''})`,
+      `Created attestation campaign: ${name} (targeting: ${targetingInfo})`,
       req.user.email
     );
     
@@ -4773,7 +4786,7 @@ app.get('/api/attestation/campaigns/:id', authenticate, authorize('admin'), asyn
 // Update campaign (Admin only)
 app.put('/api/attestation/campaigns/:id', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const { name, description, start_date, end_date, reminder_days, escalation_days, status } = req.body;
+    const { name, description, start_date, end_date, reminder_days, escalation_days, status, target_type, target_user_ids, target_company_ids } = req.body;
     
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -4783,6 +4796,13 @@ app.put('/api/attestation/campaigns/:id', authenticate, authorize('admin'), asyn
     if (reminder_days !== undefined) updates.reminder_days = reminder_days;
     if (escalation_days !== undefined) updates.escalation_days = escalation_days;
     if (status !== undefined) updates.status = status;
+    if (target_type !== undefined) updates.target_type = target_type;
+    if (target_user_ids !== undefined) {
+      updates.target_user_ids = target_user_ids && Array.isArray(target_user_ids) ? JSON.stringify(target_user_ids) : null;
+    }
+    if (target_company_ids !== undefined) {
+      updates.target_company_ids = target_company_ids && Array.isArray(target_company_ids) ? JSON.stringify(target_company_ids) : null;
+    }
     
     await attestationCampaignDb.update(req.params.id, updates);
     
@@ -4817,17 +4837,44 @@ app.post('/api/attestation/campaigns/:id/start', authenticate, authorize('admin'
     }
     
     // Get users based on targeting
-    let users = await userDb.getAll();
+    let users = [];
     
-    // Filter users if target_type is 'selected'
-    if (campaign.target_type === 'selected' && campaign.target_user_ids) {
+    if (campaign.target_type === 'companies' && campaign.target_company_ids) {
+      // Get users who own assets in the specified companies
+      try {
+        const companyIds = JSON.parse(campaign.target_company_ids);
+        
+        // Validate that company IDs exist
+        const companies = await companyDb.getAll();
+        const validCompanyIds = companyIds.filter(id => companies.some(c => c.id === id));
+        
+        if (validCompanyIds.length === 0) {
+          return res.status(400).json({ error: 'No valid companies found for the selected company IDs' });
+        }
+        
+        // Get registered owners by company IDs
+        users = await assetDb.getRegisteredOwnersByCompanyIds(validCompanyIds);
+        
+        if (users.length === 0) {
+          return res.status(400).json({ error: 'No users with assets found in the selected companies' });
+        }
+      } catch (parseError) {
+        console.error('Error parsing target_company_ids:', parseError);
+        return res.status(500).json({ error: 'Invalid target company IDs format' });
+      }
+    } else if (campaign.target_type === 'selected' && campaign.target_user_ids) {
+      // Filter users by selected user IDs
       try {
         const targetIds = JSON.parse(campaign.target_user_ids);
-        users = users.filter(u => targetIds.includes(u.id));
+        const allUsers = await userDb.getAll();
+        users = allUsers.filter(u => targetIds.includes(u.id));
       } catch (parseError) {
         console.error('Error parsing target_user_ids:', parseError);
         return res.status(500).json({ error: 'Invalid target user IDs format' });
       }
+    } else {
+      // Default: all users
+      users = await userDb.getAll();
     }
     
     // Create attestation records for targeted users

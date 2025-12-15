@@ -73,12 +73,15 @@ export default function AttestationPage() {
     reminder_days: 7,
     escalation_days: 10,
     target_type: 'all',
-    target_user_ids: []
+    target_user_ids: [],
+    target_company_ids: []
   });
   
   const [wizardStep, setWizardStep] = useState(1);
   const [availableUsers, setAvailableUsers] = useState([]);
+  const [availableCompanies, setAvailableCompanies] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [companySearchQuery, setCompanySearchQuery] = useState('');
   
   // Alert dialog states
   const [showStartDialog, setShowStartDialog] = useState(false);
@@ -99,9 +102,26 @@ export default function AttestationPage() {
     }
   };
 
+  // Helper function to parse target_company_ids
+  const parseTargetCompanyIds = (targetCompanyIds) => {
+    if (!targetCompanyIds) return [];
+    try {
+      return typeof targetCompanyIds === 'string' ? JSON.parse(targetCompanyIds) : targetCompanyIds;
+    } catch (error) {
+      console.error('Error parsing target_company_ids:', error);
+      return [];
+    }
+  };
+
   // Helper function to get user count message for campaign start
   const getStartCampaignMessage = (campaign) => {
     if (!campaign) return '';
+    
+    if (campaign.target_type === 'companies' && campaign.target_company_ids) {
+      const companyIds = parseTargetCompanyIds(campaign.target_company_ids);
+      const count = companyIds.length;
+      return `Emails will be sent to employees with assets in ${count} selected compan${count !== 1 ? 'ies' : 'y'}.`;
+    }
     
     if (campaign.target_type === 'selected' && campaign.target_user_ids) {
       const targetIds = parseTargetUserIds(campaign.target_user_ids);
@@ -189,6 +209,32 @@ export default function AttestationPage() {
     }
   };
 
+  const loadCompanies = async () => {
+    try {
+      const res = await fetch('/api/companies/names', {
+        headers: { ...getAuthHeaders() }
+      });
+      if (!res.ok) throw new Error('Failed to load companies');
+      const data = await res.json();
+      setAvailableCompanies(data.companies || []);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load companies',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Helper function to filter companies by search query
+  const filterCompaniesBySearch = (companies, searchQuery) => {
+    return companies.filter(c => 
+      searchQuery === '' ||
+      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
   const handleCreateCampaign = async () => {
     try {
       const res = await fetch('/api/attestation/campaigns', {
@@ -214,9 +260,11 @@ export default function AttestationPage() {
         reminder_days: 7,
         escalation_days: 10,
         target_type: 'all',
-        target_user_ids: []
+        target_user_ids: [],
+        target_company_ids: []
       });
       setUserSearchQuery('');
+      setCompanySearchQuery('');
       loadCampaigns();
     } catch (err) {
       console.error(err);
@@ -335,8 +383,9 @@ export default function AttestationPage() {
   };
 
   const handleEditCampaignClick = (campaign) => {
-    // Parse target_user_ids using helper function
+    // Parse target_user_ids and target_company_ids using helper functions
     const targetUserIds = parseTargetUserIds(campaign.target_user_ids);
+    const targetCompanyIds = parseTargetCompanyIds(campaign.target_company_ids);
 
     setEditingCampaign(campaign);
     setFormData({
@@ -347,7 +396,8 @@ export default function AttestationPage() {
       reminder_days: campaign.reminder_days || 7,
       escalation_days: campaign.escalation_days || 10,
       target_type: campaign.target_type || 'all',
-      target_user_ids: targetUserIds
+      target_user_ids: targetUserIds,
+      target_company_ids: targetCompanyIds
     });
     setWizardStep(1);
     setShowEditModal(true);
@@ -355,6 +405,11 @@ export default function AttestationPage() {
     // Load users if target type is selected
     if (campaign.target_type === 'selected' && availableUsers.length === 0) {
       loadUsers();
+    }
+    
+    // Load companies if target type is companies
+    if (campaign.target_type === 'companies' && availableCompanies.length === 0) {
+      loadCompanies();
     }
   };
 
@@ -384,9 +439,11 @@ export default function AttestationPage() {
         reminder_days: 7,
         escalation_days: 10,
         target_type: 'all',
-        target_user_ids: []
+        target_user_ids: [],
+        target_company_ids: []
       });
       setUserSearchQuery('');
+      setCompanySearchQuery('');
       loadCampaigns();
     } catch (err) {
       console.error(err);
@@ -771,9 +828,12 @@ export default function AttestationPage() {
               <RadioGroup
                 value={formData.target_type}
                 onValueChange={(value) => {
-                  setFormData({ ...formData, target_type: value, target_user_ids: [] });
+                  setFormData({ ...formData, target_type: value, target_user_ids: [], target_company_ids: [] });
                   if (value === 'selected' && availableUsers.length === 0) {
                     loadUsers();
+                  }
+                  if (value === 'companies' && availableCompanies.length === 0) {
+                    loadCompanies();
                   }
                 }}
               >
@@ -792,6 +852,15 @@ export default function AttestationPage() {
                     <div className="font-medium">Select Specific Employees</div>
                     <div className="text-sm text-muted-foreground">
                       Choose individual employees to receive the attestation request
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                  <RadioGroupItem value="companies" id="target-companies" />
+                  <Label htmlFor="target-companies" className="flex-1 cursor-pointer">
+                    <div className="font-medium">By Company</div>
+                    <div className="text-sm text-muted-foreground">
+                      Send attestation to employees with assets in specific companies
                     </div>
                   </Label>
                 </div>
@@ -859,6 +928,63 @@ export default function AttestationPage() {
                   )}
                 </div>
               )}
+              
+              {formData.target_type === 'companies' && (
+                <div className="space-y-3 mt-4">
+                  <div>
+                    <Label htmlFor="company-search">Search Companies</Label>
+                    <Input
+                      id="company-search"
+                      type="text"
+                      placeholder="Search by company name..."
+                      value={companySearchQuery}
+                      onChange={(e) => setCompanySearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  {availableCompanies.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading companies...
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg max-h-64 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        {filterCompaniesBySearch(availableCompanies, companySearchQuery)
+                          .map((c) => (
+                            <div
+                              key={c.id}
+                              className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                              onClick={() => {
+                                const isSelected = formData.target_company_ids.includes(c.id);
+                                setFormData({
+                                  ...formData,
+                                  target_company_ids: isSelected
+                                    ? formData.target_company_ids.filter(id => id !== c.id)
+                                    : [...formData.target_company_ids, c.id]
+                                });
+                              }}
+                            >
+                              <Checkbox
+                                checked={formData.target_company_ids.includes(c.id)}
+                                readOnly
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{c.name}</div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {formData.target_company_ids.length > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      Selected: {formData.target_company_ids.length} compan{formData.target_company_ids.length !== 1 ? 'ies' : 'y'}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
@@ -885,7 +1011,10 @@ export default function AttestationPage() {
                 </Button>
                 <Button 
                   onClick={handleCreateCampaign}
-                  disabled={formData.target_type === 'selected' && formData.target_user_ids.length === 0}
+                  disabled={
+                    (formData.target_type === 'selected' && formData.target_user_ids.length === 0) ||
+                    (formData.target_type === 'companies' && formData.target_company_ids.length === 0)
+                  }
                 >
                   Create Campaign
                 </Button>
@@ -1016,6 +1145,7 @@ export default function AttestationPage() {
         if (!open) {
           setWizardStep(1);
           setUserSearchQuery('');
+          setCompanySearchQuery('');
           setEditingCampaign(null);
         }
       }}>
@@ -1106,9 +1236,12 @@ export default function AttestationPage() {
               <RadioGroup
                 value={formData.target_type}
                 onValueChange={(value) => {
-                  setFormData({ ...formData, target_type: value, target_user_ids: [] });
+                  setFormData({ ...formData, target_type: value, target_user_ids: [], target_company_ids: [] });
                   if (value === 'selected' && availableUsers.length === 0) {
                     loadUsers();
+                  }
+                  if (value === 'companies' && availableCompanies.length === 0) {
+                    loadCompanies();
                   }
                 }}
               >
@@ -1127,6 +1260,15 @@ export default function AttestationPage() {
                     <div className="font-medium">Select Specific Employees</div>
                     <div className="text-sm text-muted-foreground">
                       Choose individual employees to receive the attestation request
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                  <RadioGroupItem value="companies" id="edit-target-companies" />
+                  <Label htmlFor="edit-target-companies" className="flex-1 cursor-pointer">
+                    <div className="font-medium">By Company</div>
+                    <div className="text-sm text-muted-foreground">
+                      Send attestation to employees with assets in specific companies
                     </div>
                   </Label>
                 </div>
@@ -1194,6 +1336,63 @@ export default function AttestationPage() {
                   )}
                 </div>
               )}
+              
+              {formData.target_type === 'companies' && (
+                <div className="space-y-3 mt-4">
+                  <div>
+                    <Label htmlFor="edit-company-search">Search Companies</Label>
+                    <Input
+                      id="edit-company-search"
+                      type="text"
+                      placeholder="Search by company name..."
+                      value={companySearchQuery}
+                      onChange={(e) => setCompanySearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  {availableCompanies.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading companies...
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg max-h-64 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        {filterCompaniesBySearch(availableCompanies, companySearchQuery)
+                          .map((c) => (
+                            <div
+                              key={c.id}
+                              className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                              onClick={() => {
+                                const isSelected = formData.target_company_ids.includes(c.id);
+                                setFormData({
+                                  ...formData,
+                                  target_company_ids: isSelected
+                                    ? formData.target_company_ids.filter(id => id !== c.id)
+                                    : [...formData.target_company_ids, c.id]
+                                });
+                              }}
+                            >
+                              <Checkbox
+                                checked={formData.target_company_ids.includes(c.id)}
+                                readOnly
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{c.name}</div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {formData.target_company_ids.length > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      Selected: {formData.target_company_ids.length} compan{formData.target_company_ids.length !== 1 ? 'ies' : 'y'}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
@@ -1221,7 +1420,10 @@ export default function AttestationPage() {
                 </Button>
                 <Button 
                   onClick={handleUpdateCampaign}
-                  disabled={formData.target_type === 'selected' && formData.target_user_ids.length === 0}
+                  disabled={
+                    (formData.target_type === 'selected' && formData.target_user_ids.length === 0) ||
+                    (formData.target_type === 'companies' && formData.target_company_ids.length === 0)
+                  }
                 >
                   Update Campaign
                 </Button>
