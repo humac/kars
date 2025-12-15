@@ -42,19 +42,9 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
   const isAdmin = user && user.role === 'admin';
   const isManager = user && user.role === 'manager';
   
-  // Parse manager name into first and last if available
-  const getManagerNames = () => {
-    if (user?.manager_name) {
-      const parts = user.manager_name.split(' ');
-      return {
-        first: parts[0] || '',
-        last: parts.slice(1).join(' ') || ''
-      };
-    }
-    return { first: '', last: '' };
-  };
-  
-  const managerNames = getManagerNames();
+  // Get manager first and last name from user profile
+  const managerFirstName = user?.manager_first_name || '';
+  const managerLastName = user?.manager_last_name || '';
   
   // Initialize form with required fields
   // For employees, prepopulate their information and manager information
@@ -62,8 +52,8 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
     employee_first_name: isEmployee ? (user.first_name || '') : '',
     employee_last_name: isEmployee ? (user.last_name || '') : '',
     employee_email: isEmployee ? user.email : '',
-    manager_first_name: isEmployee ? managerNames.first : '',
-    manager_last_name: isEmployee ? managerNames.last : '',
+    manager_first_name: isEmployee ? managerFirstName : '',
+    manager_last_name: isEmployee ? managerLastName : '',
     manager_email: isEmployee ? (user.manager_email || '') : '',
     company_name: '',
     asset_type: 'laptop',
