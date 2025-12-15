@@ -40,7 +40,7 @@ jest.unstable_mockModule('nodemailer', () => ({
 }));
 
 // Now import the module under test
-const { sendTestEmail, verifyConnection } = await import('./smtpMailer.js');
+const { sendTestEmail, verifyConnection, getAppUrl } = await import('./smtpMailer.js');
 
 describe('SMTP Mailer Service', () => {
   beforeEach(() => {
@@ -318,6 +318,70 @@ describe('SMTP Mailer Service', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Connection failed');
+    });
+  });
+
+  describe('getAppUrl', () => {
+    it('should return URL from branding settings without trailing slash', async () => {
+      mockBrandingSettingsDb.get.mockResolvedValue({
+        app_url: 'https://example.com/',
+        site_name: 'KARS'
+      });
+
+      const url = await getAppUrl();
+
+      expect(url).toBe('https://example.com');
+    });
+
+    it('should remove multiple trailing slashes', async () => {
+      mockBrandingSettingsDb.get.mockResolvedValue({
+        app_url: 'https://example.com///',
+        site_name: 'KARS'
+      });
+
+      const url = await getAppUrl();
+
+      expect(url).toBe('https://example.com');
+    });
+
+    it('should return URL without modification if no trailing slash', async () => {
+      mockBrandingSettingsDb.get.mockResolvedValue({
+        app_url: 'https://example.com',
+        site_name: 'KARS'
+      });
+
+      const url = await getAppUrl();
+
+      expect(url).toBe('https://example.com');
+    });
+
+    it('should fallback to default localhost without trailing slash', async () => {
+      mockBrandingSettingsDb.get.mockResolvedValue(null);
+      
+      // Clear any environment variables that might interfere
+      const originalFrontendUrl = process.env.FRONTEND_URL;
+      const originalBaseUrl = process.env.BASE_URL;
+      delete process.env.FRONTEND_URL;
+      delete process.env.BASE_URL;
+
+      const url = await getAppUrl();
+
+      expect(url).toBe('http://localhost:3000');
+      
+      // Restore environment variables
+      if (originalFrontendUrl) process.env.FRONTEND_URL = originalFrontendUrl;
+      if (originalBaseUrl) process.env.BASE_URL = originalBaseUrl;
+    });
+
+    it('should handle URLs with paths correctly', async () => {
+      mockBrandingSettingsDb.get.mockResolvedValue({
+        app_url: 'https://example.com/app/',
+        site_name: 'KARS'
+      });
+
+      const url = await getAppUrl();
+
+      expect(url).toBe('https://example.com/app');
     });
   });
 });
