@@ -449,20 +449,10 @@ Completed: {{completedAt}}`,
 <p>Hello {{firstName}},</p>
 <p>You have <strong>{{assetCount}}</strong> asset(s) assigned to you that require attestation as part of the "<strong>{{campaignName}}</strong>" campaign.</p>
 <p>To complete your attestation, you'll need to create an account in {{siteName}}.</p>
-{{#if ssoEnabled}}
-<div style="margin: 20px 0; padding: 15px; background-color: #f0f9ff; border-radius: 8px;">
-  <h3 style="margin-top: 0;">Option 1: Sign in with SSO (Recommended)</h3>
-  <p>If your organization uses Single Sign-On, simply click the button below. Your account will be created automatically.</p>
-  <p><a href="{{loginUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #22c55e; color: white; text-decoration: none; border-radius: 6px;">{{ssoButtonText}}</a></p>
+<div style="margin: 30px 0; text-align: center;">
+  <a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Register to Complete Attestation</a>
 </div>
-<div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
-  <h3 style="margin-top: 0;">Option 2: Register Manually</h3>
-  <p>Create an account with your email address:</p>
-  <p><a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register Account</a></p>
-</div>
-{{else}}
-<p><a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register to Complete Attestation</a></p>
-{{/if}}
+<p style="color: #666; font-size: 14px;">If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.</p>
 <p>This attestation campaign {{#if endDate}}runs until <strong>{{endDate}}</strong>{{else}}is currently active{{/if}}.</p>
 <p>If you have any questions, please contact your administrator.</p>`,
     text_body: `Asset Attestation Required
@@ -475,10 +465,12 @@ To complete your attestation, you'll need to create an account in {{siteName}}.
 
 Register here: {{registerUrl}}
 
+If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.
+
 This attestation campaign {{#if endDate}}runs until {{endDate}}{{else}}is currently active{{/if}}.
 
 If you have any questions, please contact your administrator.`,
-    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl', 'loginUrl', 'ssoEnabled', 'ssoButtonText'])
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl'])
   },
   {
     template_key: 'attestation_unregistered_reminder',
@@ -489,12 +481,10 @@ If you have any questions, please contact your administrator.`,
 <p>Hello {{firstName}},</p>
 <p>This is a reminder that you have <strong>{{assetCount}}</strong> asset(s) requiring attestation for the "<strong>{{campaignName}}</strong>" campaign.</p>
 <p>You have not yet registered your account. Please register as soon as possible to complete your attestation.</p>
-{{#if ssoEnabled}}
-<p><a href="{{loginUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #22c55e; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px;">{{ssoButtonText}}</a>
-<a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register Manually</a></p>
-{{else}}
-<p><a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Register Now</a></p>
-{{/if}}
+<div style="margin: 30px 0; text-align: center;">
+  <a href="{{registerUrl}}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Register Now</a>
+</div>
+<p style="color: #666; font-size: 14px;">If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.</p>
 {{#if endDate}}<p><strong>Deadline:</strong> {{endDate}}</p>{{/if}}`,
     text_body: `Reminder: Asset Attestation Pending
 
@@ -506,8 +496,10 @@ You have not yet registered your account. Please register as soon as possible to
 
 Register here: {{registerUrl}}
 
+If your organization uses Single Sign-On (SSO), you can also use that option when you reach the registration page.
+
 {{#if endDate}}Deadline: {{endDate}}{{/if}}`,
-    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl', 'loginUrl', 'ssoEnabled', 'ssoButtonText'])
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl'])
   },
   {
     template_key: 'attestation_unregistered_escalation',
@@ -1486,36 +1478,49 @@ const initDb = async () => {
     console.log(`Asset types already exist (${typeCount} found), skipping seeding`);
   }
 
-  // Seed default email templates if table is empty
-  const existingTemplates = await dbAll('SELECT COUNT(*) as count FROM email_templates');
-  // Ensure count is a number (handles both SQLite and PostgreSQL return types)
-  const templateCount = parseInt(existingTemplates[0]?.count, 10) || 0;
-  
-  if (templateCount === 0) {
-    console.log('Seeding default email templates...');
-    const now = new Date().toISOString();
+  // Seed default email templates - check for and insert any missing templates
+  console.log('Checking for missing email templates...');
+  const now = new Date().toISOString();
+  let seededCount = 0;
 
-    for (const template of DEFAULT_EMAIL_TEMPLATES) {
-      const insertQuery = isPostgres
-        ? `INSERT INTO email_templates (template_key, name, description, subject, html_body, text_body, variables, is_custom, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8)`
-        : `INSERT INTO email_templates (template_key, name, description, subject, html_body, text_body, variables, is_custom, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`;
+  for (const template of DEFAULT_EMAIL_TEMPLATES) {
+    try {
+      const selectQuery = isPostgres
+        ? 'SELECT id FROM email_templates WHERE template_key = $1'
+        : 'SELECT id FROM email_templates WHERE template_key = ?';
       
-      await dbRun(insertQuery, [
-        template.template_key,
-        template.name,
-        template.description,
-        template.subject,
-        template.html_body,
-        template.text_body,
-        template.variables,
-        now
-      ]);
+      const existing = await dbGet(selectQuery, [template.template_key]);
+      
+      if (!existing) {
+        const insertQuery = isPostgres
+          ? `INSERT INTO email_templates (template_key, name, description, subject, html_body, text_body, variables, is_custom, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8)`
+          : `INSERT INTO email_templates (template_key, name, description, subject, html_body, text_body, variables, is_custom, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`;
+        
+        await dbRun(insertQuery, [
+          template.template_key,
+          template.name,
+          template.description,
+          template.subject,
+          template.html_body,
+          template.text_body,
+          template.variables,
+          now
+        ]);
+        console.log(`Seeded missing email template: ${template.template_key}`);
+        seededCount++;
+      }
+    } catch (err) {
+      console.error(`Error seeding email template ${template.template_key}:`, err.message);
+      // Continue with other templates even if one fails
     }
-    console.log(`Seeded ${DEFAULT_EMAIL_TEMPLATES.length} default email templates`);
+  }
+  
+  if (seededCount > 0) {
+    console.log(`Seeded ${seededCount} missing email template(s)`);
   } else {
-    console.log(`Email templates already exist (${templateCount} found), skipping seeding`);
+    console.log('All email templates already exist');
   }
 
   // Indexes

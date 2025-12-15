@@ -60,8 +60,16 @@ const OIDCCallback = () => {
 
         setAuthData(data.token, data.user);
 
-        // Always navigate to home - App.jsx will redirect to CompleteProfile if needed
-        setTimeout(() => navigate('/'), 500);
+        // Check for stored invite token and redirect appropriately
+        const storedInviteToken = sessionStorage.getItem('attestation_invite_token');
+        if (storedInviteToken) {
+          sessionStorage.removeItem('attestation_invite_token');
+          // Redirect to attestations page since invite was converted during registration
+          setTimeout(() => navigate('/my-attestations'), 500);
+        } else {
+          // Always navigate to home - App.jsx will redirect to CompleteProfile if needed
+          setTimeout(() => navigate('/'), 500);
+        }
       } catch (err) {
         console.error('OIDC callback error:', err);
         setError(err.message);

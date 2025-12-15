@@ -182,18 +182,26 @@ const RegisterNew = ({ onSwitchToLogin }) => {
               </div>
             )}
 
-            {inviteData && oidcConfig && (
+            {oidcConfig && (
               <>
                 <div className="space-y-4">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-3">Sign in with SSO to automatically create your account</p>
                     <Button
                       type="button"
-                      onClick={() => window.location.href = '/api/auth/oidc/login'}
+                      onClick={() => {
+                        // Store invite token if present so we can redirect after OIDC callback
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const token = urlParams.get('token');
+                        if (token) {
+                          sessionStorage.setItem('attestation_invite_token', token);
+                        }
+                        window.location.href = '/api/auth/oidc/login';
+                      }}
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
                       size="lg"
                     >
-                      🔐 {oidcConfig.buttonText || 'Sign In with SSO'}
+                      🔐 {oidcConfig.button_text || 'Sign In with SSO'}
                     </Button>
                     <p className="text-xs text-muted-foreground mt-2">Your account will be created automatically</p>
                   </div>

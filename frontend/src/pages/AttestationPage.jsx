@@ -132,6 +132,24 @@ export default function AttestationPage() {
     return 'Emails will be sent to all employees.';
   };
 
+  // Helper function to format progress display with pending invites
+  const getProgressDisplay = (campaign, stats) => {
+    if (!stats) return '-';
+    
+    const { completed, total } = stats;
+    const pending_invites_count = campaign.pending_invites_count || 0;
+    
+    if (total === 0 && pending_invites_count > 0) {
+      return `0/0 (${pending_invites_count} pending invite${pending_invites_count !== 1 ? 's' : ''})`;
+    }
+    
+    if (pending_invites_count > 0) {
+      return `${completed}/${total} (${pending_invites_count} pending invite${pending_invites_count !== 1 ? 's' : ''})`;
+    }
+    
+    return `${completed}/${total} - ${total > 0 ? Math.round((completed / total) * 100) : 0}% Complete`;
+  };
+
   const loadCampaigns = async () => {
     setLoading(true);
     try {
@@ -617,14 +635,16 @@ export default function AttestationPage() {
                       {campaign.status === 'active' && stats ? (
                         <div className="space-y-1 w-44">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{stats.completed}/{stats.total} - {stats.percentage}% Complete</span>
+                            <span>{getProgressDisplay(campaign, stats)}</span>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                            <div 
-                              className="bg-primary h-full transition-all duration-300 rounded-full"
-                              style={{ width: `${stats.percentage}%` }}
-                            />
-                          </div>
+                          {stats.total > 0 && (
+                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                              <div 
+                                className="bg-primary h-full transition-all duration-300 rounded-full"
+                                style={{ width: `${stats.percentage}%` }}
+                              />
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>

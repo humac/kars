@@ -4819,6 +4819,14 @@ app.post('/api/attestation/campaigns', authenticate, authorize('admin'), async (
 app.get('/api/attestation/campaigns', authenticate, authorize('admin'), async (req, res) => {
   try {
     const campaigns = await attestationCampaignDb.getAll();
+    
+    // Add pending invites count to each campaign
+    for (const campaign of campaigns) {
+      const pendingInvites = await attestationPendingInviteDb.getByCampaignId(campaign.id);
+      const unresolvedInvites = pendingInvites.filter(inv => !inv.registered_at);
+      campaign.pending_invites_count = unresolvedInvites.length;
+    }
+    
     res.json({ success: true, campaigns });
   } catch (error) {
     console.error('Error fetching attestation campaigns:', error);
