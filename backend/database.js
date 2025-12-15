@@ -478,7 +478,7 @@ Register here: {{registerUrl}}
 This attestation campaign {{#if endDate}}runs until {{endDate}}{{else}}is currently active{{/if}}.
 
 If you have any questions, please contact your administrator.`,
-    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'campaignDescription', 'endDate', 'registerUrl', 'loginUrl', 'ssoEnabled', 'ssoButtonText'])
+    variables: JSON.stringify(['siteName', 'firstName', 'lastName', 'assetCount', 'campaignName', 'endDate', 'registerUrl', 'loginUrl', 'ssoEnabled', 'ssoButtonText'])
   },
   {
     template_key: 'attestation_unregistered_reminder',
@@ -563,7 +563,7 @@ Complete your attestation here: {{attestationUrl}}
 {{#if endDate}}Deadline: {{endDate}}{{/if}}
 
 If you have any questions, please contact your administrator.`,
-    variables: JSON.stringify(['siteName', 'firstName', 'campaignName', 'campaignDescription', 'endDate', 'attestationUrl'])
+    variables: JSON.stringify(['siteName', 'firstName', 'campaignName', 'endDate', 'attestationUrl'])
   }
 ];
 
