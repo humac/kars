@@ -1711,7 +1711,13 @@ export const assetDb = {
       return [];
     }
     
-    const placeholders = companyIds.map((_, i) => isPostgres ? `$${i + 1}` : '?').join(', ');
+    // Validate that all company IDs are valid integers
+    const validatedIds = companyIds.filter(id => Number.isInteger(Number(id)) && Number(id) > 0);
+    if (validatedIds.length === 0) {
+      return [];
+    }
+    
+    const placeholders = validatedIds.map((_, i) => isPostgres ? `$${i + 1}` : '?').join(', ');
     const query = `
       SELECT DISTINCT users.*
       FROM users
@@ -1721,7 +1727,7 @@ export const assetDb = {
       ORDER BY users.email
     `;
     
-    const rows = await dbAll(query, companyIds);
+    const rows = await dbAll(query, validatedIds);
     return rows;
   },
   linkAssetsToUser: async (employeeEmail, managerFirstName, managerLastName, managerEmail) => {

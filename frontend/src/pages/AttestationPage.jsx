@@ -227,6 +227,14 @@ export default function AttestationPage() {
     }
   };
 
+  // Helper function to filter companies by search query
+  const filterCompaniesBySearch = (companies, searchQuery) => {
+    return companies.filter(c => 
+      searchQuery === '' ||
+      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
   const handleCreateCampaign = async () => {
     try {
       const res = await fetch('/api/attestation/campaigns', {
@@ -942,11 +950,7 @@ export default function AttestationPage() {
                   ) : (
                     <div className="border rounded-lg max-h-64 overflow-y-auto">
                       <div className="p-2 space-y-1">
-                        {availableCompanies
-                          .filter(c => 
-                            companySearchQuery === '' ||
-                            c.name?.toLowerCase().includes(companySearchQuery.toLowerCase())
-                          )
+                        {filterCompaniesBySearch(availableCompanies, companySearchQuery)
                           .map((c) => (
                             <div
                               key={c.id}
@@ -1354,11 +1358,7 @@ export default function AttestationPage() {
                   ) : (
                     <div className="border rounded-lg max-h-64 overflow-y-auto">
                       <div className="p-2 space-y-1">
-                        {availableCompanies
-                          .filter(c => 
-                            companySearchQuery === '' ||
-                            c.name?.toLowerCase().includes(companySearchQuery.toLowerCase())
-                          )
+                        {filterCompaniesBySearch(availableCompanies, companySearchQuery)
                           .map((c) => (
                             <div
                               key={c.id}
