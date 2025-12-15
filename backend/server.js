@@ -5330,8 +5330,15 @@ app.post('/api/attestation/records/:id/assets/new', authenticate, async (req, re
             employee_first_name, employee_last_name, employee_email,
             manager_first_name, manager_last_name, manager_email } = req.body;
     
+    // Validate required fields
     if (!asset_type || !serial_number || !asset_tag) {
       return res.status(400).json({ error: 'Asset type, serial number, and asset tag are required' });
+    }
+    if (!employee_first_name || !employee_last_name || !employee_email) {
+      return res.status(400).json({ error: 'Employee first name, last name, and email are required' });
+    }
+    if (!company_id) {
+      return res.status(400).json({ error: 'Company is required' });
     }
     
     // Create new asset record with employee and manager info

@@ -238,7 +238,10 @@ export default function MyAttestationsPage() {
   };
 
   const handleAddNewAsset = async () => {
-    if (!newAssetForm.asset_type || !newAssetForm.serial_number || !newAssetForm.asset_tag) {
+    // Validate required fields
+    if (!newAssetForm.asset_type || !newAssetForm.serial_number || !newAssetForm.asset_tag ||
+        !newAssetForm.employee_first_name || !newAssetForm.employee_last_name || !newAssetForm.employee_email ||
+        !newAssetForm.company_id) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -725,7 +728,7 @@ export default function MyAttestationsPage() {
                 <div>
                   <Label>Company (Auto-selected from campaign)</Label>
                   <Input
-                    value={companies.find(c => c.id === newAssetForm.company_id)?.name || 'Loading...'}
+                    value={companies.find(c => c.id === newAssetForm.company_id)?.name || (companies.length > 0 ? 'Company not found' : 'Loading...')}
                     readOnly
                     className="bg-muted"
                   />
