@@ -18,7 +18,8 @@ const ResetPassword = () => {
   const location = useLocation();
   
   // Extract token from pathname since this route is not handled by React Router
-  const token = location.pathname.split('/reset-password/')[1];
+  // Use regex to extract only the token portion, handling query params and extra segments
+  const token = location.pathname.match(/\/reset-password\/([^/?]+)/)?.[1];
 
   useEffect(() => {
     const verifyToken = async () => {
