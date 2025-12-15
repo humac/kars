@@ -14,6 +14,7 @@ The feature adds 4 new tables to the database:
    - Campaign name, description, dates
    - Reminder and escalation day settings
    - Status tracking (draft, active, completed, cancelled)
+   - Targeting options (target_type, target_user_ids, target_company_ids)
 
 2. **attestation_records** - Individual employee attestation records
    - Links campaigns to users
@@ -99,13 +100,21 @@ Employee endpoints:
      - Start/end dates
      - Reminder days (default: 7)
      - Escalation days (default: 10)
+   - Choose targeting option:
+     - **All Employees**: Send to all registered users (system-wide)
+     - **Select Specific Employees**: Choose individual users to receive attestation
+     - **By Company**: Send to employees with assets in specific companies
+   - If selecting companies, choose one or more companies from the list
    - Save as draft
 
 2. **Start Campaign**
    - Select draft campaign
    - Click "Start"
-   - System creates attestation records for all users
-   - Emails sent to all employees
+   - System creates attestation records for targeted users based on campaign type:
+     - **All**: All registered users
+     - **Selected**: Only the selected users
+     - **Companies**: Users who own assets in the selected companies
+   - Emails sent to targeted employees
 
 3. **Monitor Progress**
    - View dashboard showing:
