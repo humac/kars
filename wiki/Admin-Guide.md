@@ -406,6 +406,185 @@ The attestation scheduler (if enabled with `RUN_ATTESTATION_SCHEDULER=true`) run
 - Update asset records based on feedback
 - Close out campaign after 100% completion or end date
 
+## Email Notification Workflows
+
+KARS includes a comprehensive email notification system to support password reset workflows and attestation campaigns. All email notifications require SMTP configuration via **Admin Settings → Notifications**. Email templates are fully customizable via **Admin Settings → Notifications → Email Templates**.
+
+**Scheduler Note:** When `RUN_ATTESTATION_SCHEDULER=true` is enabled, the scheduler runs daily automated checks for reminders, escalations, and campaign closures.
+
+### Password Reset Flow
+
+```mermaid
+flowchart LR
+    A[User Requests<br/>Password Reset] --> B[System Generates<br/>Reset Token]
+    B --> C[Send Email:<br/>password_reset]
+    C --> D[User Clicks Link]
+    D --> E[User Resets Password]
+    
+    style C fill:#e3f2fd
+    
+    classDef emailNode fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    class C emailNode
+```
+
+**Email Template:** `password_reset`  
+**Trigger:** User requests password reset from login page  
+**Frequency:** On-demand (user-initiated)  
+**Recipients:** User requesting reset
+
+---
+
+### Attestation Campaign Lifecycle
+
+This diagram shows the complete attestation workflow with all email touchpoints from campaign launch through completion.
+
+```mermaid
+flowchart TD
+    Start([Admin Launches<br/>Attestation Campaign]) --> Launch[Send Launch Emails:<br/>attestation_launch]
+    Launch --> CheckReg{User<br/>Registered?}
+    
+    CheckReg -->|Yes| Registered[Registered User<br/>Receives Launch Email]
+    CheckReg -->|No| Unregistered[Unregistered User<br/>Receives Invite Email:<br/>attestation_registration_invite]
+    
+    Registered --> WaitReg[User Registers<br/>During Campaign]
+    Unregistered --> WaitReg
+    WaitReg --> Ready[Send Ready Email:<br/>attestation_ready]
+    
+    Ready --> ReminderCheck{Reminder Days<br/>Reached?}
+    Registered --> ReminderCheck
+    
+    ReminderCheck -->|Yes, Still Pending| Reminder[Send Reminder:<br/>attestation_reminder]
+    ReminderCheck -->|No| WaitMore[Continue Waiting]
+    
+    Unregistered --> UnregReminderCheck{Unregistered<br/>Reminder Days<br/>Reached?}
+    UnregReminderCheck -->|Yes, Still Unregistered| UnregReminder[Send Unregistered<br/>Reminder:<br/>attestation_unregistered_reminder]
+    UnregReminderCheck -->|No| WaitMore
+    
+    Reminder --> EscalationCheck{Escalation Days<br/>Reached?}
+    WaitMore --> EscalationCheck
+    
+    EscalationCheck -->|Yes, Still Pending| Escalation[Send to Manager:<br/>attestation_escalation]
+    EscalationCheck -->|No| KeepWaiting[Keep Waiting]
+    
+    UnregReminder --> UnregEscalationCheck{Escalation Days<br/>Reached?}
+    UnregEscalationCheck -->|Yes, Still Unregistered| UnregEscalation[Send to Manager:<br/>attestation_unregistered_escalation]
+    UnregEscalationCheck -->|No| KeepWaiting
+    
+    Escalation --> Complete{Attestation<br/>Completed?}
+    UnregEscalation --> Complete
+    KeepWaiting --> Complete
+    
+    Complete -->|Yes| CompleteEmail[Send Admin Notification:<br/>attestation_complete]
+    CompleteEmail --> End([Campaign Ends])
+    Complete -->|No| ReminderCheck
+    
+    style Launch fill:#e3f2fd
+    style Reminder fill:#fff3e0
+    style Escalation fill:#ffebee
+    style UnregReminder fill:#fff3e0
+    style UnregEscalation fill:#ffebee
+    style CompleteEmail fill:#e8f5e9
+    style Unregistered fill:#f3e5f5
+    style Ready fill:#e8f5e9
+    
+    classDef emailNode fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    class Launch,Reminder,Escalation,CompleteEmail,Unregistered,UnregReminder,UnregEscalation,Ready emailNode
+```
+
+#### Campaign Launch
+- **Template:** `attestation_launch`
+- **Trigger:** Admin launches a new attestation campaign
+- **Frequency:** Once per campaign launch
+- **Recipients:** All employees with assets (registered users only)
+
+#### Registration Invite (for unregistered asset owners)
+- **Template:** `attestation_registration_invite`
+- **Trigger:** Campaign launch finds assets assigned to unregistered emails
+- **Frequency:** Once per campaign for each unregistered email
+- **Recipients:** Unregistered users with assets
+
+#### Attestation Ready (for newly registered users)
+- **Template:** `attestation_ready`
+- **Trigger:** User registers during an active campaign
+- **Frequency:** Once per user registration during active campaign
+- **Recipients:** Newly registered user
+
+#### Attestation Reminder
+- **Template:** `attestation_reminder`
+- **Trigger:** Scheduler runs after `reminder_days` from campaign start
+- **Frequency:** Daily scheduler check; sent once per pending attestation
+- **Recipients:** Employees with pending attestations
+- **Condition:** Only for pending attestations that haven't received a reminder
+
+#### Unregistered User Reminder
+- **Template:** `attestation_unregistered_reminder`
+- **Trigger:** Scheduler runs after `unregistered_reminder_days` from campaign start
+- **Frequency:** Daily scheduler check; sent once per unregistered user
+- **Recipients:** Unregistered users with assets
+- **Condition:** User still hasn't registered
+
+#### Attestation Escalation (to manager)
+- **Template:** `attestation_escalation`
+- **Trigger:** Scheduler runs after `escalation_days` from campaign start
+- **Frequency:** Daily scheduler check; sent once per overdue attestation
+- **Recipients:** Employee's manager
+- **Condition:** Employee hasn't completed attestation
+
+#### Unregistered User Escalation (to manager)
+- **Template:** `attestation_unregistered_escalation`
+- **Trigger:** Scheduler runs after `escalation_days` from campaign start
+- **Frequency:** Daily scheduler check; sent once per unregistered user
+- **Recipients:** Manager listed on assets
+- **Condition:** Asset owner still hasn't registered
+
+#### Attestation Complete (confirmation to admin)
+- **Template:** `attestation_complete`
+- **Trigger:** Employee completes their attestation
+- **Frequency:** Once per completed attestation
+- **Recipients:** Admin users
+
+---
+
+### SMTP Test Email
+
+```mermaid
+flowchart LR
+    A[Admin Opens<br/>Notification Settings] --> B[Admin Clicks<br/>Send Test Email]
+    B --> C[Send Test Email:<br/>test_email]
+    C --> D[Admin Verifies<br/>Email Received]
+    
+    style C fill:#e3f2fd
+    
+    classDef emailNode fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    class C emailNode
+```
+
+**Email Template:** `test_email`  
+**Trigger:** Admin clicks "Send Test Email" in notification settings  
+**Frequency:** On-demand (admin-initiated)  
+**Recipients:** Test recipient specified by admin
+
+---
+
+### Email Templates Reference Table
+
+All email templates are customizable via **Admin Settings → Notifications → Email Templates**. Each template supports variable substitution using `{{variableName}}` syntax.
+
+| Template Key | Template Name | Description | Trigger Event | Frequency | Recipient Type |
+|--------------|---------------|-------------|---------------|-----------|----------------|
+| `test_email` | Test Email | SMTP configuration verification | Admin sends test | On-demand | Admin-specified |
+| `password_reset` | Password Reset | Secure password reset with time-limited token | User requests reset | On-demand | User |
+| `attestation_launch` | Attestation Campaign Launch | Notifies employees of new attestation campaign | Campaign launched | Once per campaign | Registered employees with assets |
+| `attestation_registration_invite` | Registration Invite | Invites unregistered asset owners to register | Campaign finds unregistered owners | Once per campaign per unregistered email | Unregistered users with assets |
+| `attestation_ready` | Attestation Ready | Notifies newly registered users attestation is ready | User registers during campaign | Once per registration | Newly registered user |
+| `attestation_reminder` | Attestation Reminder | Reminds employees of pending attestation | Scheduler after reminder_days | Once per pending attestation | Employees with pending attestations |
+| `attestation_unregistered_reminder` | Unregistered User Reminder | Reminds unregistered users to register | Scheduler after unregistered_reminder_days | Once per unregistered user | Unregistered users |
+| `attestation_escalation` | Attestation Escalation | Notifies managers of overdue employee attestations | Scheduler after escalation_days | Once per overdue attestation | Employee's manager |
+| `attestation_unregistered_escalation` | Unregistered User Escalation | Notifies managers of unregistered team members | Scheduler after escalation_days | Once per unregistered user | Manager on assets |
+| `attestation_complete` | Attestation Complete | Confirms attestation completion to admins | Employee completes attestation | Once per completion | Admin users |
+
+**Note:** The attestation scheduler processes reminders and escalations through daily automated checks when `RUN_ATTESTATION_SCHEDULER=true` is enabled.
+
 ## System Monitoring
 
 ### System Overview Dashboard
