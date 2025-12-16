@@ -2959,6 +2959,7 @@ app.get('/api/auth/oidc/callback', async (req, res) => {
     await userDb.updateLastLogin(user.id);
 
     // Check for pending attestation invites and convert them
+    let hasActiveAttestation = false;
     try {
       const pendingInvites = await attestationPendingInviteDb.getActiveByEmail(user.email);
       for (const invite of pendingInvites) {
@@ -2979,6 +2980,7 @@ app.get('/api/auth/oidc/callback', async (req, res) => {
           });
           
           // Note: attestation_ready email removed - user will be redirected to attestations page
+          hasActiveAttestation = true;
           
           console.log(`Converted pending invite to attestation record for ${user.email} in campaign ${campaign.name}`);
         }
@@ -3006,7 +3008,8 @@ app.get('/api/auth/oidc/callback', async (req, res) => {
         manager_last_name: user.manager_last_name,
         manager_email: user.manager_email,
         profile_complete: user.profile_complete
-      }
+      },
+      redirectToAttestations: hasActiveAttestation
     });
   } catch (error) {
     console.error('OIDC callback error:', error);
