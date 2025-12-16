@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Comparison</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #f5f5f5; }
+        .comparison { display: flex; gap: 40px; margin: 20px 0; }
+        .icon-box { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .icon-box h3 { margin: 0 0 20px 0; }
+        svg { width: 64px; height: 64px; stroke: #333; stroke-width: 2; }
+    </style>
+</head>
+<body>
+    <h1>Lucide Key Icon Comparison</h1>
+    <div class="comparison">
+        <div class="icon-box">
+            <h3>Key (modern)</h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"></path>
+                <path d="m21 2-9.6 9.6"></path>
+                <circle cx="7.5" cy="15.5" r="5.5"></circle>
+            </svg>
+            <p>Current Login.jsx (before fix)</p>
+        </div>
+        <div class="icon-box">
+            <h3>KeyRound (classic)</h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"></path>
+                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle>
+            </svg>
+            <p>Matches user's reference image</p>
+        </div>
+    </div>
+    <p><strong>Note:</strong> The user's reference image shows the KeyRound (classic) style icon.</p>
+</body>
+</html>
