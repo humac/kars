@@ -1,5 +1,6 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { generateToken, verifyToken, hashPassword, comparePassword, authenticate, authorize, optionalAuth } from './auth.js';
+import { userDb } from './database.js';
 
 describe('Auth Module', () => {
   describe('JWT_SECRET validation', () => {
@@ -160,23 +161,29 @@ describe('Auth Module', () => {
       expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
-    it('should attach user when valid token is provided', () => {
-      const user = {
-        id: 1,
-        email: 'test@example.com',
+    it('should attach user when valid token is provided', async () => {
+      // Create a real user in the database
+      const timestamp = Date.now();
+      await userDb.create({
+        email: `test-optional-${timestamp}@example.com`,
         name: 'Test User',
-        role: 'user'
-      };
+        password_hash: 'dummy-hash',
+        role: 'admin'
+      });
+      const user = await userDb.getByEmail(`test-optional-${timestamp}@example.com`);
       
       const token = generateToken(user);
       req.headers.authorization = `Bearer ${token}`;
       
-      optionalAuth(req, res, next);
+      await optionalAuth(req, res, next);
       
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.user).toBeDefined();
       expect(req.user.email).toBe(user.email);
       expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+      // Cleanup
+      await userDb.delete(user.id);
     });
 
     it('should not attach user when invalid token is provided', () => {
@@ -263,18 +270,21 @@ describe('Auth Module', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should attach user to request and call next() when token is valid', () => {
-      const user = {
-        id: 1,
-        email: 'test@example.com',
+    it('should attach user to request and call next() when token is valid', async () => {
+      // Create a real user in the database
+      const timestamp = Date.now();
+      await userDb.create({
+        email: `test-auth-${timestamp}@example.com`,
         name: 'Test User',
+        password_hash: 'dummy-hash',
         role: 'admin'
-      };
+      });
+      const user = await userDb.getByEmail(`test-auth-${timestamp}@example.com`);
 
       const token = generateToken(user);
       req.headers.authorization = `Bearer ${token}`;
 
-      authenticate(req, res, next);
+      await authenticate(req, res, next);
 
       expect(req.user).toBeDefined();
       expect(req.user.id).toBe(user.id);
@@ -282,6 +292,9 @@ describe('Auth Module', () => {
       expect(req.user.role).toBe(user.role);
       expect(next).toHaveBeenCalledTimes(1);
       expect(statusMock).not.toHaveBeenCalled();
+
+      // Cleanup
+      await userDb.delete(user.id);
     });
   });
 

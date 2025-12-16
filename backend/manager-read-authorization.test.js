@@ -38,30 +38,45 @@ describe('Manager Read-Only Authorization', () => {
     // Use timestamp to ensure unique test data
     timestamp = Date.now();
 
-    // Create mock user objects for token generation
-    adminUser = {
-      id: 1,
+    // Create actual users in the database (required for authenticate middleware)
+    await userDb.create({
       email: `admin-read-${timestamp}@test.com`,
       name: 'Admin User',
+      password_hash: 'dummy-hash',
       role: 'admin'
-    };
+    });
+    adminUser = await userDb.getByEmail(`admin-read-${timestamp}@test.com`);
     adminToken = generateToken(adminUser);
 
-    managerUser = {
-      id: 2,
+    await userDb.create({
       email: `manager-read-${timestamp}@test.com`,
       name: 'Manager User',
+      password_hash: 'dummy-hash',
       role: 'manager'
-    };
+    });
+    managerUser = await userDb.getByEmail(`manager-read-${timestamp}@test.com`);
     managerToken = generateToken(managerUser);
 
-    employeeUser = {
-      id: 3,
+    await userDb.create({
       email: `employee-read-${timestamp}@test.com`,
       name: 'Employee User',
+      password_hash: 'dummy-hash',
       role: 'employee'
-    };
+    });
+    employeeUser = await userDb.getByEmail(`employee-read-${timestamp}@test.com`);
     employeeToken = generateToken(employeeUser);
+  });
+
+  afterAll(async () => {
+    // Clean up test users
+    try {
+      if (adminUser?.id) await userDb.delete(adminUser.id);
+      if (managerUser?.id) await userDb.delete(managerUser.id);
+      if (employeeUser?.id) await userDb.delete(employeeUser.id);
+    } catch (error) {
+      // Log cleanup errors but don't fail the test suite
+      console.error('Error cleaning up test users:', error);
+    }
   });
 
   describe('GET /api/attestation/campaigns', () => {

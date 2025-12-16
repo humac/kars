@@ -44,7 +44,7 @@ export const comparePassword = async (password, hash) => {
 };
 
 // Authentication middleware
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -59,8 +59,23 @@ export const authenticate = (req, res, next) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // Attach user info to request
-    req.user = decoded;
+    // Fetch fresh user data from database to ensure role is up-to-date
+    // This allows role changes to take effect without requiring re-login
+    // Trade-off: Adds a DB query per request, but ensures correctness
+    // Future optimization: Consider caching with short TTL or event-based invalidation
+    const user = await userDb.getById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Attach fresh user info to request with updated role
+    req.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    };
     next();
   } catch (error) {
     console.error('Authentication error:', error);
@@ -93,7 +108,7 @@ export const authorize = (...allowedRoles) => {
 };
 
 // Optional authentication (allows public access but attaches user if token present)
-export const optionalAuth = (req, res, next) => {
+export const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -102,7 +117,18 @@ export const optionalAuth = (req, res, next) => {
       const decoded = verifyToken(token);
 
       if (decoded) {
-        req.user = decoded;
+        // Fetch fresh user data from database to ensure role is up-to-date
+        const user = await userDb.getById(decoded.id);
+        
+        if (user) {
+          // Attach fresh user info to request with updated role
+          req.user = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          };
+        }
       }
     }
 
