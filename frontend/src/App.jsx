@@ -90,8 +90,9 @@ function AppNew() {
         
         // Set as HSL for Tailwind
         document.documentElement.style.setProperty('--primary', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
-        // Set hover state with reduced lightness for gradient effect
-        document.documentElement.style.setProperty('--primary-hover', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.max(0, Math.round(l * 100) - 10)}%`);
+        // Set hover state with reduced lightness for gradient effect (10% darker)
+        const hoverLightness = Math.max(0, Math.round(l * 100) - 10);
+        document.documentElement.style.setProperty('--primary-hover', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${hoverLightness}%`);
       }
       
       // Update favicon
