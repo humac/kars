@@ -201,7 +201,8 @@ const LoginNew = ({ onSwitchToRegister }) => {
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      window.location.reload();
+      // Navigate to root to ensure user lands on asset list page
+      window.location.href = '/';
     } catch (err) {
       setMfaError(err.message);
     } finally {

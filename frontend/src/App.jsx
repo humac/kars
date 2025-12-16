@@ -208,6 +208,8 @@ function AppNew() {
   const handleLogout = () => {
     logout();
     setMobileMenuOpen(false);
+    // Navigate to root and clear history so user returns to asset list on next login
+    navigate('/', { replace: true });
   };
 
   return (
