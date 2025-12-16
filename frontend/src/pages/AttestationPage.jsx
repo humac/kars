@@ -104,6 +104,9 @@ export default function AttestationPage() {
   const [sendingReminder, setSendingReminder] = useState(new Set());
   const [sendingBulkReminder, setSendingBulkReminder] = useState(false);
 
+  // Table column count constant for colSpan calculations
+  const DASHBOARD_TABLE_COLUMNS = 8; // Checkbox, Employee, Email, Status, Completed, Reminder, Escalation, Actions
+
   // Helper function to parse target_user_ids
   const parseTargetUserIds = (targetUserIds) => {
     if (!targetUserIds) return [];
@@ -1452,7 +1455,7 @@ export default function AttestationPage() {
                     <TableBody>
                       {filteredRecords.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={DASHBOARD_TABLE_COLUMNS} className="text-center py-8 text-muted-foreground">
                             {dashboardSearchQuery || dashboardFilterTab !== 'all'
                               ? 'No employees match your filters'
                               : 'No records found'}
@@ -1475,7 +1478,7 @@ export default function AttestationPage() {
                               <div className="flex items-center gap-2">
                                 {getStatusBadge(record.status)}
                                 {isOverdue(record, selectedCampaign) && (
-                                  <Badge variant="destructive" className="text-xs font-medium">
+                                  <Badge variant="destructive" className="text-xs">
                                     {getDaysLate(record, selectedCampaign)}d late
                                   </Badge>
                                 )}
