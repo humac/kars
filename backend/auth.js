@@ -106,7 +106,7 @@ export const authorize = (...allowedRoles) => {
 };
 
 // Optional authentication (allows public access but attaches user if token present)
-export const optionalAuth = (req, res, next) => {
+export const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -115,7 +115,18 @@ export const optionalAuth = (req, res, next) => {
       const decoded = verifyToken(token);
 
       if (decoded) {
-        req.user = decoded;
+        // Fetch fresh user data from database to ensure role is up-to-date
+        const user = await userDb.getById(decoded.id);
+        
+        if (user) {
+          // Attach fresh user info to request with updated role
+          req.user = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          };
+        }
       }
     }
 

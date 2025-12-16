@@ -161,23 +161,29 @@ describe('Auth Module', () => {
       expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
-    it('should attach user when valid token is provided', () => {
-      const user = {
-        id: 1,
-        email: 'test@example.com',
+    it('should attach user when valid token is provided', async () => {
+      // Create a real user in the database
+      const timestamp = Date.now();
+      await userDb.create({
+        email: `test-optional-${timestamp}@example.com`,
         name: 'Test User',
-        role: 'user'
-      };
+        password_hash: 'dummy-hash',
+        role: 'admin'
+      });
+      const user = await userDb.getByEmail(`test-optional-${timestamp}@example.com`);
       
       const token = generateToken(user);
       req.headers.authorization = `Bearer ${token}`;
       
-      optionalAuth(req, res, next);
+      await optionalAuth(req, res, next);
       
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.user).toBeDefined();
       expect(req.user.email).toBe(user.email);
       expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+      // Cleanup
+      await userDb.delete(user.id);
     });
 
     it('should not attach user when invalid token is provided', () => {
