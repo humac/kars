@@ -10,7 +10,7 @@ This document provides AI agents with guidance for working with the KARS (KeyDat
 
 | Layer | Technologies |
 |-------|-------------|
-| **Backend** | Node.js 18, Express.js, SQLite/PostgreSQL, JWT, WebAuthn, TOTP, OIDC |
+| **Backend** | Node.js 22 LTS, Express.js, SQLite/PostgreSQL, JWT, WebAuthn, TOTP, OIDC |
 | **Frontend** | React 18, Vite, Tailwind CSS, shadcn/ui (Radix), React Router v7 |
 | **Testing** | Jest (backend), Vitest (frontend) |
 | **DevOps** | Docker multi-platform, GitHub Actions, Portainer |

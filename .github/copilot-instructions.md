@@ -4,7 +4,7 @@
 
 KARS (KeyData Asset Registration System) is a SOC2-compliant asset tracking web app with multi-factor authentication, role-based access control (RBAC), and comprehensive audit logging.
 
-**Stack:** Node.js 18 + Express + SQLite/PostgreSQL | React 18 + Vite + Tailwind + shadcn/ui | Jest/Vitest | Docker (ARM64/AMD64)
+**Stack:** Node.js 22 LTS + Express + SQLite/PostgreSQL | React 18 + Vite + Tailwind + shadcn/ui | Jest/Vitest | Docker (ARM64/AMD64)
 
 **Auth Methods:** JWT, WebAuthn/Passkeys, TOTP MFA, OIDC/SSO
 
@@ -14,7 +14,7 @@ KARS (KeyData Asset Registration System) is a SOC2-compliant asset tracking web 
 
 ### Backend (`/backend`)
 
-**⚠️ CRITICAL: Node 18 required** (`>=18 <19` in package.json) for native modules (better-sqlite3).
+**⚠️ CRITICAL: Node 22 LTS required** (`>=22 <23` in package.json) for native modules (better-sqlite3).
 
 ```bash
 npm ci                # Install (ALWAYS use ci, not install)
@@ -25,7 +25,7 @@ npm start             # Production
 
 **Requirements:** `.env` file with `JWT_SECRET` (copy from `.env.example`)
 
-**Issues:** Missing .env → copy example | Native errors → use Node 18 | DB locked → delete `backend/data/*.db`
+**Issues:** Missing .env → copy example | Native errors → use Node 22 | DB locked → delete `backend/data/*.db`
 
 ### Frontend (`/frontend`)
 
@@ -216,15 +216,15 @@ if (user.role === 'employee') {
 
 | Issue | Solution |
 |-------|----------|
-| Backend won't start | Check `.env` has JWT_SECRET, use Node 18, delete `backend/data/*.db` |
+| Backend won't start | Check `.env` has JWT_SECRET, use Node 22, delete `backend/data/*.db` |
 | Frontend API fails | Ensure backend on :3001, check vite proxy, browser console for CORS |
-| Tests fail | Run `npm ci`, use Node 18 (backend), delete test DBs |
-| Docker fails | Use Node 18 base, test `npm run build` locally |
+| Tests fail | Run `npm ci`, use Node 22 (backend), delete test DBs |
+| Docker fails | Use Node 22 base, test `npm run build` locally |
 | CI fails | Check Actions logs, test locally with `npm ci && npm test` |
 
 ## Tips for Coding Agents
 
-1. **Node 18 for backend** - Most common build failure cause
+1. **Node 22 LTS for backend** - Most common build failure cause
 2. **Use `npm ci`** - Not `npm install`
 3. **Test incrementally** - Run tests after each change
 4. **Check both modules** - API changes affect backend AND frontend

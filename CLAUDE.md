@@ -31,7 +31,7 @@ Web application that supports organizational SOC2 compliance by tracking client 
 ### Tech Stack
 
 **Backend:**
-- Node.js 18 (ES modules)
+- Node.js 22 LTS (ES modules)
 - Express.js
 - Database: SQLite (default) / PostgreSQL (optional)
 - Authentication: JWT, WebAuthn/Passkeys, TOTP MFA, OIDC/SSO
@@ -145,7 +145,7 @@ Web application that supports organizational SOC2 compliance by tracking client 
 ### Prerequisites
 ```bash
 # Required
-Node.js 18.x (use nvm for version management)
+Node.js 22.x LTS (use nvm for version management)
 npm 9.x or higher
 
 # Optional (for PostgreSQL)
@@ -1114,7 +1114,7 @@ describe('AssetTable', () => {
 
 Backend Dockerfile:
 ```dockerfile
-# Uses Node 18 for native module compatibility
+# Uses Node 22 for native module compatibility
 # Installs production dependencies
 # Creates non-root user for security
 # Exposes port 3001
