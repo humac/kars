@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { UserPlus, Loader2, AlertCircle, Laptop, User, Briefcase, Lock, CheckCircle } from 'lucide-react';
+import { UserPlus, Loader2, AlertCircle, Laptop, User, Briefcase, Lock, CheckCircle, KeyRound } from 'lucide-react';
 
 const RegisterNew = ({ onSwitchToLogin }) => {
   const { register } = useAuth();
@@ -202,7 +202,8 @@ const RegisterNew = ({ onSwitchToLogin }) => {
                       className="w-full"
                       size="lg"
                     >
-                      🔐 {oidcConfig?.button_text || 'Sign In with SSO'}
+                      <KeyRound className="h-4 w-4" />
+                      {oidcConfig?.button_text || 'Sign In with SSO'}
                     </Button>
                     <p className="text-xs text-muted-foreground mt-2">Your account will be created automatically</p>
                   </div>

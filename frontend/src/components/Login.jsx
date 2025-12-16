@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LogIn, Key, Loader2, AlertCircle, Laptop, Moon, Sun, UserCircle } from 'lucide-react';
+import { LogIn, Key, KeyRound, Loader2, AlertCircle, Laptop, Moon, Sun, UserCircle } from 'lucide-react';
 import { prepareRequestOptions, uint8ArrayToBase64Url } from '@/utils/webauthn';
 
 const LoginNew = ({ onSwitchToRegister }) => {
@@ -476,7 +476,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
                     </>
                     ) : (
                       <>
-                        <Key className="h-4 w-4" />
+                        <KeyRound className="h-4 w-4" />
                         {ssoButtonConfig.text}
                       </>
                     )}
