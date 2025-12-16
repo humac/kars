@@ -20,7 +20,10 @@ import {
   Edit,
   Trash2,
   Search,
-  Bell
+  Bell,
+  RefreshCw,
+  AlertTriangle,
+  Mail
 } from 'lucide-react';
 import {
   Table,
@@ -54,6 +57,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export default function AttestationPage() {
   const { getAuthHeaders, user } = useAuth();
@@ -103,6 +107,19 @@ export default function AttestationPage() {
   const [selectedRecordIds, setSelectedRecordIds] = useState(new Set());
   const [sendingReminder, setSendingReminder] = useState(new Set());
   const [sendingBulkReminder, setSendingBulkReminder] = useState(false);
+
+  // Auto-refresh states
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+
+  // Manager filter state
+  const [showMyTeamOnly, setShowMyTeamOnly] = useState(false);
+
+  // Pending invites states
+  const [showPendingInvitesModal, setShowPendingInvitesModal] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [loadingPendingInvites, setLoadingPendingInvites] = useState(false);
+  const [resendingInvite, setResendingInvite] = useState(new Set());
 
   // Table column count constant for colSpan calculations
   const DASHBOARD_TABLE_COLUMNS = 8; // Checkbox, Employee, Email, Status, Completed, Reminder, Escalation, Actions
@@ -254,6 +271,18 @@ export default function AttestationPage() {
       loadCampaigns();
     }
   }, [user]);
+
+  // Auto-refresh effect for dashboard
+  useEffect(() => {
+    if (!showDashboardModal || !selectedCampaign || !autoRefreshEnabled) return;
+    
+    const interval = setInterval(() => {
+      handleViewDashboard(selectedCampaign);
+      setLastRefresh(new Date());
+    }, 60000); // 60 seconds
+    
+    return () => clearInterval(interval);
+  }, [showDashboardModal, selectedCampaign, autoRefreshEnabled]);
 
   const loadUsers = async () => {
     try {
@@ -623,6 +652,73 @@ export default function AttestationPage() {
     }
   };
 
+  // Manual refresh handler
+  const handleManualRefresh = () => {
+    handleViewDashboard(selectedCampaign);
+    setLastRefresh(new Date());
+  };
+
+  // Load pending invites
+  const handleViewPendingInvites = async (campaignId) => {
+    setShowPendingInvitesModal(true);
+    setLoadingPendingInvites(true);
+    
+    try {
+      const res = await fetch(`/api/attestation/campaigns/${campaignId}/pending-invites`, {
+        headers: { ...getAuthHeaders() }
+      });
+      
+      if (!res.ok) throw new Error('Failed to load pending invites');
+      
+      const data = await res.json();
+      setPendingInvites(data.pending_invites);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load pending invites',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingPendingInvites(false);
+    }
+  };
+
+  // Resend invite
+  const handleResendInvite = async (inviteId) => {
+    setResendingInvite(prev => new Set(prev).add(inviteId));
+    
+    try {
+      const res = await fetch(`/api/attestation/pending-invites/${inviteId}/resend`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders() }
+      });
+      
+      if (!res.ok) throw new Error('Failed to resend invite');
+      
+      toast({
+        title: 'Invite Resent',
+        description: 'Registration invite email sent successfully'
+      });
+      
+      // Refresh pending invites
+      handleViewPendingInvites(selectedCampaign.id);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error',
+        description: 'Failed to resend invite',
+        variant: 'destructive'
+      });
+    } finally {
+      setResendingInvite(prev => {
+        const next = new Set(prev);
+        next.delete(inviteId);
+        return next;
+      });
+    }
+  };
+
   const handleViewDashboard = async (campaign) => {
     // Reset filters when opening dashboard
     setDashboardSearchQuery('');
@@ -706,6 +802,11 @@ export default function AttestationPage() {
     
     let records = dashboardData.records;
     
+    // Manager team filter (apply first, before other filters)
+    if (user?.role === 'manager' && showMyTeamOnly) {
+      records = records.filter(r => r.manager_email === user.email);
+    }
+    
     // Apply tab filter
     if (dashboardFilterTab === 'overdue') {
       records = records.filter(r => isOverdue(r, selectedCampaign));
@@ -728,7 +829,7 @@ export default function AttestationPage() {
     }
     
     return records;
-  }, [dashboardData, dashboardFilterTab, dashboardSearchQuery, selectedCampaign]);
+  }, [dashboardData, dashboardFilterTab, dashboardSearchQuery, selectedCampaign, showMyTeamOnly, user]);
 
   // Compute counts for dashboard
   const overdueCount = useMemo(() => {
@@ -1274,10 +1375,41 @@ export default function AttestationPage() {
       >
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Campaign Dashboard: {selectedCampaign?.name}</DialogTitle>
-            <DialogDescription>
-              View completion status and employee details
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Campaign Dashboard: {selectedCampaign?.name}</DialogTitle>
+                <DialogDescription>
+                  View completion status and employee details
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <RefreshCw className={cn(
+                    "h-3 w-3",
+                    autoRefreshEnabled && "animate-spin"
+                  )} />
+                  <span>
+                    Updated {lastRefresh.toLocaleTimeString()}
+                  </span>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={handleManualRefresh}
+                  title="Refresh now"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                  title={autoRefreshEnabled ? 'Pause auto-refresh' : 'Resume auto-refresh'}
+                >
+                  {autoRefreshEnabled ? 'Pause' : 'Resume'}
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
           {loadingDashboard ? (
             <div className="flex items-center justify-center h-32">
@@ -1285,6 +1417,31 @@ export default function AttestationPage() {
             </div>
           ) : dashboardData ? (
             <div className="space-y-4">
+              {/* Unregistered Users Alert */}
+              {selectedCampaign?.pending_invites_count > 0 && (
+                <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      {selectedCampaign.pending_invites_count} Unregistered Asset Owner{selectedCampaign.pending_invites_count !== 1 ? 's' : ''}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      These employees own assets but haven't registered in KARS yet.
+                    </p>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleViewPendingInvites(selectedCampaign.id)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Details & Resend Invites
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Card>
@@ -1348,6 +1505,20 @@ export default function AttestationPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Manager Team Filter */}
+              {user?.role === 'manager' && (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <Checkbox 
+                    id="myTeamOnly"
+                    checked={showMyTeamOnly}
+                    onCheckedChange={setShowMyTeamOnly}
+                  />
+                  <Label htmlFor="myTeamOnly" className="text-sm font-medium cursor-pointer">
+                    Show only my direct reports
+                  </Label>
+                </div>
+              )}
 
               {/* Filter Tabs */}
               <Tabs value={dashboardFilterTab} onValueChange={setDashboardFilterTab}>
@@ -1529,6 +1700,68 @@ export default function AttestationPage() {
               </div>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Pending Invites Modal */}
+      <Dialog open={showPendingInvitesModal} onOpenChange={setShowPendingInvitesModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Unregistered Asset Owners</DialogTitle>
+            <DialogDescription>
+              Employees who own assets but haven't registered in KARS yet
+            </DialogDescription>
+          </DialogHeader>
+          {loadingPendingInvites ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : pendingInvites.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No pending invites - all asset owners are registered!
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Invite Sent</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingInvites.map((invite) => (
+                    <TableRow key={invite.id}>
+                      <TableCell className="font-medium">{invite.email}</TableCell>
+                      <TableCell>
+                        {invite.invite_sent_at 
+                          ? new Date(invite.invite_sent_at).toLocaleString()
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResendInvite(invite.id)}
+                          disabled={resendingInvite.has(invite.id)}
+                        >
+                          {resendingInvite.has(invite.id) ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Mail className="h-4 w-4 mr-2" />
+                              Resend
+                            </>
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
