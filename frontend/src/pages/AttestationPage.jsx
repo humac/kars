@@ -1078,51 +1078,39 @@ export default function AttestationPage() {
             <div className="space-y-6">
               {/* Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Total Employees
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-2xl font-bold">
-                        {dashboardData.records?.length || 0}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Completed
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <span className="text-2xl font-bold">
-                        {dashboardData.records?.filter(r => r.status === 'completed').length || 0}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Pending
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-orange-600" />
-                      <span className="text-2xl font-bold">
-                        {dashboardData.records?.filter(r => r.status === 'pending').length || 0}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="p-4 rounded-lg border bg-card">
+                  <div className="text-sm font-medium text-muted-foreground mb-3">
+                    Total Employees
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-2xl font-bold">
+                      {dashboardData.records?.length || 0}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border bg-card">
+                  <div className="text-sm font-medium text-muted-foreground mb-3">
+                    Completed
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <span className="text-2xl font-bold">
+                      {dashboardData.records?.filter(r => r.status === 'completed').length || 0}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border bg-card">
+                  <div className="text-sm font-medium text-muted-foreground mb-3">
+                    Pending
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                    <span className="text-2xl font-bold">
+                      {dashboardData.records?.filter(r => r.status === 'pending').length || 0}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Employee Records Table */}
