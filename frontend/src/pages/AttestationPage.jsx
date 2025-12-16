@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,8 @@ import {
   Clock,
   AlertCircle,
   Edit,
-  Trash2
+  Trash2,
+  Search
 } from 'lucide-react';
 import {
   Table,
@@ -28,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -92,6 +94,10 @@ export default function AttestationPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState(null);
 
+  // Dashboard search and filter states
+  const [dashboardSearchQuery, setDashboardSearchQuery] = useState('');
+  const [dashboardFilterTab, setDashboardFilterTab] = useState('all');
+
   // Helper function to parse target_user_ids
   const parseTargetUserIds = (targetUserIds) => {
     if (!targetUserIds) return [];
@@ -148,6 +154,34 @@ export default function AttestationPage() {
     }
     
     return `${completed}/${total} - ${total > 0 ? Math.round((completed / total) * 100) : 0}% Complete`;
+  };
+
+  // Helper function to calculate days elapsed since campaign start
+  const getDaysElapsed = (startDate) => {
+    if (!startDate) return 0;
+    const start = new Date(startDate);
+    const now = new Date();
+    const diffTime = Math.abs(now - start);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // Helper function to calculate days late for a record
+  const getDaysLate = (record, campaign) => {
+    if (!record || !campaign) return 0;
+    if (record.status === 'completed') return 0;
+    
+    const daysElapsed = getDaysElapsed(campaign.start_date);
+    const escalationDays = campaign.escalation_days || 0;
+    const daysLate = Math.max(0, daysElapsed - escalationDays);
+    return daysLate;
+  };
+
+  // Helper function to check if a record is overdue
+  const isOverdue = (record, campaign) => {
+    if (!record || !campaign) return false;
+    if (record.status === 'completed') return false;
+    return getDaysLate(record, campaign) > 0;
   };
 
   const loadCampaigns = async () => {
@@ -478,6 +512,10 @@ export default function AttestationPage() {
   };
 
   const handleViewDashboard = async (campaign) => {
+    // Reset filters when opening dashboard
+    setDashboardSearchQuery('');
+    setDashboardFilterTab('all');
+    
     setSelectedCampaign(campaign);
     setShowDashboardModal(true);
     setLoadingDashboard(true);
@@ -549,6 +587,57 @@ export default function AttestationPage() {
       </Badge>
     );
   };
+
+  // Compute filtered records and counts for dashboard
+  const filteredRecords = useMemo(() => {
+    if (!dashboardData?.records) return [];
+    
+    let records = dashboardData.records;
+    
+    // Apply tab filter
+    if (dashboardFilterTab === 'overdue') {
+      records = records.filter(r => isOverdue(r, selectedCampaign));
+    } else if (dashboardFilterTab === 'pending') {
+      records = records.filter(r => r.status === 'pending');
+    } else if (dashboardFilterTab === 'in_progress') {
+      records = records.filter(r => r.status === 'in_progress');
+    } else if (dashboardFilterTab === 'completed') {
+      records = records.filter(r => r.status === 'completed');
+    }
+    // 'all' - no filter
+    
+    // Apply search filter
+    if (dashboardSearchQuery) {
+      const query = dashboardSearchQuery.toLowerCase();
+      records = records.filter(r => 
+        r.user_name?.toLowerCase().includes(query) ||
+        r.user_email?.toLowerCase().includes(query)
+      );
+    }
+    
+    return records;
+  }, [dashboardData, dashboardFilterTab, dashboardSearchQuery, selectedCampaign]);
+
+  // Compute counts for dashboard
+  const overdueCount = useMemo(() => {
+    if (!dashboardData?.records || !selectedCampaign) return 0;
+    return dashboardData.records.filter(r => isOverdue(r, selectedCampaign)).length;
+  }, [dashboardData, selectedCampaign]);
+
+  const pendingCount = useMemo(() => {
+    if (!dashboardData?.records) return 0;
+    return dashboardData.records.filter(r => r.status === 'pending').length;
+  }, [dashboardData]);
+
+  const inProgressCount = useMemo(() => {
+    if (!dashboardData?.records) return 0;
+    return dashboardData.records.filter(r => r.status === 'in_progress').length;
+  }, [dashboardData]);
+
+  const completedCount = useMemo(() => {
+    if (!dashboardData?.records) return 0;
+    return dashboardData.records.filter(r => r.status === 'completed').length;
+  }, [dashboardData]);
 
   if (loading) {
     return (
@@ -1077,39 +1166,109 @@ export default function AttestationPage() {
           ) : dashboardData ? (
             <div className="space-y-6">
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg border bg-card">
-                  <div className="text-sm font-medium text-muted-foreground mb-3">
-                    Total Employees
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-2xl font-bold">
-                      {dashboardData.records?.length || 0}
-                    </span>
-                  </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Total Employees
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-2xl font-bold">
+                        {dashboardData.records?.length || 0}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Completed
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <span className="text-2xl font-bold">
+                        {completedCount}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Pending
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      <span className="text-2xl font-bold">
+                        {pendingCount}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className={overdueCount > 0 ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : ''}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Overdue
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                      <span className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : ''}`}>
+                        {overdueCount}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Filter Tabs */}
+              <Tabs value={dashboardFilterTab} onValueChange={setDashboardFilterTab}>
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="all">
+                    All ({dashboardData.records?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="overdue" className="flex items-center gap-2">
+                    <span>Overdue ({overdueCount})</span>
+                    {overdueCount > 0 && (
+                      <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
+                        !
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="pending">
+                    Pending ({pendingCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="in_progress">
+                    In Progress ({inProgressCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="completed">
+                    Completed ({completedCount})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* Search and Count */}
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  <Input
+                    id="dashboard-search"
+                    placeholder="Search by name or email..."
+                    className="pl-9"
+                    value={dashboardSearchQuery}
+                    onChange={(e) => setDashboardSearchQuery(e.target.value)}
+                  />
                 </div>
-                <div className="p-4 rounded-lg border bg-card">
-                  <div className="text-sm font-medium text-muted-foreground mb-3">
-                    Completed
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-2xl font-bold">
-                      {dashboardData.records?.filter(r => r.status === 'completed').length || 0}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-4 rounded-lg border bg-card">
-                  <div className="text-sm font-medium text-muted-foreground mb-3">
-                    Pending
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-orange-600" />
-                    <span className="text-2xl font-bold">
-                      {dashboardData.records?.filter(r => r.status === 'pending').length || 0}
-                    </span>
-                  </div>
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredRecords.length} of {dashboardData.records?.length || 0} employees
                 </div>
               </div>
 
@@ -1129,32 +1288,51 @@ export default function AttestationPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dashboardData.records?.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">{record.user_name}</TableCell>
-                          <TableCell>{record.user_email}</TableCell>
-                          <TableCell>{getStatusBadge(record.status)}</TableCell>
-                          <TableCell>
-                            {record.completed_at 
-                              ? new Date(record.completed_at).toLocaleString()
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.reminder_sent_at ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {record.escalation_sent_at ? (
-                              <AlertCircle className="h-4 w-4 text-orange-600" />
-                            ) : (
-                              '-'
-                            )}
+                      {filteredRecords.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            {dashboardSearchQuery || dashboardFilterTab !== 'all'
+                              ? 'No employees match your filters'
+                              : 'No records found'}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        filteredRecords.map((record) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-medium">{record.user_name}</TableCell>
+                            <TableCell>{record.user_email}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(record.status)}
+                                {isOverdue(record, selectedCampaign) && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    {getDaysLate(record, selectedCampaign)}d late
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {record.completed_at 
+                                ? new Date(record.completed_at).toLocaleString()
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.reminder_sent_at ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {record.escalation_sent_at ? (
+                                <AlertCircle className="h-4 w-4 text-orange-600" />
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
