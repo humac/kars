@@ -197,6 +197,199 @@ All 13 alerts are for attestation endpoints that:
    - Anomaly detection
    - Regular audit log reviews
 
+## Manager Read-Only Access
+
+As of PR #286, managers have read-only access to attestation campaigns to support their oversight responsibilities.
+
+### Accessible Endpoints (Manager Role)
+
+| Endpoint | Method | Purpose | Authorization |
+|----------|--------|---------|---------------|
+| `/api/attestation/campaigns` | GET | List all campaigns | `authorize('admin', 'manager')` |
+| `/api/attestation/campaigns/:id` | GET | View campaign details | `authorize('admin', 'manager')` |
+| `/api/attestation/campaigns/:id/dashboard` | GET | View campaign dashboard | `authorize('admin', 'manager')` |
+
+### Authorization Matrix
+
+| Action | Admin | Manager | Employee |
+|--------|-------|---------|----------|
+| Create campaign | ✅ | ❌ | ❌ |
+| Start campaign | ✅ | ❌ | ❌ |
+| Cancel campaign | ✅ | ❌ | ❌ |
+| Update campaign | ✅ | ❌ | ❌ |
+| View campaigns (read-only) | ✅ | ✅ | ❌ |
+| View dashboard (read-only) | ✅ | ✅ | ❌ |
+| Export campaign results | ✅ | ❌ | ❌ |
+| Complete own attestation | ✅ | ✅ | ✅ |
+
+### Security Implications
+
+✅ **Benefits:**
+- Managers can track their team's compliance progress
+- Supports escalation workflow (managers receive emails about non-compliant team members)
+- Maintains audit visibility for organizational hierarchy
+- Aligns with SOC2 principle of least privilege (read-only access)
+
+⚠️ **Considerations:**
+- Managers can see campaign details for all employees, not just their direct reports
+- This is consistent with the manager role's broader visibility in KARS
+- Future enhancement could add filtering to show only direct reports
+
+✅ **Mitigations:**
+- Manager access is read-only (no create, update, or delete)
+- All access is logged via authentication middleware
+- Role validation occurs on every request
+- Database queries use role-based filtering where appropriate
+
+## Pending Invite Token Security
+
+Unregistered asset owners receive invitation emails with tokens for secure registration.
+
+### Token Generation
+
+```javascript
+// Token is generated using crypto.randomBytes (32 bytes = 256 bits)
+const crypto = await import('crypto');
+const inviteToken = crypto.randomBytes(32).toString('hex');
+```
+
+**Properties:**
+- Length: 64 hexadecimal characters (256 bits of entropy)
+- Randomness: Cryptographically secure random number generator
+- Uniqueness: Extremely low collision probability (2^256 possible values)
+
+### Token Storage
+
+- Stored in `attestation_pending_invites` table
+- Indexed for fast lookup during registration
+- Not encrypted (acts as a secret itself, like a password reset token)
+- Token is single-use (marked with `registered_at` timestamp upon use)
+
+### Token Validation Process
+
+1. User clicks registration link with token: `/register?invite=[TOKEN]`
+2. Frontend includes token in registration API call
+3. Backend validates:
+   - Token exists in `attestation_pending_invites`
+   - `registered_at` is NULL (not already used)
+   - Associated campaign is still active
+4. Upon successful registration:
+   - User account is created
+   - Token is marked with `registered_at` timestamp
+   - Attestation record is created
+   - Assets are linked to new user
+
+### Security Assessment
+
+✅ **Strengths:**
+- High entropy prevents brute force attacks
+- Single-use prevents replay attacks
+- Tied to specific campaign and email
+- No sensitive data exposed in token
+
+⚠️ **Current Limitations:**
+- No expiration date implemented
+- Tokens remain valid indefinitely until used
+- No rate limiting on registration attempts with invalid tokens
+
+### Recommendations for Token Expiration
+
+**Option 1: Campaign-Based Expiration**
+```javascript
+// Validate token is from active campaign
+const campaign = await attestationCampaignDb.getById(invite.campaign_id);
+if (campaign.status !== 'active' || (campaign.end_date && new Date() > new Date(campaign.end_date))) {
+  return { error: 'Invitation expired' };
+}
+```
+
+**Option 2: Time-Based Expiration**
+```javascript
+// Add expires_at column to attestation_pending_invites
+const EXPIRATION_DAYS = 30; // Recommended: 30 days for invite tokens
+const expiresAt = new Date();
+expiresAt.setDate(expiresAt.getDate() + EXPIRATION_DAYS);
+
+await attestationPendingInviteDb.create({
+  // ... other fields
+  expires_at: expiresAt.toISOString()
+});
+
+// Validate on registration
+if (invite.expires_at && new Date() > new Date(invite.expires_at)) {
+  return { error: 'Invitation expired' };
+}
+```
+
+**Recommended Expiration Periods:**
+- **Invite tokens:** 30 days (sufficient time for new hires/onboarding)
+- **Password reset tokens:** 24 hours (for comparison - more urgent)
+- **Campaign-based:** Until campaign end_date (automatic via Option 1)
+
+**Recommendation:** Implement Option 1 immediately (campaign-based) as it requires no schema changes. Consider Option 2 for future enhancement with 30-day expiration.
+
+## Rate Limiting Recommendations
+
+While not currently implemented, rate limiting would enhance security. Priority endpoints for rate limiting:
+
+### High Priority (Write Operations)
+
+1. **Campaign Creation**
+   ```javascript
+   // Suggested limit: 10 campaigns per day per admin
+   app.post('/api/attestation/campaigns', 
+     rateLimit({ windowMs: 24*60*60*1000, max: 10 }),
+     authenticate, authorize('admin'), ...
+   );
+   ```
+
+2. **Registration with Invite**
+   ```javascript
+   // Suggested limit: 5 attempts per IP per hour
+   app.post('/api/auth/register',
+     rateLimit({ windowMs: 60*60*1000, max: 5 }),
+     ...
+   );
+   ```
+
+3. **Attestation Completion**
+   ```javascript
+   // Suggested limit: 100 completions per user per day
+   app.post('/api/attestation/records/:id/complete',
+     rateLimit({ windowMs: 24*60*60*1000, max: 100 }),
+     authenticate, ...
+   );
+   ```
+
+### Medium Priority (Read Operations)
+
+4. **Campaign List**
+   ```javascript
+   // Suggested limit: 300 requests per user per hour
+   app.get('/api/attestation/campaigns',
+     rateLimit({ windowMs: 60*60*1000, max: 300 }),
+     authenticate, authorize('admin', 'manager'), ...
+   );
+   ```
+
+5. **My Attestations**
+   ```javascript
+   // Suggested limit: 300 requests per user per hour
+   app.get('/api/attestation/my-attestations',
+     rateLimit({ windowMs: 60*60*1000, max: 300 }),
+     authenticate, ...
+   );
+   ```
+
+### Implementation Strategy
+
+1. **Phase 1:** Implement high-priority write operation limits
+2. **Phase 2:** Add monitoring and alerting for rate limit violations
+3. **Phase 3:** Implement read operation limits based on actual usage patterns
+4. **Phase 4:** Add per-user tracking and adaptive limits
+
+**Recommended Library:** `express-rate-limit` with Redis store for distributed deployments
+
 ## Conclusion
 
 The attestation feature implements security controls consistent with the existing KARS codebase. While CodeQL identified missing rate limiting, this is:
@@ -206,13 +399,19 @@ The attestation feature implements security controls consistent with the existin
 3. **Appropriate for use case** - Internal tool with controlled access
 4. **Documented for future** - Recommendations provided for enhancement
 
+**Additional Security Enhancements (Phase 3):**
+- Manager read-only access properly implemented with role-based authorization
+- Pending invite tokens use cryptographically secure generation
+- Token expiration recommendations provided for future implementation
+- Rate limiting strategy defined with priority endpoints identified
+
 The feature is **safe for production deployment** in typical internal enterprise environments with:
 - Corporate network security
 - VPN/firewall protection
 - Internal user base
 - Standard SOC2 compliance monitoring
 
-For high-security or public-facing deployments, implement the recommended rate limiting and monitoring enhancements.
+For high-security or public-facing deployments, implement the recommended rate limiting, token expiration, and monitoring enhancements.
 
 ## Security Summary
 
@@ -222,4 +421,6 @@ For high-security or public-facing deployments, implement the recommended rate l
 - Authentication and authorization properly implemented
 - Audit trail complete for SOC2 compliance
 - Security posture consistent with existing system
-- Recommendations provided for future enhancements
+- Manager read-only access follows least privilege principle
+- Invite token security adequate for internal use
+- Rate limiting recommendations provided for future enhancements

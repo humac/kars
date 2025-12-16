@@ -153,6 +153,68 @@ Employee endpoints:
    - Click "Complete Attestation"
    - Admin receives notification email
 
+### Unregistered Asset Owner Workflow
+
+When a campaign is started and assets are found with unregistered owner emails, the system automatically handles these owners:
+
+1. **Invitation Creation**
+   - System creates `attestation_pending_invites` records for unregistered owners
+   - Each invite includes a unique invite token for secure registration
+   - Asset count is tracked for each unregistered owner
+
+2. **Initial Invitation Email**
+   - Unregistered owner receives registration invite email
+   - Email includes:
+     - Campaign information
+     - Number of assets requiring attestation
+     - Registration link with invite token
+     - SSO button (if SSO is enabled)
+
+3. **Registration Process**
+   - User clicks registration link from email
+   - Fills out registration form (or uses SSO)
+   - System validates invite token
+   - Upon successful registration:
+     - Pending invite is marked with `registered_at` timestamp
+     - Attestation record is created for the new user
+     - Assets are linked to the new user account via `owner_id`
+
+4. **Post-Registration**
+   - User can now access "My Attestations" page
+   - Completes normal attestation workflow
+   - Existing assets are associated with their account
+
+5. **Reminders & Escalations**
+   - Unregistered owners receive reminder emails after `unregistered_reminder_days` (default: 7)
+   - Managers receive escalation emails after `escalation_days` if team members haven't registered
+   - All emails include registration link and asset count
+
+### Company-Scoped Targeting
+
+Campaigns can be targeted by company to focus attestation on specific business units or subsidiaries:
+
+1. **Campaign Configuration**
+   - Select "By Company" as target type when creating campaign
+   - Choose one or more companies from the dropdown
+   - System stores selected company IDs in `target_company_ids` field (JSON array)
+
+2. **User Selection on Start**
+   - When campaign is started, system calls `getRegisteredOwnersByCompanyIds()`
+   - Query returns all registered users who own assets in the selected companies
+   - Unregistered owners with assets in selected companies also get pending invites
+   - Example: If Company A and Company B are selected, all users with assets in either company receive attestation records
+
+3. **Multi-Company Selection**
+   - Users with assets in multiple selected companies receive ONE attestation record
+   - Attestation shows all their assets across all companies
+   - Asset filtering respects company boundaries during attestation
+
+4. **Benefits**
+   - Focus compliance efforts on specific subsidiaries
+   - Support phased rollout of attestation requirements
+   - Align with organizational structure
+   - Reduce noise for employees outside scope
+
 ### Automated Processes
 
 **Reminders** (Daily Check)
@@ -196,6 +258,136 @@ All emails use the SMTP configuration from Admin Settings and include:
 - Responsive HTML design
 - Plain text fallback
 - Action buttons with URLs
+
+### Email Template Variables Reference
+
+The following variables are available for use in email templates. Use `{{variableName}}` syntax in templates.
+
+| Variable | Description | Available In Templates |
+|----------|-------------|----------------------|
+| `{{siteName}}` | Site name from branding settings | All templates |
+| `{{campaignName}}` | Campaign name | attestation_launch, attestation_reminder, attestation_escalation, attestation_complete, attestation_registration_invite, attestation_unregistered_reminder, attestation_unregistered_escalation, attestation_ready |
+| `{{campaignDescription}}` | Campaign description | attestation_launch, attestation_registration_invite |
+| `{{attestationUrl}}` | Direct link to My Attestations page | attestation_launch, attestation_reminder |
+| `{{registerUrl}}` | Registration link with invite token | attestation_registration_invite, attestation_unregistered_reminder |
+| `{{assetCount}}` | Number of assets requiring attestation | attestation_registration_invite, attestation_unregistered_reminder, attestation_unregistered_escalation |
+| `{{ssoEnabled}}` | Whether SSO is enabled (true/false) | attestation_registration_invite, attestation_unregistered_reminder |
+| `{{ssoButtonText}}` | SSO button text from OIDC settings | attestation_registration_invite, attestation_unregistered_reminder |
+| `{{employeeName}}` | Employee's full name | attestation_escalation, attestation_unregistered_escalation |
+| `{{employeeEmail}}` | Employee's email address | attestation_escalation, attestation_unregistered_escalation |
+| `{{managerName}}` | Manager's full name | attestation_unregistered_escalation |
+| `{{firstName}}` | Recipient's first name | attestation_registration_invite, attestation_unregistered_reminder, attestation_ready |
+| `{{lastName}}` | Recipient's last name | attestation_registration_invite |
+| `{{userName}}` | Recipient's full name or email | Various templates |
+
+**Template Customization:**
+- Templates can be customized in Admin Settings > Email Templates
+- Use the variables table above to create dynamic, personalized emails
+- Test templates using the "Send Test Email" feature
+- Variables not provided will remain as-is in the output (e.g., `{{missingVar}}`)
+
+### Scheduler Testing
+
+The attestation scheduler automates reminders, escalations, and campaign closures. Here's how to test it:
+
+#### Manual Scheduler Execution
+
+Run scheduler functions manually for testing:
+
+```javascript
+// In backend directory
+node -e "import('./services/attestationScheduler.js').then(s => s.processReminders()).catch(e => console.error('Error:', e))"
+node -e "import('./services/attestationScheduler.js').then(s => s.processEscalations()).catch(e => console.error('Error:', e))"
+node -e "import('./services/attestationScheduler.js').then(s => s.processUnregisteredReminders()).catch(e => console.error('Error:', e))"
+node -e "import('./services/attestationScheduler.js').then(s => s.processUnregisteredEscalations()).catch(e => console.error('Error:', e))"
+node -e "import('./services/attestationScheduler.js').then(s => s.autoCloseExpiredCampaigns()).catch(e => console.error('Error:', e))"
+```
+
+Or run all tasks at once:
+```javascript
+node -e "import('./services/attestationScheduler.js').then(s => s.runScheduledTasks()).catch(e => console.error('Error:', e))"
+```
+
+#### Testing with Mock SMTP
+
+Use MailHog or Mailpit to capture emails without sending them:
+
+1. **Install MailHog** (https://github.com/mailhog/MailHog):
+   ```bash
+   # macOS
+   brew install mailhog
+   mailhog
+   
+   # Docker
+   docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog
+   ```
+
+2. **Configure KARS SMTP Settings**:
+   - Host: `localhost`
+   - Port: `1025`
+   - No authentication required
+   - TLS: Disabled
+
+3. **View Captured Emails**:
+   - Open http://localhost:8025
+   - All emails sent by KARS appear here
+   - Test reminder and escalation emails safely
+
+#### Verification Checklist
+
+For each scheduler function, verify:
+
+**processReminders():**
+- [ ] Sends reminders only after `reminder_days` have passed
+- [ ] Skips records where `reminder_sent_at` is already set
+- [ ] Only processes `status: 'pending'` records
+- [ ] Updates `reminder_sent_at` timestamp after sending
+- [ ] Handles missing user emails gracefully
+
+**processEscalations():**
+- [ ] Sends escalations only after `escalation_days` have passed
+- [ ] Requires `manager_email` on user record
+- [ ] Skips records where `escalation_sent_at` is already set
+- [ ] Only processes `status: 'pending'` records
+- [ ] Updates `escalation_sent_at` timestamp after sending
+
+**processUnregisteredReminders():**
+- [ ] Sends reminders after `unregistered_reminder_days` have passed
+- [ ] Includes correct asset count in email
+- [ ] Skips invites where `registered_at` is set
+- [ ] Skips invites where `reminder_sent_at` is set
+- [ ] Updates `reminder_sent_at` timestamp after sending
+
+**processUnregisteredEscalations():**
+- [ ] Sends escalations after `escalation_days` have passed
+- [ ] Gets manager info from asset records
+- [ ] Includes correct asset count in email
+- [ ] Skips invites where `escalation_sent_at` is set
+- [ ] Updates `escalation_sent_at` timestamp after sending
+
+**autoCloseExpiredCampaigns():**
+- [ ] Closes campaigns past their `end_date`
+- [ ] Does NOT close campaigns without `end_date`
+- [ ] Only affects `status: 'active'` campaigns
+- [ ] Updates campaign `status` to 'completed'
+
+#### Production Deployment
+
+For production, enable the scheduler as a background process:
+
+```bash
+# Set environment variable
+export RUN_ATTESTATION_SCHEDULER=true
+
+# Start the scheduler (runs every 24 hours)
+node backend/services/attestationScheduler.js &
+```
+
+Or use a cron job for more control:
+```bash
+# Run daily at 2 AM
+0 2 * * * cd /path/to/kars/backend && node -e "import('./services/attestationScheduler.js').then(s => s.runScheduledTasks())"
+```
 
 ## Security & Compliance
 
