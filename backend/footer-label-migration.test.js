@@ -70,6 +70,8 @@ describe('footer_label column migration', () => {
 
   it('should add footer_label column with migration', () => {
     // This simulates the migration code in database.js
+    // Note: We duplicate the migration logic here intentionally to test the SQL syntax
+    // and verify the migration works independently from the implementation
     const columns = db.prepare('PRAGMA table_info(branding_settings)').all();
     const hasFooterLabel = columns.some(col => col.name === 'footer_label');
 
