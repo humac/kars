@@ -62,62 +62,64 @@ KARS helps consulting organizations maintain accountability for client-owned ass
 - **New Asset Discovery** - Employees can report unregistered assets during attestation
 
 ### 🔐 Additional Security Features
-- **Role-Based Access Control** - Three roles with distinct permissions (see detailed matrix below):
+- **Role-Based Access Control** - Four roles with distinct permissions (see detailed matrix below):
   - **Employee**: View/edit own assets and audit logs only
   - **Manager**: View all assets and audit logs; bulk import assets; read-only access to users page; cannot edit other users' assets or access admin settings
+  - **Attestation Coordinator**: Manage attestation campaigns; read-only access to assets, users, companies, and audit logs; cannot access admin settings
   - **Admin**: Full access to all resources including admin settings, user management, and company management
 
 ### 📋 Role/Permissions Matrix
 
-| Feature | Employee | Manager | Admin |
-|---------|:--------:|:-------:|:-----:|
-| **Assets** | | | |
-| View own assets | ✅ | ✅ | ✅ |
-| View team assets (direct reports) | ❌ | ✅ | ✅ |
-| View all assets | ❌ | ✅ | ✅ |
-| Register own assets | ✅ | ✅ | ✅ |
-| Register assets for others | ❌ | ✅ | ✅ |
-| Edit own assets | ✅ | ✅ | ✅ |
-| Edit team assets | ❌ | ❌ | ✅ |
-| Edit all assets | ❌ | ❌ | ✅ |
-| Bulk import assets (CSV) | ❌ | ✅ | ✅ |
-| **Companies** | | | |
-| View company names (dropdown) | ✅ | ✅ | ✅ |
-| Create companies | ❌ | ❌ | ✅ |
-| Edit companies | ❌ | ❌ | ✅ |
-| Delete companies | ❌ | ❌ | ✅ |
-| Bulk import companies (CSV) | ❌ | ❌ | ✅ |
-| **Users** | | | |
-| View users page | ❌ | ✅ (read-only) | ✅ |
-| Add new users | ❌ | ❌ | ✅ |
-| Edit user roles | ❌ | ❌ | ✅ |
-| Delete users | ❌ | ❌ | ✅ |
-| **Audit & Reporting** | | | |
-| View own audit logs | ✅ | ✅ | ✅ |
-| View team audit logs | ❌ | ✅ | ✅ |
-| View all audit logs | ❌ | ✅ | ✅ |
-| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
-| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
-| **Attestations** | | | |
-| View own pending attestations | ✅ | ✅ | ✅ |
-| Submit attestations | ✅ | ✅ | ✅ |
-| View own attestation history | ✅ | ✅ | ✅ |
-| View team attestation status | ❌ | ✅ | ✅ |
-| View all attestation reports | ❌ | ❌ | ✅ |
-| Create/manage campaigns | ❌ | ❌ | ✅ |
-| Export attestation records | ❌ | ❌ | ✅ |
-| **Profile & Security** | | | |
-| Update own profile | ✅ | ✅ | ✅ |
-| Change own password | ✅ | ✅ | ✅ |
-| Enable/disable MFA | ✅ | ✅ | ✅ |
-| Register passkeys | ✅ | ✅ | ✅ |
-| **Admin Settings** | | | |
-| Access Admin Settings | ❌ | ❌ | ✅ |
-| Configure OIDC/SSO | ❌ | ❌ | ✅ |
-| Configure passkey settings | ❌ | ❌ | ✅ |
-| Manage branding | ❌ | ❌ | ✅ |
-| Configure database engine | ❌ | ❌ | ✅ |
-| Configure email/SMTP | ❌ | ❌ | ✅ |
+| Feature | Employee | Manager | Attestation Coordinator | Admin |
+|---------|:--------:|:-------:|:----------------------:|:-----:|
+| **Assets** | | | | |
+| View own assets | ✅ | ✅ | ✅ | ✅ |
+| View team assets (direct reports) | ❌ | ✅ | ✅ | ✅ |
+| View all assets | ❌ | ✅ | ✅ (read-only) | ✅ |
+| Register own assets | ✅ | ✅ | ❌ | ✅ |
+| Register assets for others | ❌ | ✅ | ❌ | ✅ |
+| Edit own assets | ✅ | ✅ | ❌ | ✅ |
+| Edit team assets | ❌ | ❌ | ❌ | ✅ |
+| Edit all assets | ❌ | ❌ | ❌ | ✅ |
+| Bulk import assets (CSV) | ❌ | ✅ | ❌ | ✅ |
+| **Companies** | | | | |
+| View company names (dropdown) | ✅ | ✅ | ✅ | ✅ |
+| View companies page | ❌ | ✅ | ✅ (read-only) | ✅ |
+| Create companies | ❌ | ❌ | ❌ | ✅ |
+| Edit companies | ❌ | ❌ | ❌ | ✅ |
+| Delete companies | ❌ | ❌ | ❌ | ✅ |
+| Bulk import companies (CSV) | ❌ | ❌ | ❌ | ✅ |
+| **Users** | | | | |
+| View users page | ❌ | ✅ (read-only) | ✅ (read-only) | ✅ |
+| Add new users | ❌ | ❌ | ❌ | ✅ |
+| Edit user roles | ❌ | ❌ | ❌ | ✅ |
+| Delete users | ❌ | ❌ | ❌ | ✅ |
+| **Audit & Reporting** | | | | |
+| View own audit logs | ✅ | ✅ | ✅ | ✅ |
+| View team audit logs | ❌ | ✅ | ✅ | ✅ |
+| View all audit logs | ❌ | ✅ | ✅ | ✅ |
+| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) | ✅ (all) |
+| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) | ✅ (all) |
+| **Attestations** | | | | |
+| View own pending attestations | ✅ | ✅ | ✅ | ✅ |
+| Submit attestations | ✅ | ✅ | ✅ | ✅ |
+| View own attestation history | ✅ | ✅ | ✅ | ✅ |
+| View team attestation status | ❌ | ✅ | ✅ | ✅ |
+| View all attestation reports | ❌ | ❌ | ✅ | ✅ |
+| Create/manage campaigns | ❌ | ❌ | ✅ | ✅ |
+| Export attestation records | ❌ | ❌ | ✅ | ✅ |
+| **Profile & Security** | | | | |
+| Update own profile | ✅ | ✅ | ✅ | ✅ |
+| Change own password | ✅ | ✅ | ✅ | ✅ |
+| Enable/disable MFA | ✅ | ✅ | ✅ | ✅ |
+| Register passkeys | ✅ | ✅ | ✅ | ✅ |
+| **Admin Settings** | | | | |
+| Access Admin Settings | ❌ | ❌ | ❌ | ✅ |
+| Configure OIDC/SSO | ❌ | ❌ | ❌ | ✅ |
+| Configure passkey settings | ❌ | ❌ | ❌ | ✅ |
+| Manage branding | ❌ | ❌ | ❌ | ✅ |
+| Configure database engine | ❌ | ❌ | ❌ | ✅ |
+| Configure email/SMTP | ❌ | ❌ | ❌ | ✅ |
 
 - **Automatic Manager Promotion** - Users listed as a manager are auto-promoted to manager with audit logging
 - **First Admin Setup** - Automatic admin promotion for first user

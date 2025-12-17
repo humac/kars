@@ -115,7 +115,7 @@ Web application that supports organizational SOC2 compliance by tracking client 
 - **Database Abstraction**: Single interface (`database.js`) supporting both SQLite and PostgreSQL
 - **Middleware Chain**: Authentication → Authorization → Route Handler
 - **Audit Logging**: Automatic tracking of all CRUD operations
-- **Role-Based Access Control**: Three roles (employee, manager, admin)
+- **Role-Based Access Control**: Four roles (employee, manager, attestation_coordinator, admin)
 
 **Frontend:**
 - **Context API**: Global state management (AuthContext, UsersContext)
@@ -500,10 +500,16 @@ if (user.role === 'employee') {
   assets = await assetDb.getByEmployee(user.email);
 }
 
-// managers: all assets (same as admins)
+// managers: all assets (same as admins and attestation_coordinator)
 else if (user.role === 'manager') {
   assets = await assetDb.getScopedForUser(user);
   // Returns: all assets
+}
+
+// attestation_coordinator: all assets (read-only)
+else if (user.role === 'attestation_coordinator') {
+  assets = await assetDb.getScopedForUser(user);
+  // Returns: all assets (but cannot edit)
 }
 
 // admins: all assets
@@ -516,6 +522,7 @@ else if (user.role === 'admin') {
 **Asset Edit Authorization:**
 ```javascript
 // Only admins and asset owners can edit
+// attestation_coordinator cannot edit assets
 if (user.role !== 'admin' && asset.employee_email !== user.email) {
   return res.status(403).json({
     success: false,

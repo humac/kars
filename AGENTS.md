@@ -19,7 +19,7 @@ This document provides AI agents with guidance for working with the KARS (KeyDat
 
 - **Three-Tier**: React SPA → Express REST API → SQLite/PostgreSQL
 - **Database Abstraction**: Single interface supporting both SQLite and PostgreSQL
-- **RBAC**: Three roles (employee, manager, admin) with scoped data access
+- **RBAC**: Four roles (employee, manager, attestation_coordinator, admin) with scoped data access
 
 ## Repository Structure
 
@@ -130,7 +130,10 @@ app.get('/api/profile', authenticate, async (req, res) => { ... });
 app.post('/api/companies', authenticate, authorize('admin'), async (req, res) => { ... });
 
 // Multiple roles
-app.get('/api/users', authenticate, authorize('admin', 'manager'), async (req, res) => { ... });
+app.get('/api/users', authenticate, authorize('admin', 'manager', 'attestation_coordinator'), async (req, res) => { ... });
+
+// Attestation coordinator example
+app.post('/api/attestation/campaigns', authenticate, authorize('admin', 'attestation_coordinator'), async (req, res) => { ... });
 ```
 
 ### Role-Based Data Filtering
@@ -138,8 +141,16 @@ app.get('/api/users', authenticate, authorize('admin', 'manager'), async (req, r
 ```javascript
 // Use getScopedForUser for proper role-based filtering
 const assets = await assetDb.getScopedForUser(user);
-// Admin and Manager see all assets
+// Admin, Manager, and Attestation Coordinator see all assets
 // Employee sees only own assets
+```
+
+### Role Hierarchy and Permissions
+
+- **admin**: Full access to all resources including admin settings, user management, company management
+- **attestation_coordinator**: Manage attestation campaigns; read-only access to assets, users, companies, audit logs; no admin settings access
+- **manager**: View all assets/audit logs, bulk import assets, read-only user access; cannot edit other users' assets
+- **employee**: View/edit own assets and audit logs only
 ```
 
 ### Audit Logging (CRITICAL)
