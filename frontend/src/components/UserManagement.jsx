@@ -51,6 +51,8 @@ const UserManagement = () => {
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
+  const isAttestationCoordinator = user?.role === 'attestation_coordinator';
+  const isReadOnly = isManager || isAttestationCoordinator;
 
   useEffect(() => {
     fetchUsers();
@@ -336,7 +338,7 @@ const UserManagement = () => {
   const isAllUsersSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.has(u.id));
   const isSomeUsersSelected = paginatedUsers.some((u) => selectedUserIds.has(u.id)) && !isAllUsersSelected;
 
-  if (!isAdmin && !isManager) {
+  if (!isAdmin && !isReadOnly) {
     return (
       <Card className="border-destructive">
         <CardContent className="pt-6">
@@ -361,11 +363,11 @@ const UserManagement = () => {
             <span className="text-xs sm:text-sm text-muted-foreground">Total: {users.length}</span>
           </div>
           <CardDescription className="text-sm">
-            {(isManager || user?.role === 'attestation_coordinator') ? 'View user information (read-only access)' : 'Manage user accounts, roles, and permissions'}
+            {isReadOnly ? 'View user information (read-only access)' : 'Manage user accounts, roles, and permissions'}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2 px-4 sm:px-6">
-          {(isManager || user?.role === 'attestation_coordinator') && (
+          {isReadOnly && (
             <Alert className="mb-4">
               <Info className="h-4 w-4" />
               <AlertDescription>
