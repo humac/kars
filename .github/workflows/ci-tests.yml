@@ -53,6 +53,15 @@ jobs:
         working-directory: ./${{ matrix.project }}
         run: npm ci
 
+      - name: Lint code
+        working-directory: ./${{ matrix.project }}
+        run: npm run lint --if-present
+
+      - name: Security audit
+        working-directory: ./${{ matrix.project }}
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Clean test environment (backend)
         if: matrix.project == 'backend'
         working-directory: ./backend
@@ -72,9 +81,17 @@ jobs:
 
       - name: Generate coverage report
         working-directory: ./${{ matrix.project }}
-        run: npm run test:coverage
-        # Allow coverage generation to fail without failing the job
+        run: npm run test:coverage --if-present
+        env:
+          NODE_ENV: test
+          CI: true
+          JWT_SECRET: test-jwt-secret-for-ci-only
         continue-on-error: true
+
+      - name: Build verification
+        if: matrix.project == 'frontend'
+        working-directory: ./frontend
+        run: npm run build
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4

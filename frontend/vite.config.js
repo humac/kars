@@ -29,6 +29,12 @@ export default defineConfig({
         'node_modules/',
         'src/test/',
       ],
+      thresholds: {
+        branches: 70,
+        functions: 70,
+        lines: 70,
+        statements: 70
+      }
     },
     // Suppress console warnings during tests
     onConsoleLog(log, type) {
