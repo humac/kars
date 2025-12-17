@@ -221,12 +221,8 @@ describe('AssetTable Component', () => {
       />
     );
 
-    // Click the direct Delete button (first one)
-    const deleteButtons = screen.getAllByRole('button', { name: '' }).filter(btn => {
-      const svg = btn.querySelector('svg');
-      return svg && svg.classList.contains('lucide-trash-2');
-    });
-    
+    // Click the direct Delete button (first one) - now has aria-label
+    const deleteButtons = screen.getAllByRole('button', { name: /delete asset/i });
     await user.click(deleteButtons[0]);
 
     // Check for Dialog confirmation
@@ -249,12 +245,8 @@ describe('AssetTable Component', () => {
       />
     );
 
-    // Click the direct Delete button (first one)
-    const deleteButtons = screen.getAllByRole('button', { name: '' }).filter(btn => {
-      const svg = btn.querySelector('svg');
-      return svg && svg.classList.contains('lucide-trash-2');
-    });
-    
+    // Click the direct Delete button (first one) - now has aria-label
+    const deleteButtons = screen.getAllByRole('button', { name: /delete asset/i });
     await user.click(deleteButtons[0]);
 
     // Wait for and click confirm in Dialog

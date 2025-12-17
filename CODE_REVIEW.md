@@ -478,10 +478,10 @@ useEffect(() => {
 
 ### Frontend (< 1 hour each)
 
-1. Extract `formatFullName` utility
-2. Add sr-only text to icon buttons
+1. ~~Extract `formatFullName` utility~~ ✅ Done
+2. ~~Add sr-only text to icon buttons~~ ✅ Done (aria-labels added)
 3. Fix unstable useEffect dependencies
-4. Add React.memo to table row components
+4. ~~Add React.memo to table row components~~ ✅ Done
 
 ---
 
@@ -503,11 +503,11 @@ useEffect(() => {
 - [ ] Extract constants
 
 ### Phase 3: Frontend Refactoring (2-3 weeks)
-- [ ] Create useFetch hook
-- [ ] Extract shared utilities
-- [ ] Split large components
-- [ ] Fix performance issues
-- [ ] Address accessibility gaps
+- [x] Create useFetch hook ✅ Done
+- [x] Extract shared utilities ✅ Done (user.js)
+- [ ] Split large components (in progress - AssetTableRow, AssetCard extracted)
+- [x] Fix performance issues ✅ Done (React.memo on table components)
+- [x] Address accessibility gaps ✅ Done (aria-labels on icon buttons)
 
 ### Phase 4: Testing (Ongoing)
 - [ ] Add tests for security-critical paths
@@ -538,6 +538,7 @@ The codebase has several strong points worth maintaining:
 |------|---------|
 | 2025-12-17 | Initial code review completed |
 | 2025-12-17 | **Phase 1 Security Fixes:** Added authentication to asset endpoints, authorization to CSV import, required JWT_SECRET, rate limiting on auth endpoints, CORS whitelist, safe JSON parsing utilities |
+| 2025-12-17 | **Phase 3 Frontend Quick Wins:** Created `useFetch` hook for consistent API error handling, extracted `user.js` utilities for name formatting, added memoized `AssetTableRow` and `AssetCard` components with React.memo, added aria-labels to icon buttons for accessibility, integrated new components into AssetTable.jsx |
 
 ---
 

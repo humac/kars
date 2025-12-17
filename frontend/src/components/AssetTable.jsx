@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -14,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +31,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TablePaginationControls from '@/components/TablePaginationControls';
-import { Laptop, Search, Edit, Trash2, Sparkles, Loader2, Download } from 'lucide-react';
+import AssetTableRow from '@/components/AssetTableRow';
+import AssetCard from '@/components/AssetCard';
+import { Laptop, Search, Sparkles, Download } from 'lucide-react';
 
 export default function AssetTable({ assets = [], onEdit, onDelete, currentUser, onRefresh, onAssetAdded }) {
   const { getAuthHeaders } = useAuth();
@@ -416,23 +416,6 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const isAllSelected = paginatedAssets.length > 0 && paginatedAssets.every((a) => selectedIds.has(a.id));
   const isSomeSelected = paginatedAssets.some((a) => selectedIds.has(a.id)) && !isAllSelected;
 
-  const getStatusBadge = (status) => {
-    const normalized = (status || '').toLowerCase();
-    const variants = {
-      active: 'success',
-      returned: 'default',
-      lost: 'destructive',
-      damaged: 'warning',
-      retired: 'secondary'
-    };
-
-    return (
-      <Badge variant={variants[normalized] || 'outline'} className="capitalize">
-        {status || 'unknown'}
-      </Badge>
-    );
-  };
-
   return (
     <>
       <div className="space-y-6">
@@ -605,71 +588,16 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           <>
             <div className="md:hidden space-y-3">
               {paginatedAssets.map((asset) => (
-                <div
+                <AssetCard
                   key={asset.id}
-                  className={cn(
-                    "border rounded-lg p-4 flex gap-3",
-                    selectedIds.has(asset.id) && "bg-primary/5 border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary))]"
-                  )}
-                >
-                  <Checkbox
-                    checked={selectedIds.has(asset.id)}
-                    onCheckedChange={() => toggleSelect(asset.id)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-medium truncate">{asset.employee_first_name && asset.employee_last_name ? `${asset.employee_first_name} ${asset.employee_last_name}` : 'N/A'}</h4>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{asset.employee_email}</p>
-                      </div>
-                      {getStatusBadge(asset.status)}
-                    </div>
-                    {(asset._managerDisplayName || asset._managerEmail) && (
-                      <div className="mt-2">
-                        <p className="text-xs text-muted-foreground">Manager:</p>
-                        {asset._managerDisplayName && (
-                          <p className="text-sm font-medium">{asset._managerDisplayName}</p>
-                        )}
-                        {asset._managerEmail && (
-                          <p className="text-sm text-muted-foreground">{asset._managerEmail}</p>
-                        )}
-                      </div>
-                    )}
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Type</p>
-                        <p className="capitalize">{asset.asset_type === 'mobile_phone' ? 'Mobile Phone' : asset.asset_type || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Make/Model</p>
-                        <p>{asset.make && asset.model ? `${asset.make} ${asset.model}` : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Asset Tag</p>
-                        <p>{asset.asset_tag || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Serial Number</p>
-                        <p className="font-mono">{asset.serial_number || '-'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(asset)} disabled={!canEdit(asset)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleteDialog({ open: true, asset })}
-                      disabled={!canDelete(asset)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                  asset={asset}
+                  isSelected={selectedIds.has(asset.id)}
+                  canEdit={canEdit(asset)}
+                  canDelete={canDelete(asset)}
+                  onToggleSelect={() => toggleSelect(asset.id)}
+                  onEdit={() => onEdit(asset)}
+                  onDelete={() => setDeleteDialog({ open: true, asset })}
+                />
               ))}
             </div>
 
@@ -695,69 +623,16 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
               </TableHeader>
               <TableBody>
                 {paginatedAssets.map((asset) => (
-                  <TableRow
+                  <AssetTableRow
                     key={asset.id}
-                    data-state={selectedIds.has(asset.id) ? "selected" : undefined}
-                    className={cn(selectedIds.has(asset.id) && "bg-primary/5 border-primary/40")}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(asset.id)}
-                        onCheckedChange={() => toggleSelect(asset.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">
-                        {asset.employee_first_name && asset.employee_last_name
-                          ? `${asset.employee_first_name} ${asset.employee_last_name}`
-                          : 'N/A'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {asset.employee_email || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell">
-                      <div className="font-medium">
-                        {asset._managerDisplayName || '-'}
-                      </div>
-                      {asset._managerEmail && (
-                        <div className="text-sm text-muted-foreground">
-                          {asset._managerEmail}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{asset.company_name || '-'}</TableCell>
-                    <TableCell className="hidden xl:table-cell capitalize">
-                      {asset.asset_type === 'mobile_phone' ? 'Mobile Phone' : asset.asset_type || '-'}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {asset.make && asset.model ? `${asset.make} ${asset.model}` : '-'}
-                    </TableCell>
-                    <TableCell className="hidden 2xl:table-cell">{asset.asset_tag || '-'}</TableCell>
-                    <TableCell className="font-mono text-sm">{asset.serial_number || '-'}</TableCell>
-                    <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(asset)}
-                          disabled={!canEdit(asset)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteDialog({ open: true, asset })}
-                          disabled={!canDelete(asset)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    asset={asset}
+                    isSelected={selectedIds.has(asset.id)}
+                    canEdit={canEdit(asset)}
+                    canDelete={canDelete(asset)}
+                    onToggleSelect={() => toggleSelect(asset.id)}
+                    onEdit={() => onEdit(asset)}
+                    onDelete={() => setDeleteDialog({ open: true, asset })}
+                  />
                 ))}
               </TableBody>
             </Table>
