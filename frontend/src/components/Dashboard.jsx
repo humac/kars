@@ -43,42 +43,42 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card className="stat-card group">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                <Package className="h-6 w-6 text-primary-foreground" />
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Package className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-gradient mb-1">{dashboardStats.assetsCount}</div>
-            <p className="text-sm text-muted-foreground font-medium">Total Assets</p>
+            <div className="text-3xl md:text-4xl font-bold text-gradient mb-1">{dashboardStats.assetsCount}</div>
+            <p className="text-xs md:text-sm text-muted-foreground font-medium">Total Assets</p>
           </CardContent>
         </Card>
         
         <Card className="stat-card group">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-success flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                <Users className="h-6 w-6 text-success-foreground" />
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-success flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Users className="h-5 w-5 md:h-6 md:w-6 text-success-foreground" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-gradient mb-1">{dashboardStats.employeesCount}</div>
-            <p className="text-sm text-muted-foreground font-medium">Team Members</p>
+            <div className="text-3xl md:text-4xl font-bold text-gradient mb-1">{dashboardStats.employeesCount}</div>
+            <p className="text-xs md:text-sm text-muted-foreground font-medium">Team Members</p>
           </CardContent>
         </Card>
         
         <Card className="stat-card group">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-warning/80 to-warning flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                <Building2 className="h-6 w-6 text-warning-foreground" />
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-warning/80 to-warning flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Building2 className="h-5 w-5 md:h-6 md:w-6 text-warning-foreground" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-gradient mb-1">{dashboardStats.companiesCount}</div>
-            <p className="text-sm text-muted-foreground font-medium">Partners</p>
+            <div className="text-3xl md:text-4xl font-bold text-gradient mb-1">{dashboardStats.companiesCount}</div>
+            <p className="text-xs md:text-sm text-muted-foreground font-medium">Partners</p>
           </CardContent>
         </Card>
       </div>

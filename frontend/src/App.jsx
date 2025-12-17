@@ -219,22 +219,22 @@ function AppNew() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 md:px-6 flex h-16 items-center justify-between">
+        <div className="container mx-auto px-2 md:px-4 lg:px-6 flex h-16 items-center justify-between">
           {/* Logo and Nav */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 md:gap-6">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/assets')}>
               {brandingLogo ? (
                 <img
                   src={brandingLogo}
                   alt="Company logo"
-                  className="h-9 w-auto max-h-10 object-contain"
+                  className="h-7 md:h-9 w-auto max-h-8 md:max-h-10 object-contain"
                 />
               ) : (
                 <>
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-                    <Laptop className="h-4 w-4 text-primary-foreground" />
+                  <div className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-lg bg-primary">
+                    <Laptop className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary-foreground" />
                   </div>
-                  <span className="font-semibold text-lg hidden sm:block">KARS</span>
+                  <span className="font-semibold text-base md:text-lg hidden sm:block">KARS</span>
                 </>
               )}
             </div>
@@ -257,8 +257,8 @@ function AppNew() {
           </div>
 
           {/* User Menu - Desktop */}
-          <div className="hidden md:flex items-center gap-4">
-            <div className="flex flex-col items-end text-sm">
+          <div className="hidden md:flex items-center gap-3 lg:gap-4">
+            <div className="hidden lg:flex flex-col items-end text-sm">
               <span className="font-medium">{user?.first_name} {user?.last_name}</span>
               <span className="text-muted-foreground text-xs">{user?.email}</span>
             </div>
@@ -326,7 +326,7 @@ function AppNew() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden h-11 w-11"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -336,11 +336,11 @@ function AppNew() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background">
-            <div className="container mx-auto px-4 md:px-6 py-4 space-y-4">
+            <div className="container mx-auto px-3 py-4 space-y-4">
               {/* User Info */}
               <div className="flex items-center gap-3 pb-4 border-b">
                 <div className="relative">
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-11 w-11">
                     {user?.profile_image && (
                       <AvatarImage src={user.profile_image} alt="Profile" />
                     )}
@@ -352,9 +352,9 @@ function AppNew() {
                     <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background"></span>
                   )}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{user?.first_name} {user?.last_name}</p>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{user?.first_name} {user?.last_name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
                 </div>
                 <Badge variant="secondary" className="uppercase text-xs">
                   {user?.role}
@@ -384,12 +384,12 @@ function AppNew() {
               </div>
 
               {/* Navigation */}
-              <nav className="space-y-1">
+              <nav className="space-y-2">
                 {visibleNavItems.map((item) => (
                   <Button
                     key={item.path}
                     variant={isActive(item.path) ? 'secondary' : 'ghost'}
-                    className="w-full justify-start gap-2"
+                    className="w-full justify-start gap-2 h-11"
                     onClick={() => handleNavigation(item.path)}
                   >
                     <item.icon className="h-4 w-4" />
@@ -399,7 +399,7 @@ function AppNew() {
                 <Separator />
                 <Button
                   variant="ghost"
-                  className="w-full justify-start gap-2"
+                  className="w-full justify-start gap-2 h-11"
                   onClick={() => handleNavigation('/profile')}
                 >
                   <User className="h-4 w-4" />
@@ -407,7 +407,7 @@ function AppNew() {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start gap-2 relative"
+                  className="w-full justify-start gap-2 relative h-11"
                   onClick={() => handleNavigation('/my-attestations')}
                 >
                   <ClipboardCheck className="h-4 w-4" />
@@ -418,7 +418,7 @@ function AppNew() {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                  className="w-full justify-start gap-2 text-destructive hover:text-destructive h-11"
                   onClick={handleLogout}
                 >
                   <LogOut className="h-4 w-4" />
