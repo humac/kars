@@ -1345,6 +1345,14 @@ const initDb = async () => {
       await dbRun("ALTER TABLE branding_settings ADD COLUMN app_url TEXT");
       console.log('Migration complete: Added app_url column');
     }
+
+    // Add footer_label column if it doesn't exist
+    const hasFooterLabel = brandingCols.some(col => col.name === 'footer_label');
+    if (!hasFooterLabel) {
+      console.log('Migrating branding_settings table: adding footer_label column...');
+      await dbRun("ALTER TABLE branding_settings ADD COLUMN footer_label TEXT DEFAULT 'SOC2 Compliance - KeyData Asset Registration System'");
+      console.log('Migration complete: Added footer_label column');
+    }
   } catch (err) {
     console.error('Migration error (branding columns):', err.message);
     // Don't fail initialization
