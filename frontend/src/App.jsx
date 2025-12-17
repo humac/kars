@@ -459,8 +459,8 @@ function AppNew() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-3 md:py-4 mt-auto">
-        <div className="container mx-auto px-3 md:px-4 lg:px-6 text-center text-xs md:text-sm text-muted-foreground">
+      <footer className="border-t py-4 mt-auto">
+        <div className="container mx-auto px-4 md:px-6 text-center text-sm text-muted-foreground">
           {footerLabel}
         </div>
       </footer>
