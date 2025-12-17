@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { ASSET_STATUS_OPTIONS } from '@/lib/constants';
 import {
   Dialog,
   DialogContent,
@@ -19,14 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-
-const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'lost', label: 'Lost' },
-  { value: 'damaged', label: 'Damaged' },
-  { value: 'retired', label: 'Retired' },
-];
 
 export default function AssetEditModal({ asset, currentUser, onClose, onSaved }) {
   const { getAuthHeaders } = useAuth();
@@ -178,7 +171,7 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map((option) => (
+                {ASSET_STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>

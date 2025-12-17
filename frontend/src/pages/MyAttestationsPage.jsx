@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { ASSET_STATUS_OPTIONS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -510,11 +511,11 @@ export default function MyAttestationsPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="active">Active</SelectItem>
-                                      <SelectItem value="lost">Lost</SelectItem>
-                                      <SelectItem value="stolen">Stolen</SelectItem>
-                                      <SelectItem value="decommissioned">Decommissioned</SelectItem>
-                                      <SelectItem value="transferred">Transferred</SelectItem>
+                                      {ASSET_STATUS_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 )}

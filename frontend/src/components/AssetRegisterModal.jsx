@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ASSET_STATUS_OPTIONS } from '@/lib/constants';
 import {
   Dialog,
   DialogContent,
@@ -22,14 +23,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, AlertCircle } from 'lucide-react';
-
-const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'lost', label: 'Lost' },
-  { value: 'damaged', label: 'Damaged' },
-  { value: 'retired', label: 'Retired' },
-];
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -500,7 +493,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
+                  {ASSET_STATUS_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
