@@ -24,7 +24,7 @@ Create a `.env` file in the `backend` directory with:
 ```bash
 # Passkey Configuration for Local Development
 PASSKEY_RP_ID=localhost
-PASSKEY_RP_NAME=KARS - KeyData Asset Registration System
+PASSKEY_RP_NAME=ACS - Asset Compliance System
 PASSKEY_ORIGIN=http://localhost:5173
 ```
 
@@ -70,7 +70,7 @@ Example output:
 ```
 [Passkey Registration] Configuration: {
   rpID: 'localhost',
-  rpName: 'KARS - KeyData Asset Registration System',
+  rpName: 'ACS - Asset Compliance System',
   expectedOrigin: 'http://localhost:5173',
   requestOrigin: 'http://127.0.0.1:5173',  # ⚠️ Mismatch!
   userEmail: 'user@example.com'
@@ -142,7 +142,7 @@ cat .env | grep PASSKEY
 Should show:
 ```
 PASSKEY_RP_ID=localhost
-PASSKEY_RP_NAME=KARS - KeyData Asset Registration System
+PASSKEY_RP_NAME=ACS - Asset Compliance System
 PASSKEY_ORIGIN=http://localhost:5173
 ```
 

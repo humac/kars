@@ -1,4 +1,4 @@
-# KARS (KeyData Asset Registration System)
+# ACS (Asset Compliance System)
 
 [![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/humac/kars/actions)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
@@ -16,7 +16,7 @@ A web application that supports organizational SOC2 compliance by tracking clien
 
 ## 🎯 Purpose
 
-KARS helps consulting organizations maintain accountability for client-owned assets (laptops, mobile devices) assigned to their consultants. This supports:
+ACS helps consulting organizations maintain accountability for client-owned assets (laptops, mobile devices) assigned to their consultants. This supports:
 
 - **SOC2 Audit Requirements** - Demonstrable tracking of client assets under your custody
 - **Regular Attestation** - Automated workflows for employees to certify assets they hold
@@ -253,7 +253,7 @@ npm run dev   # starts UI on http://localhost:5173
 - First registered account becomes **Admin** automatically (or set `ADMIN_EMAIL` in the backend `.env`).
 - Passkeys require the frontend origin to match `PASSKEY_ORIGIN` (default `http://localhost:5173`).
 - Enable OIDC/SSO from the admin UI after setting issuer/client credentials.
-- For email notifications, set `KARS_MASTER_KEY` environment variable for password encryption (see below).
+- For email notifications, set `ACS_MASTER_KEY` environment variable for password encryption (see below).
 - For password reset emails, configure `BASE_URL` (application URL) and optionally `ALLOWED_ORIGINS` (comma-separated list of allowed origins for security).
 
 ### Manual Backup
@@ -289,7 +289,7 @@ Email notifications (including password reset emails) require SMTP configuration
 2. **Set Environment Variable**:
    ```bash
    # Add to backend/.env
-   KARS_MASTER_KEY=your-generated-key-here
+   ACS_MASTER_KEY=your-generated-key-here
    ```
 
 3. **Configure SMTP Settings** (from Admin Settings UI):
@@ -307,7 +307,7 @@ Email notifications (including password reset emails) require SMTP configuration
    - Enter recipient email
    - Check for test email delivery
 
-**Security Note:** SMTP passwords are encrypted using AES-256-GCM before storage. The `KARS_MASTER_KEY` must remain secure and consistent across deployments.
+**Security Note:** SMTP passwords are encrypted using AES-256-GCM before storage. The `ACS_MASTER_KEY` must remain secure and consistent across deployments.
 
 ### Configure Attestation Scheduler
 
@@ -328,7 +328,7 @@ FRONTEND_URL=http://localhost:5173  # Base URL for email links (adjust for produ
 
 ## 📧 Email Notification Workflows
 
-KARS includes a comprehensive email notification system to support password reset workflows and attestation campaigns. All email notifications require SMTP configuration (see "Configure Email Notifications" above). Email templates are fully customizable via **Admin Settings → Notifications → Email Templates**.
+ACS includes a comprehensive email notification system to support password reset workflows and attestation campaigns. All email notifications require SMTP configuration (see "Configure Email Notifications" above). Email templates are fully customizable via **Admin Settings → Notifications → Email Templates**.
 
 **Scheduler Note:** When `RUN_ATTESTATION_SCHEDULER=true` is enabled, the scheduler runs daily automated checks for reminders, escalations, and campaign closures.
 
@@ -545,7 +545,7 @@ docker-compose up -d
 
 ## 📦 Dependency Upgrade Roadmap
 
-This section tracks planned dependency upgrades. Since KARS is currently in beta, we're taking a phased approach to upgrades.
+This section tracks planned dependency upgrades. Since ACS is currently in beta, we're taking a phased approach to upgrades.
 
 ### ✅ Completed (Phase 1 - December 2025)
 

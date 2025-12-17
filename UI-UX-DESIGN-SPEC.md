@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document outlines a comprehensive UI/UX modernization plan for the KARS (KeyData Asset Registration System) application. The goal is to create a modern, cohesive, and user-friendly interface that aligns with current design standards while maintaining the application's functionality and accessibility.
+This document outlines a comprehensive UI/UX modernization plan for the ACS (Asset Compliance System) application. The goal is to create a modern, cohesive, and user-friendly interface that aligns with current design standards while maintaining the application's functionality and accessibility.
 
 ---
 
@@ -536,6 +536,6 @@ xl: 1280px
 
 ## Conclusion
 
-This design specification provides a comprehensive plan to modernize the KARS application UI/UX while maintaining its functionality and improving user experience. The implementation will be done incrementally, starting with foundational design tokens and progressing through component updates to full page redesigns.
+This design specification provides a comprehensive plan to modernize the ACS application UI/UX while maintaining its functionality and improving user experience. The implementation will be done incrementally, starting with foundational design tokens and progressing through component updates to full page redesigns.
 
 The result will be a modern, cohesive, and user-friendly interface that aligns with current design standards while remaining accessible and performant.

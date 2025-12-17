@@ -1,6 +1,6 @@
 # Quick Start - Portainer Deployment
 
-Get your KeyData Asset Registration System (KARS) running on Portainer in minutes!
+Get your Asset Compliance System (ACS) running on Portainer in minutes!
 
 ## Prerequisites
 - Portainer instance running

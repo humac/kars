@@ -2,13 +2,13 @@
 
 ## Overview
 
-This document outlines database schema changes and migration considerations for the KARS application. The most recent update adds support for multiple asset types beyond just laptops.
+This document outlines database schema changes and migration considerations for the ACS application. The most recent update adds support for multiple asset types beyond just laptops.
 
 ## Latest Changes: Multi-Type Asset Support (December 2024)
 
 ### Breaking Change: Generic Asset Fields
 
-The KARS application has been updated to support multiple asset types (laptops and mobile phones) by replacing laptop-specific fields with generic asset fields.
+The ACS application has been updated to support multiple asset types (laptops and mobile phones) by replacing laptop-specific fields with generic asset fields.
 
 **⚠️ IMPORTANT: This is a breaking change. You must delete your existing database and start fresh.**
 
@@ -80,7 +80,7 @@ employee_first_name,employee_last_name,employee_email,...,asset_type,make,model,
 
 Since this is a breaking change:
 
-1. **Stop the KARS application**
+1. **Stop the ACS application**
 2. **Delete the existing database file** (typically `backend/data/*.db` for SQLite)
 3. **Update to the latest code**
 4. **Restart the application** - new schema will be created automatically
@@ -90,7 +90,7 @@ Since this is a breaking change:
 
 ## Previous Changes: Separated Name Fields (Earlier 2024)
 
-The KARS application was previously updated to use separated first and last name fields for better data quality and improved user experience.
+The ACS application was previously updated to use separated first and last name fields for better data quality and improved user experience.
 
 ## What Changed
 
@@ -123,7 +123,7 @@ All asset-related API endpoints now use the new separated field names:
 
 ## Migration for New Deployments
 
-If you're deploying KARS for the first time, no migration is needed. The new schema will be created automatically.
+If you're deploying ACS for the first time, no migration is needed. The new schema will be created automatically.
 
 ## Benefits of the New Schema
 

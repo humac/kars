@@ -1,4 +1,4 @@
-# KARS UI/UX Wireframes & Visual Mockups
+# ACS UI/UX Wireframes & Visual Mockups
 
 This document provides ASCII wireframes and detailed descriptions of the proposed UI improvements for each major screen.
 
@@ -13,9 +13,9 @@ This document provides ASCII wireframes and detailed descriptions of the propose
 │                                                              │
 │                    ┌─────────────────┐                      │
 │                    │   [LAPTOP ICON] │                      │
-│                    │      KARS       │                      │
-│                    │  KeyData Asset  │                      │
-│                    │ Registration... │                      │
+│                    │       ACS       │                      │
+│                    │  Asset          │                      │
+│                    │ Compliance...   │                      │
 │                    └─────────────────┘                      │
 │                                                              │
 │        ┌────────────────────────────────────────┐          │
@@ -106,7 +106,7 @@ This document provides ASCII wireframes and detailed descriptions of the propose
 ### Before (Current)
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ [Logo] KARS  [Assets] [Companies] [Audit] [Admin]     John Doe [☀️][⚙️]│
+│ [Logo] ACS  [Assets] [Companies] [Audit] [Admin]     John Doe [☀️][⚙️]│
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                       │
 │  Asset Inventory                                            0 assets  │
@@ -475,7 +475,7 @@ Level 4: Dropdown         ▬▬▬
 ### Mobile View (< 768px)
 ```
 ┌──────────────────────┐
-│ [☰]  KARS      [JD]  │
+│ [☰]  ACS       [JD]  │
 ├──────────────────────┤
 │                      │
 │ ╔══════════════════╗ │

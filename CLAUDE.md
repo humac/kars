@@ -1,6 +1,6 @@
-# CLAUDE.md - AI Assistant Guide for KARS
+# CLAUDE.md - AI Assistant Guide for ACS
 
-**KARS (KeyData Asset Registration System)** - A web application that supports organizational SOC2 compliance by tracking client assets with multi-factor authentication, role-based access control, and comprehensive audit logging.
+**ACS (Asset Compliance System)** - A web application that supports organizational SOC2 compliance by tracking client assets with multi-factor authentication, role-based access control, and comprehensive audit logging.
 -
 This document provides AI assistants with comprehensive guidance for working with this codebase effectively.
 
@@ -190,7 +190,7 @@ POSTGRES_URL=postgresql://user:pass@host:5432/dbname
 # Authentication (optional)
 ADMIN_EMAIL=admin@example.com
 PASSKEY_RP_ID=localhost
-PASSKEY_RP_NAME=KARS
+PASSKEY_RP_NAME=ACS
 PASSKEY_ORIGIN=http://localhost:3000
 OIDC_ENABLED=false
 # See .env.example for full OIDC configuration
@@ -441,7 +441,7 @@ await syncAssetOwnership(userEmail);
 
 ### Authentication Mechanisms
 
-KARS supports **four authentication methods**:
+ACS supports **four authentication methods**:
 
 1. **Password + JWT**: bcrypt hashing, 7-day tokens
 2. **WebAuthn/Passkeys**: FIDO2 biometric authentication
@@ -1660,7 +1660,7 @@ git push origin feature/my-feature      # Push branch
 
 ## Summary
 
-This guide provides AI assistants with comprehensive context for working with KARS. Key takeaways:
+This guide provides AI assistants with comprehensive context for working with ACS. Key takeaways:
 
 1. **Security First**: Never skip authentication, authorization, or audit logging
 2. **Dual Database Support**: Always implement for both SQLite and PostgreSQL

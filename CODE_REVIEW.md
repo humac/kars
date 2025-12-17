@@ -1,6 +1,6 @@
-# KARS Code Review - December 2025
+# ACS Code Review - December 2025
 
-This document contains a comprehensive code review of the KARS codebase with suggestions for improvements across security, architecture, code quality, and testing.
+This document contains a comprehensive code review of the ACS codebase with suggestions for improvements across security, architecture, code quality, and testing.
 
 ---
 

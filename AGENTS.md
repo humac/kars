@@ -1,10 +1,10 @@
-# Agent Guide for KARS
+# Agent Guide for ACS
 
-This document provides AI agents with guidance for working with the KARS (KeyData Asset Registration System) codebase. For comprehensive documentation, see `CLAUDE.md`.
+This document provides AI agents with guidance for working with the ACS (Asset Compliance System) codebase. For comprehensive documentation, see `CLAUDE.md`.
 
 ## Project Overview
 
-**KARS** is a SOC2-compliant web application for tracking and managing client assets assigned to consultants. It features multi-factor authentication, role-based access control (RBAC), and comprehensive audit logging.
+**ACS** is a SOC2-compliant web application for tracking and managing client assets assigned to consultants. It features multi-factor authentication, role-based access control (RBAC), and comprehensive audit logging.
 
 ### Tech Stack
 

@@ -322,7 +322,7 @@ Use MailHog or Mailpit to capture emails without sending them:
    docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog
    ```
 
-2. **Configure KARS SMTP Settings**:
+2. **Configure ACS SMTP Settings**:
    - Host: `localhost`
    - Port: `1025`
    - No authentication required
@@ -330,7 +330,7 @@ Use MailHog or Mailpit to capture emails without sending them:
 
 3. **View Captured Emails**:
    - Open http://localhost:8025
-   - All emails sent by KARS appear here
+   - All emails sent by ACS appear here
    - Test reminder and escalation emails safely
 
 #### Verification Checklist

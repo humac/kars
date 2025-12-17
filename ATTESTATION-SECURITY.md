@@ -82,7 +82,7 @@ All 13 alerts are for attestation endpoints that:
 ### Low Risk Factors
 
 1. **Internal Tool Usage**
-   - KARS is designed for internal employee use
+   - ACS is designed for internal employee use
    - Not exposed to public internet in typical deployments
    - Behind corporate VPN/firewall
 
@@ -232,7 +232,7 @@ As of PR #286, managers have read-only access to attestation campaigns to suppor
 
 ⚠️ **Considerations:**
 - Managers can see campaign details for all employees, not just their direct reports
-- This is consistent with the manager role's broader visibility in KARS
+- This is consistent with the manager role's broader visibility in ACS
 - Future enhancement could add filtering to show only direct reports
 
 ✅ **Mitigations:**
@@ -392,7 +392,7 @@ While not currently implemented, rate limiting would enhance security. Priority 
 
 ## Conclusion
 
-The attestation feature implements security controls consistent with the existing KARS codebase. While CodeQL identified missing rate limiting, this is:
+The attestation feature implements security controls consistent with the existing ACS codebase. While CodeQL identified missing rate limiting, this is:
 
 1. **Not a critical vulnerability** - Authentication and authorization provide baseline security
 2. **Consistent with codebase** - Existing endpoints also lack rate limiting

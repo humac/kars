@@ -1,6 +1,6 @@
 # Critical Files Verification
 
-This document describes the verification system for critical files in the KARS repository.
+This document describes the verification system for critical files in the ACS repository.
 
 ## Background
 
@@ -123,7 +123,7 @@ Expected output:
 ```
 Database initialized using SQLite
 Using SQLITE database backend
-KARS API running on http://localhost:3001
+ACS API running on http://localhost:3001
 Health check: http://localhost:3001/api/health
 ```
 
