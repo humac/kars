@@ -24,8 +24,7 @@ import {
   Bell,
   RefreshCw,
   AlertTriangle,
-  Mail,
-  MoreHorizontal
+  Mail
 } from 'lucide-react';
 import {
   Table,
@@ -82,7 +81,6 @@ export default function AttestationPage() {
   // Dashboard modal state
   const [showDashboardModal, setShowDashboardModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
-  const [selectedRecordIds, setSelectedRecordIds] = useState(new Set());
   
   const [campaignStats, setCampaignStats] = useState({});
   const [formData, setFormData] = useState({
@@ -1067,7 +1065,6 @@ export default function AttestationPage() {
         onOpenChange={(open) => {
           setShowDashboardModal(open);
           if (!open) {
-            setSelectedRecordIds(new Set());
             setSelectedCampaign(null);
           }
         }}
