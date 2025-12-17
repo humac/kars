@@ -149,7 +149,7 @@ Complete feature overview of the KeyData Asset Registration System (KARS).
 
 The Attestation Workflow system enables administrators to create periodic campaigns where employees certify the assets in their possession, ensuring accurate records and supporting compliance requirements.
 
-**Campaign Management (Admin Only)**
+**Campaign Management (Admin & Attestation Coordinator)**
 - Create attestation campaigns with custom names and descriptions
 - Configure start and end dates for campaigns
 - Set reminder schedules (e.g., send reminder after 7 days)
@@ -160,6 +160,11 @@ The Attestation Workflow system enables administrators to create periodic campai
   - Pending attestation count
   - Reminder and escalation tracking
 - Export campaign results to CSV for audit evidence
+
+**Workflow Roles:**
+- **Attestation Coordinator/Admin**: Creates and manages campaigns, monitors overall compliance
+- **Manager**: Receives team dashboard, helps drive completion with direct reports
+- **Employee**: Completes attestations for assigned assets
 
 **Employee Attestation Process**
 - Receive email notification when campaign starts
@@ -204,61 +209,62 @@ The attestation scheduler runs daily automated tasks:
 
 ### Role-Based Access Control (RBAC)
 
-**Three User Roles:**
+**Four User Roles:**
 
-KARS implements a comprehensive role-based access control system with three distinct roles: **Employee**, **Manager**, and **Admin**. Each role has specific permissions designed to support different levels of system access and responsibility.
+KARS implements a comprehensive role-based access control system with four distinct roles: **Employee**, **Manager**, **Attestation Coordinator**, and **Admin**. Each role has specific permissions designed to support different levels of system access and responsibility.
+
+#### Role Descriptions
+
+- **Employee**: Self-service asset management and attestation submission. Can only view and manage their own assets.
+- **Manager**: Team oversight with read-only visibility to all assets and audit reports. Can help drive attestation completion for their team.
+- **Attestation Coordinator**: Compliance-focused role for managing attestation campaigns and generating compliance reports. Has read-only access to assets, users, and companies but cannot modify them.
+- **Admin**: Full system administration including user management, company management, and system configuration.
 
 #### 📋 Role/Permissions Matrix
 
-| Feature | Employee | Manager | Admin |
-|---------|:--------:|:-------:|:-----:|
-| **Assets** | | | |
-| View own assets | ✅ | ✅ | ✅ |
-| View team assets (direct reports) | ❌ | ✅ | ✅ |
-| View all assets | ❌ | ✅ | ✅ |
-| Register own assets | ✅ | ✅ | ✅ |
-| Register assets for others | ❌ | ✅ | ✅ |
-| Edit own assets | ✅ | ✅ | ✅ |
-| Edit team assets | ❌ | ❌ | ✅ |
-| Edit all assets | ❌ | ❌ | ✅ |
-| Bulk import assets (CSV) | ❌ | ✅ | ✅ |
-| **Companies** | | | |
-| View company names (dropdown) | ✅ | ✅ | ✅ |
-| Create companies | ❌ | ❌ | ✅ |
-| Edit companies | ❌ | ❌ | ✅ |
-| Delete companies | ❌ | ❌ | ✅ |
-| Bulk import companies (CSV) | ❌ | ❌ | ✅ |
-| **Users** | | | |
-| View users page | ❌ | ✅ (read-only) | ✅ |
-| Add new users | ❌ | ❌ | ✅ |
-| Edit user roles | ❌ | ❌ | ✅ |
-| Delete users | ❌ | ❌ | ✅ |
-| **Audit & Reporting** | | | |
-| View own audit logs | ✅ | ✅ | ✅ |
-| View team audit logs | ❌ | ✅ | ✅ |
-| View all audit logs | ❌ | ✅ | ✅ |
-| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
-| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
-| **Attestations** | | | |
-| View own pending attestations | ✅ | ✅ | ✅ |
-| Submit attestations | ✅ | ✅ | ✅ |
-| View own attestation history | ✅ | ✅ | ✅ |
-| View team attestation status | ❌ | ✅ | ✅ |
-| View all attestation reports | ❌ | ❌ | ✅ |
-| Create/manage campaigns | ❌ | ❌ | ✅ |
-| Export attestation records | ❌ | ❌ | ✅ |
-| **Profile & Security** | | | |
-| Update own profile | ✅ | ✅ | ✅ |
-| Change own password | ✅ | ✅ | ✅ |
-| Enable/disable MFA | ✅ | ✅ | ✅ |
-| Register passkeys | ✅ | ✅ | ✅ |
-| **Admin Settings** | | | |
-| Access Admin Settings | ❌ | ❌ | ✅ |
-| Configure OIDC/SSO | ❌ | ❌ | ✅ |
-| Configure passkey settings | ❌ | ❌ | ✅ |
-| Manage branding | ❌ | ❌ | ✅ |
-| Configure database engine | ❌ | ❌ | ✅ |
-| Configure email/SMTP | ❌ | ❌ | ✅ |
+| Feature | Employee | Manager | Attestation Coordinator | Admin |
+|---------|:--------:|:-------:|:----------------------:|:-----:|
+| **Assets** | | | | |
+| View own assets | ✅ | ✅ | ✅ | ✅ |
+| View team assets (direct reports) | ❌ | ✅ | ✅ | ✅ |
+| View all assets | ❌ | ✅ | ✅ (read-only) | ✅ |
+| Register own assets | ✅ | ✅ | ❌ | ✅ |
+| Register assets for others | ❌ | ✅ | ❌ | ✅ |
+| Edit own assets | ✅ | ✅ | ❌ | ✅ |
+| Edit team assets | ❌ | ❌ | ❌ | ✅ |
+| Edit all assets | ❌ | ❌ | ❌ | ✅ |
+| Bulk import assets (CSV) | ❌ | ✅ | ❌ | ✅ |
+| **Companies** | | | | |
+| View company names (dropdown) | ✅ | ✅ | ✅ | ✅ |
+| View all companies | ❌ | ✅ | ✅ (read-only) | ✅ |
+| Create companies | ❌ | ❌ | ❌ | ✅ |
+| Edit companies | ❌ | ❌ | ❌ | ✅ |
+| Delete companies | ❌ | ❌ | ❌ | ✅ |
+| Bulk import companies (CSV) | ❌ | ❌ | ❌ | ✅ |
+| **Users** | | | | |
+| View users page | ❌ | ✅ (read-only) | ✅ (read-only) | ✅ |
+| Add new users | ❌ | ❌ | ❌ | ✅ |
+| Edit user roles | ❌ | ❌ | ❌ | ✅ |
+| Delete users | ❌ | ❌ | ❌ | ✅ |
+| **Audit & Reporting** | | | | |
+| View own audit logs | ✅ | ✅ | ✅ | ✅ |
+| View team audit logs | ❌ | ✅ | ✅ | ✅ |
+| View all audit logs | ❌ | ✅ | ✅ | ✅ |
+| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) | ✅ (all) |
+| **Attestations** | | | | |
+| View own pending attestations | ✅ | ✅ | ✅ | ✅ |
+| Submit attestations | ✅ | ✅ | ✅ | ✅ |
+| View team attestation status | ❌ | ✅ | ✅ | ✅ |
+| View all attestation reports | ❌ | ❌ | ✅ | ✅ |
+| Create/manage campaigns | ❌ | ❌ | ✅ | ✅ |
+| Export attestation records | ❌ | ❌ | ✅ | ✅ |
+| **Profile & Security** | | | | |
+| Update own profile | ✅ | ✅ | ✅ | ✅ |
+| Change own password | ✅ | ✅ | ✅ | ✅ |
+| Enable/disable MFA | ✅ | ✅ | ✅ | ✅ |
+| Register passkeys | ✅ | ✅ | ✅ | ✅ |
+| **Admin Settings** | | | | |
+| Access admin settings | ❌ | ❌ | ❌ | ✅ |
 
 **Automatic Manager Role Assignment**
 - When a user registers with a **manager email** that matches an existing account, that person is automatically promoted to **Manager** (unless already Manager/Admin).

@@ -591,10 +591,11 @@ const UserManagement = () => {
 
           <Card className="bg-muted/50 mt-4">
             <CardHeader className="pb-2 px-4 sm:px-6"><CardTitle className="text-sm sm:text-base">Role Descriptions</CardTitle></CardHeader>
-            <CardContent className="grid gap-3 sm:gap-2 grid-cols-1 sm:grid-cols-3 pt-2 px-4 sm:px-6">
-              <div><Badge variant="destructive">Admin</Badge><p className="text-sm text-muted-foreground mt-1">Full system access, can manage all users and settings.</p></div>
-              <div><Badge variant="success">Manager</Badge><p className="text-sm text-muted-foreground mt-1">View own + team assets, access team audit reports.</p></div>
-              <div><Badge variant="secondary">Employee</Badge><p className="text-sm text-muted-foreground mt-1">Can only view and manage own asset registrations.</p></div>
+            <CardContent className="grid gap-3 sm:gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-2 px-4 sm:px-6">
+              <div><Badge variant="destructive" className="uppercase text-xs">Admin</Badge><p className="text-sm text-muted-foreground mt-1">Full system access, can manage all users and settings.</p></div>
+              <div><Badge variant="default" className="uppercase text-xs bg-green-600">Manager</Badge><p className="text-sm text-muted-foreground mt-1">View own + team assets, access team audit reports.</p></div>
+              <div><Badge variant="outline" className="uppercase text-xs bg-purple-600 text-white border-purple-600">Attestation Coordinator</Badge><p className="text-sm text-muted-foreground mt-1">Manage attestation campaigns and compliance reporting.</p></div>
+              <div><Badge variant="secondary" className="uppercase text-xs">Employee</Badge><p className="text-sm text-muted-foreground mt-1">Can only view and manage own asset registrations.</p></div>
             </CardContent>
           </Card>
         </CardContent>

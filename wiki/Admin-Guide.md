@@ -98,6 +98,7 @@ Total user count displayed at top right.
 3. Select new role:
    - Employee (default)
    - Manager
+   - Attestation Coordinator
    - Admin
 4. Change is saved automatically
 
@@ -112,55 +113,49 @@ Understanding the permissions for each role is crucial for effective user manage
 
 #### 📋 Role/Permissions Matrix
 
-| Feature | Employee | Manager | Admin |
-|---------|:--------:|:-------:|:-----:|
-| **Assets** | | | |
-| View own assets | ✅ | ✅ | ✅ |
-| View team assets (direct reports) | ❌ | ✅ | ✅ |
-| View all assets | ❌ | ✅ | ✅ |
-| Register own assets | ✅ | ✅ | ✅ |
-| Register assets for others | ❌ | ✅ | ✅ |
-| Edit own assets | ✅ | ✅ | ✅ |
-| Edit team assets | ❌ | ❌ | ✅ |
-| Edit all assets | ❌ | ❌ | ✅ |
-| Bulk import assets (CSV) | ❌ | ✅ | ✅ |
-| **Companies** | | | |
-| View company names (dropdown) | ✅ | ✅ | ✅ |
-| Create companies | ❌ | ❌ | ✅ |
-| Edit companies | ❌ | ❌ | ✅ |
-| Delete companies | ❌ | ❌ | ✅ |
-| Bulk import companies (CSV) | ❌ | ❌ | ✅ |
-| **Users** | | | |
-| View users page | ❌ | ✅ (read-only) | ✅ |
-| Add new users | ❌ | ❌ | ✅ |
-| Edit user roles | ❌ | ❌ | ✅ |
-| Delete users | ❌ | ❌ | ✅ |
-| **Audit & Reporting** | | | |
-| View own audit logs | ✅ | ✅ | ✅ |
-| View team audit logs | ❌ | ✅ | ✅ |
-| View all audit logs | ❌ | ✅ | ✅ |
-| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) |
-| View summary reports | ✅ (own) | ✅ (all) | ✅ (all) |
-| **Attestations** | | | |
-| View own pending attestations | ✅ | ✅ | ✅ |
-| Submit attestations | ✅ | ✅ | ✅ |
-| View own attestation history | ✅ | ✅ | ✅ |
-| View team attestation status | ❌ | ✅ | ✅ |
-| View all attestation reports | ❌ | ❌ | ✅ |
-| Create/manage campaigns | ❌ | ❌ | ✅ |
-| Export attestation records | ❌ | ❌ | ✅ |
-| **Profile & Security** | | | |
-| Update own profile | ✅ | ✅ | ✅ |
-| Change own password | ✅ | ✅ | ✅ |
-| Enable/disable MFA | ✅ | ✅ | ✅ |
-| Register passkeys | ✅ | ✅ | ✅ |
-| **Admin Settings** | | | |
-| Access Admin Settings | ❌ | ❌ | ✅ |
-| Configure OIDC/SSO | ❌ | ❌ | ✅ |
-| Configure passkey settings | ❌ | ❌ | ✅ |
-| Manage branding | ❌ | ❌ | ✅ |
-| Configure database engine | ❌ | ❌ | ✅ |
-| Configure email/SMTP | ❌ | ❌ | ✅ |
+| Feature | Employee | Manager | Attestation Coordinator | Admin |
+|---------|:--------:|:-------:|:----------------------:|:-----:|
+| **Assets** | | | | |
+| View own assets | ✅ | ✅ | ✅ | ✅ |
+| View team assets (direct reports) | ❌ | ✅ | ✅ | ✅ |
+| View all assets | ❌ | ✅ | ✅ (read-only) | ✅ |
+| Register own assets | ✅ | ✅ | ❌ | ✅ |
+| Register assets for others | ❌ | ✅ | ❌ | ✅ |
+| Edit own assets | ✅ | ✅ | ❌ | ✅ |
+| Edit team assets | ❌ | ❌ | ❌ | ✅ |
+| Edit all assets | ❌ | ❌ | ❌ | ✅ |
+| Bulk import assets (CSV) | ❌ | ✅ | ❌ | ✅ |
+| **Companies** | | | | |
+| View company names (dropdown) | ✅ | ✅ | ✅ | ✅ |
+| View all companies | ❌ | ✅ | ✅ (read-only) | ✅ |
+| Create companies | ❌ | ❌ | ❌ | ✅ |
+| Edit companies | ❌ | ❌ | ❌ | ✅ |
+| Delete companies | ❌ | ❌ | ❌ | ✅ |
+| Bulk import companies (CSV) | ❌ | ❌ | ❌ | ✅ |
+| **Users** | | | | |
+| View users page | ❌ | ✅ (read-only) | ✅ (read-only) | ✅ |
+| Add new users | ❌ | ❌ | ❌ | ✅ |
+| Edit user roles | ❌ | ❌ | ❌ | ✅ |
+| Delete users | ❌ | ❌ | ❌ | ✅ |
+| **Audit & Reporting** | | | | |
+| View own audit logs | ✅ | ✅ | ✅ | ✅ |
+| View team audit logs | ❌ | ✅ | ✅ | ✅ |
+| View all audit logs | ❌ | ✅ | ✅ | ✅ |
+| Export audit logs (CSV) | ✅ (own) | ✅ (all) | ✅ (all) | ✅ (all) |
+| **Attestations** | | | | |
+| View own pending attestations | ✅ | ✅ | ✅ | ✅ |
+| Submit attestations | ✅ | ✅ | ✅ | ✅ |
+| View team attestation status | ❌ | ✅ | ✅ | ✅ |
+| View all attestation reports | ❌ | ❌ | ✅ | ✅ |
+| Create/manage campaigns | ❌ | ❌ | ✅ | ✅ |
+| Export attestation records | ❌ | ❌ | ✅ | ✅ |
+| **Profile & Security** | | | | |
+| Update own profile | ✅ | ✅ | ✅ | ✅ |
+| Change own password | ✅ | ✅ | ✅ | ✅ |
+| Enable/disable MFA | ✅ | ✅ | ✅ | ✅ |
+| Register passkeys | ✅ | ✅ | ✅ | ✅ |
+| **Admin Settings** | | | | |
+| Access admin settings | ❌ | ❌ | ❌ | ✅ |
 
 **Key Differences:**
 - **Employee**: Limited to personal asset management and profile settings
@@ -172,6 +167,62 @@ Understanding the permissions for each role is crucial for effective user manage
 - When users register or update their profile with a **manager email** matching an existing account, that person is automatically promoted to **Manager** (unless already Manager/Admin).
 - If a newly registered user already has employees pointing to their email as manager, their role is automatically promoted to **Manager**.
 - All auto-promotions are logged in the audit trail so admins can review and adjust roles if needed.
+
+## Attestation Coordinator Role
+
+The **Attestation Coordinator** role is designed for compliance officers and team members responsible for managing attestation campaigns without requiring full administrative access.
+
+### When to Use This Role
+
+Assign the attestation_coordinator role to users who need to:
+- Create and manage attestation campaigns
+- Monitor attestation completion across the organization
+- Export attestation records for compliance reporting
+- View asset and user information for campaign planning
+
+### What Attestation Coordinators Can Do
+
+✅ **Attestation Management**
+- Create, edit, start, and cancel attestation campaigns
+- View all attestation campaigns and dashboards
+- Export attestation records for all campaigns
+- Monitor campaign progress and completion rates
+
+✅ **Read-Only Access**
+- View all assets (for campaign context)
+- View all users (for campaign targeting)
+- View all companies (for campaign scoping)
+- View and export audit logs
+
+❌ **What They Cannot Do**
+- Access admin settings (OIDC, SMTP, security, branding)
+- Create, edit, or delete assets
+- Create, edit, or delete users
+- Create, edit, or delete companies
+- Bulk import assets or companies
+
+### Assigning the Role
+
+To assign the attestation_coordinator role:
+
+1. Navigate to **Users** page (admin only)
+2. Find the user you want to promote
+3. Click **Edit** on their row
+4. Select **Attestation Coordinator** from the role dropdown
+5. Click **Save Changes**
+
+The user will immediately gain access to the Attestation page and can begin managing campaigns.
+
+### Workflow with Other Roles
+
+The attestation coordinator role works in conjunction with other roles:
+
+1. **Attestation Coordinator** creates a campaign
+2. System notifies all employees
+3. **Managers** receive team dashboards and help drive completion
+4. **Employees** complete their attestations
+5. **Attestation Coordinator** monitors progress and exports results for compliance
+6. **Admin** handles any user/system configuration needs
 
 ### Deleting Users
 

@@ -450,13 +450,14 @@ KARS supports **four authentication methods**:
 
 ### Role-Based Access Control (RBAC)
 
-**Three Roles:**
+**Four Roles:**
 
 | Role | Capabilities |
 |------|-------------|
-| **employee** | View/edit own assets only; view own audit logs |
-| **manager** | View all assets and audit logs (same as admin); no admin settings access |
-| **admin** | Full access to all resources; system configuration |
+| **employee** | View/edit own assets only; view own audit logs; complete own attestations |
+| **manager** | View all assets and audit logs; bulk import assets; read-only users access; help team with attestations |
+| **attestation_coordinator** | Create/manage attestation campaigns; read-only access to assets, users, companies, audit logs |
+| **admin** | Full access to all resources; system configuration; user management |
 
 ### Middleware Pattern
 

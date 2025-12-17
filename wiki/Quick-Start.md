@@ -80,6 +80,21 @@ KARS uses role-based access control (RBAC) to ensure appropriate access levels. 
 
 ### 🔑 Quick Permissions Overview
 
+KARS has **four roles** with different access levels:
+
+| Role | Primary Purpose |
+|------|----------------|
+| **Employee** | View and manage own assets; complete attestations |
+| **Manager** | View all assets; help team complete attestations; read-only user access |
+| **Attestation Coordinator** | Manage compliance campaigns; read-only system access |
+| **Admin** | Full system administration and configuration |
+
+**Quick Role Comparison:**
+- **Can create attestation campaigns?** Attestation Coordinator + Admin only
+- **Can edit other users' assets?** Admin only
+- **Can access admin settings?** Admin only
+- **Can view all assets?** Manager, Attestation Coordinator, Admin
+
 **Employee** - Basic user focused on personal asset management
 - ✅ View and edit your own assets
 - ✅ Register assets for yourself
@@ -95,6 +110,13 @@ KARS uses role-based access control (RBAC) to ensure appropriate access levels. 
 - ✅ View all audit logs and reports
 - ✅ Read-only access to Users page
 - ❌ Cannot edit other users' assets, manage users, or access admin settings
+
+**Attestation Coordinator** - Compliance-focused role
+- ✅ Create and manage attestation campaigns
+- ✅ View all attestation reports and export records
+- ✅ Read-only access to assets, users, and companies
+- ✅ View and export audit logs
+- ❌ Cannot access admin settings or modify assets/users/companies
 
 **Admin** - Full system control
 - ✅ Everything a Manager can do, plus:
