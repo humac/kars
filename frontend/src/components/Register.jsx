@@ -26,6 +26,7 @@ const RegisterNew = ({ onSwitchToLogin }) => {
   const [oidcConfig, setOidcConfig] = useState(null);
   const [loadingInvite, setLoadingInvite] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
+  const [footerLabel, setFooterLabel] = useState('SOC2 Compliance - KeyData Asset Registration System');
 
   useEffect(() => {
     // Fetch branding settings
@@ -34,6 +35,9 @@ const RegisterNew = ({ onSwitchToLogin }) => {
       .then(data => {
         if (data.logo_data) {
           setBrandingLogo(data.logo_data);
+        }
+        if (data.footer_label) {
+          setFooterLabel(data.footer_label);
         }
       })
       .catch(err => console.error('Failed to fetch branding:', err));
@@ -415,7 +419,7 @@ const RegisterNew = ({ onSwitchToLogin }) => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          SOC2 Compliance • Secure Asset Management
+          {footerLabel}
         </p>
       </div>
     </div>

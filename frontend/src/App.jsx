@@ -49,6 +49,7 @@ function AppNew() {
   const { pendingCount } = usePendingAttestations();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [brandingLogo, setBrandingLogo] = useState(null);
+  const [footerLabel, setFooterLabel] = useState('SOC2 Compliance - KeyData Asset Registration System');
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
     return localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -109,6 +110,9 @@ function AppNew() {
       // Update page title
       const siteName = data.site_name || 'KARS';
       document.title = siteName;
+      
+      // Set footer label
+      setFooterLabel(data.footer_label || 'SOC2 Compliance - KeyData Asset Registration System');
     } catch (error) {
       console.error('Failed to load branding:', error);
     }
@@ -457,7 +461,7 @@ function AppNew() {
       {/* Footer */}
       <footer className="border-t py-4 mt-auto">
         <div className="container mx-auto px-4 md:px-6 text-center text-sm text-muted-foreground">
-          SOC2 Compliance - KeyData Asset Registration System
+          {footerLabel}
         </div>
       </footer>
     </div>

@@ -2079,7 +2079,8 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       favicon_content_type,
       primary_color,
       include_logo_in_emails,
-      app_url
+      app_url,
+      footer_label
     } = req.body;
 
     console.log('[Branding] Update request received:', {
@@ -2093,7 +2094,8 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       favicon_filename,
       primary_color,
       include_logo_in_emails,
-      app_url
+      app_url,
+      footer_label
     });
 
     // Validate logo data if provided
@@ -2125,7 +2127,8 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
       favicon_content_type,
       primary_color,
       include_logo_in_emails,
-      app_url
+      app_url,
+      footer_label
     }, req.user.email);
 
     console.log('[Branding] Settings updated successfully in database');
@@ -2139,6 +2142,7 @@ app.put('/api/admin/branding', authenticate, authorize('admin'), async (req, res
     if (primary_color) changes.push(`Color: ${primary_color}`);
     if (include_logo_in_emails !== undefined) changes.push(`Email logo: ${include_logo_in_emails ? 'enabled' : 'disabled'}`);
     if (app_url !== undefined) changes.push(`App URL: ${app_url || 'cleared'}`);
+    if (footer_label !== undefined) changes.push(`Footer label: ${footer_label || 'cleared'}`);
 
     await auditDb.log(
       'update',
