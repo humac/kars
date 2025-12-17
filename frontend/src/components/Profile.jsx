@@ -246,13 +246,13 @@ const ProfileNew = () => {
   return (
     <div className="space-y-3">
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
-            <CardTitle>Profile Settings</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Profile Settings</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="pt-2 pb-4">
+        <CardContent className="pt-2 pb-4 px-4 sm:px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-3">
               <TabsTrigger value="account" className="gap-2"><User className="h-4 w-4" />Account</TabsTrigger>
@@ -261,7 +261,7 @@ const ProfileNew = () => {
             </TabsList>
 
             <TabsContent value="account" className="space-y-0 mt-3">
-              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex items-center justify-between p-3 rounded-md border bg-card">
                   <span className="text-sm text-muted-foreground">Email</span>
                   <span className="font-medium text-sm">{user?.email}</span>
@@ -317,16 +317,16 @@ const ProfileNew = () => {
                     <p className="text-xs text-muted-foreground">JPG, PNG, or SVG up to 5MB.</p>
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="space-y-1.5"><Label className="text-sm">First Name</Label><Input value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} required /></div>
-                  <div className="space-y-1.5"><Label className="text-sm">Last Name</Label><Input value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} required /></div>
+                <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                  <div className="space-y-1.5"><Label className="text-sm">First Name</Label><Input value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} required className="text-base" /></div>
+                  <div className="space-y-1.5"><Label className="text-sm">Last Name</Label><Input value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} required className="text-base" /></div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 pt-1">
-                  <div className="space-y-1.5"><Label className="text-sm">Manager First Name</Label><Input value={formData.manager_first_name} onChange={(e) => setFormData({ ...formData, manager_first_name: e.target.value })} /></div>
-                  <div className="space-y-1.5"><Label className="text-sm">Manager Last Name</Label><Input value={formData.manager_last_name} onChange={(e) => setFormData({ ...formData, manager_last_name: e.target.value })} /></div>
+                <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 pt-1">
+                  <div className="space-y-1.5"><Label className="text-sm">Manager First Name</Label><Input value={formData.manager_first_name} onChange={(e) => setFormData({ ...formData, manager_first_name: e.target.value })} className="text-base" /></div>
+                  <div className="space-y-1.5"><Label className="text-sm">Manager Last Name</Label><Input value={formData.manager_last_name} onChange={(e) => setFormData({ ...formData, manager_last_name: e.target.value })} className="text-base" /></div>
                 </div>
-                <div className="space-y-1.5"><Label className="text-sm">Manager Email</Label><Input type="email" value={formData.manager_email} onChange={(e) => setFormData({ ...formData, manager_email: e.target.value })} /></div>
-                <Button type="submit" size="sm" disabled={loading}>{loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Update Profile</Button>
+                <div className="space-y-1.5"><Label className="text-sm">Manager Email</Label><Input type="email" value={formData.manager_email} onChange={(e) => setFormData({ ...formData, manager_email: e.target.value })} className="text-base" /></div>
+                <Button type="submit" size="sm" disabled={loading} className="w-full sm:w-auto">{loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Update Profile</Button>
               </form>
             </TabsContent>
 
@@ -337,10 +337,10 @@ const ProfileNew = () => {
                 </div>
                 <div className="p-3">
                   <form onSubmit={handlePasswordSubmit} className="space-y-2 max-w-md">
-                    <div className="space-y-1.5"><Label className="text-sm">Current Password</Label><Input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} required /></div>
-                    <div className="space-y-1.5"><Label className="text-sm">New Password</Label><Input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} minLength={6} required /></div>
-                    <div className="space-y-1.5"><Label className="text-sm">Confirm New Password</Label><Input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} minLength={6} required /></div>
-                    <Button type="submit" size="sm" disabled={passwordLoading}>{passwordLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Change Password</Button>
+                    <div className="space-y-1.5"><Label className="text-sm">Current Password</Label><Input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} required className="text-base" /></div>
+                    <div className="space-y-1.5"><Label className="text-sm">New Password</Label><Input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} minLength={6} required className="text-base" /></div>
+                    <div className="space-y-1.5"><Label className="text-sm">Confirm New Password</Label><Input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} minLength={6} required className="text-base" /></div>
+                    <Button type="submit" size="sm" disabled={passwordLoading} className="w-full sm:w-auto">{passwordLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Change Password</Button>
                   </form>
                 </div>
               </div>

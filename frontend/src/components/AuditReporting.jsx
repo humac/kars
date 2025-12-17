@@ -204,15 +204,15 @@ const AuditReportingNew = () => {
   }, [logs, logsPage, logsPageSize]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            <CardTitle>Audit & Reporting</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Audit & Reporting</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <Tabs value={activeView} onValueChange={setActiveView}>
             <TabsList className="mb-6">
               <TabsTrigger value="summary" className="gap-2"><BarChart3 className="h-4 w-4" />Summary</TabsTrigger>

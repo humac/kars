@@ -92,18 +92,18 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] sm:max-h-none">
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] sm:max-h-none">
         <DialogHeader>
-          <DialogTitle>Edit Asset</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm:text-xl">Edit Asset</DialogTitle>
+          <DialogDescription className="text-sm">
             Update the status of this asset.
           </DialogDescription>
         </DialogHeader>
 
         <div className="overflow-y-auto sm:overflow-visible space-y-4">
           {/* Read-only Summary Section */}
-          <div className="rounded-md bg-muted/50 p-3 space-y-2 text-sm">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-md bg-muted/50 p-3 sm:p-4 space-y-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Asset Tag:</span>
                 <div className="font-semibold">{asset.asset_tag || 'N/A'}</div>
@@ -113,7 +113,7 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
                 <div className="font-semibold">{asset.serial_number || 'N/A'}</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Asset Type:</span>
                 <div className="capitalize">{asset.asset_type === 'mobile_phone' ? 'Mobile Phone' : asset.asset_type || 'N/A'}</div>
@@ -123,33 +123,33 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
                 <div>{asset.make || 'N/A'} {asset.model || ''}</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Company:</span>
                 <div>{asset.company_name || 'N/A'}</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Employee:</span>
-                <div>{asset.employee_first_name && asset.employee_last_name ? `${asset.employee_first_name} ${asset.employee_last_name}` : 'N/A'}</div>
+                <div className="break-words">{asset.employee_first_name && asset.employee_last_name ? `${asset.employee_first_name} ${asset.employee_last_name}` : 'N/A'}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Employee Email:</span>
-                <div className="text-xs">{asset.employee_email || 'N/A'}</div>
+                <div className="text-xs break-all">{asset.employee_email || 'N/A'}</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Manager:</span>
                 <div>{asset.manager_first_name && asset.manager_last_name ? `${asset.manager_first_name} ${asset.manager_last_name}` : 'N/A'}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Manager Email:</span>
-                <div className="text-xs">{asset.manager_email || 'N/A'}</div>
+                <div className="text-xs break-all">{asset.manager_email || 'N/A'}</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
               <div>
                 <span className="font-medium text-muted-foreground">Registered:</span>
                 <div>{formatDate(asset.registration_date)}</div>
@@ -188,13 +188,14 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
             onClick={save}
             disabled={saving}
+            className="w-full sm:w-auto"
           >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {saving ? 'Saving...' : 'Save'}

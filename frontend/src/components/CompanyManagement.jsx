@@ -256,14 +256,14 @@ const CompanyManagementNew = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {!canManageCompanies && (
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 md:p-4">
           <div className="flex items-start gap-3">
             <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100">Read-Only Access</h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+              <h3 className="font-semibold text-sm md:text-base text-blue-900 dark:text-blue-100">Read-Only Access</h3>
+              <p className="text-xs md:text-sm text-blue-700 dark:text-blue-300 mt-1">
                 You have read-only access to company information.
               </p>
             </div>
@@ -271,18 +271,18 @@ const CompanyManagementNew = () => {
         </div>
       )}
       <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <CardHeader className="space-y-3 md:space-y-4 px-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
-              <CardTitle>Company Management ({companies.length})</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Company Management ({companies.length})</CardTitle>
             </div>
             {canManageCompanies && (
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" onClick={() => setShowImportModal(true)}>
+                <Button variant="outline" onClick={() => setShowImportModal(true)} className="flex-1 sm:flex-none">
                   <Upload className="h-4 w-4 mr-2" />Bulk Import
                 </Button>
-                <Button onClick={handleAddClick}>
+                <Button onClick={handleAddClick} className="flex-1 sm:flex-none">
                   <Plus className="h-4 w-4 mr-2" />Add Company
                 </Button>
               </div>
@@ -320,7 +320,7 @@ const CompanyManagementNew = () => {
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {filteredCompanies.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />

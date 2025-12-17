@@ -46,6 +46,7 @@ const AdminSettingsNew = () => {
   const [primaryColor, setPrimaryColor] = useState('#3B82F6');
   const [includeLogoInEmails, setIncludeLogoInEmails] = useState(false);
   const [appUrl, setAppUrl] = useState('');
+  const [footerLabel, setFooterLabel] = useState('SOC2 Compliance - KeyData Asset Registration System');
 
   useEffect(() => {
     if (activeView === 'settings') fetchDatabaseSettings();
@@ -96,6 +97,7 @@ const AdminSettingsNew = () => {
       setPrimaryColor(data.primary_color || '#3B82F6');
       setIncludeLogoInEmails(data.include_logo_in_emails === 1 || data.include_logo_in_emails === true);
       setAppUrl(data.app_url || '');
+      setFooterLabel(data.footer_label || 'SOC2 Compliance - KeyData Asset Registration System');
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setBrandingLoading(false); }
@@ -200,7 +202,8 @@ const AdminSettingsNew = () => {
           favicon_content_type: brandingSettings.favicon_content_type || null,
           primary_color: primaryColor,
           include_logo_in_emails: includeLogoInEmails,
-          app_url: appUrl
+          app_url: appUrl,
+          footer_label: footerLabel
         })
       });
 
@@ -513,6 +516,25 @@ const AdminSettingsNew = () => {
                         <p className="text-xs text-muted-foreground">
                           Base URL used for links in email notifications (attestation links, password reset, etc.). 
                           Falls back to FRONTEND_URL environment variable if not set.
+                        </p>
+                      </div>
+
+                      <Separator />
+
+                      {/* Footer Label */}
+                      <div className="space-y-2">
+                        <Label htmlFor="footer-label" className="text-sm font-semibold">Footer Label</Label>
+                        <Input
+                          id="footer-label"
+                          type="text"
+                          value={footerLabel}
+                          onChange={(e) => setFooterLabel(e.target.value)}
+                          placeholder="SOC2 Compliance - KeyData Asset Registration System"
+                          disabled={brandingLoading}
+                          className="max-w-md"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Text displayed at the bottom of the application and on login/register pages
                         </p>
                       </div>
 

@@ -36,6 +36,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
   const [brandingLogo, setBrandingLogo] = useState(null);
   const [siteName, setSiteName] = useState('KARS');
   const [subTitle, setSubTitle] = useState('KeyData Asset Registration System');
+  const [footerLabel, setFooterLabel] = useState('SOC2 Compliance - KeyData Asset Registration System');
 
   // Dark mode state - default to light mode
   const [theme, setTheme] = useState(() => {
@@ -126,6 +127,9 @@ const LoginNew = ({ onSwitchToRegister }) => {
             document.head.appendChild(link);
           }
           link.href = data.favicon_data;
+        }
+        if (data.footer_label) {
+          setFooterLabel(data.footer_label);
         }
       })
       .catch(err => console.error('Failed to fetch branding:', err));
@@ -503,7 +507,7 @@ const LoginNew = ({ onSwitchToRegister }) => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          SOC2 Compliance - Track and manage company assets
+          {footerLabel}
         </p>
       </div>
 

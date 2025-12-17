@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -233,21 +234,21 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle>Register New Asset</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+          <DialogTitle className="text-lg sm:text-xl">Register New Asset</DialogTitle>
+          <DialogDescription className="text-sm">
             Add a new asset to the system. All fields marked with * are required.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={save} className="flex flex-col flex-1 min-h-0">
-          <div className="overflow-y-auto px-6 space-y-3 flex-1">
+          <div className="overflow-y-auto px-4 sm:px-6 space-y-4 flex-1">
             {/* Employee Information */}
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground">Employee Information</h4>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                 <Label htmlFor="employee_first_name">First Name *</Label>
                 <Input 
@@ -260,7 +261,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   required
                   readOnly={isEmployee}
                   disabled={isEmployee}
-                  className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                  className={cn('text-base', isEmployee && 'bg-muted cursor-not-allowed')}
                 />
               </div>
 
@@ -276,7 +277,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   required
                   readOnly={isEmployee}
                   disabled={isEmployee}
-                  className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                  className={cn('text-base', isEmployee && 'bg-muted cursor-not-allowed')}
                 />
               </div>
             </div>
@@ -290,7 +291,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                 value={form.employee_email} 
                 onChange={onChange}
                 placeholder="john.doe@company.com"
-                className={`${emailError ? 'border-destructive' : ''} ${isEmployee ? 'bg-muted cursor-not-allowed' : ''}`}
+                className={cn('text-base', emailError && 'border-destructive', isEmployee && 'bg-muted cursor-not-allowed')}
                 required
                 readOnly={isEmployee}
                 disabled={isEmployee}
@@ -344,10 +345,11 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground">Manager Information</h4>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="manager_first_name">Manager First Name</Label>
-                <Input 
+                <Input
+                  className="text-base" 
                   id="manager_first_name" 
                   name="manager_first_name" 
                   value={form.manager_first_name} 
@@ -371,7 +373,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   placeholder="Manager"
                   readOnly={isEmployee}
                   disabled={isEmployee}
-                  className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                  className={cn('text-base', isEmployee && 'bg-muted cursor-not-allowed')}
                 />
               </div>
             </div>
@@ -385,7 +387,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                 value={form.manager_email} 
                 onChange={onChange}
                 placeholder="manager@example.com"
-                className={isEmployee ? 'bg-muted cursor-not-allowed' : ''}
+                className={cn('text-base', isEmployee && 'bg-muted cursor-not-allowed')}
                 readOnly={isEmployee}
                 disabled={isEmployee}
               />
@@ -432,7 +434,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="make">Make</Label>
                 <Input 
@@ -442,6 +444,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   onChange={onChange}
                   maxLength={100}
                   placeholder="Dell, Apple, Samsung"
+                  className="text-base"
                 />
               </div>
 
@@ -454,6 +457,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   onChange={onChange}
                   maxLength={100}
                   placeholder="XPS 15, iPhone 15"
+                  className="text-base"
                 />
               </div>
             </div>
@@ -468,6 +472,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                 maxLength={100}
                 placeholder="ABC123456789"
                 required
+                className="text-base"
               />
             </div>
 
@@ -481,6 +486,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                 maxLength={100}
                 placeholder="AT-1001"
                 required
+                className="text-base"
               />
             </div>
 
@@ -521,13 +527,14 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
             </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t mt-auto">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t mt-auto flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving || !!emailError}
+              className="w-full sm:w-auto"
             >
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {saving ? 'Registering...' : 'Register Asset'}

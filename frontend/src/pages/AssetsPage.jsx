@@ -105,29 +105,29 @@ export default function AssetsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <CardHeader className="space-y-3 md:space-y-4 px-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <Laptop className="h-5 w-5 text-primary" />
-              <CardTitle>Asset Management ({assets.length})</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Asset Management ({assets.length})</CardTitle>
             </div>
             {canRegister() && (
               <div className="flex gap-2 flex-wrap">
                 {canBulkImport() && (
-                  <Button variant="outline" onClick={() => setShowBulkImportModal(true)}>
+                  <Button variant="outline" onClick={() => setShowBulkImportModal(true)} className="flex-1 sm:flex-none">
                     <Upload className="h-4 w-4 mr-2" />Bulk Import
                   </Button>
                 )}
-                <Button onClick={() => setShowRegisterModal(true)}>
+                <Button onClick={() => setShowRegisterModal(true)} className="flex-1 sm:flex-none">
                   <Plus className="h-4 w-4 mr-2" />Register Asset
                 </Button>
               </div>
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <AssetTable
             assets={assets}
             onEdit={onEdit}

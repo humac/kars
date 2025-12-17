@@ -352,19 +352,19 @@ const UserManagement = () => {
   return (
     <div className="space-y-3">
       <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-2 px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              <CardTitle>User Management</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">User Management</CardTitle>
             </div>
-            <span className="text-sm text-muted-foreground">Total: {users.length}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">Total: {users.length}</span>
           </div>
-          <CardDescription>
+          <CardDescription className="text-sm">
             {(isManager || user?.role === 'attestation_coordinator') ? 'View user information (read-only access)' : 'Manage user accounts, roles, and permissions'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="pt-2 px-4 sm:px-6">
           {(isManager || user?.role === 'attestation_coordinator') && (
             <Alert className="mb-4">
               <Info className="h-4 w-4" />
@@ -590,8 +590,8 @@ const UserManagement = () => {
           )}
 
           <Card className="bg-muted/50 mt-4">
-            <CardHeader className="pb-2"><CardTitle className="text-base">Role Descriptions</CardTitle></CardHeader>
-            <CardContent className="grid gap-2 md:grid-cols-3 pt-2">
+            <CardHeader className="pb-2 px-4 sm:px-6"><CardTitle className="text-sm sm:text-base">Role Descriptions</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 sm:gap-2 grid-cols-1 sm:grid-cols-3 pt-2 px-4 sm:px-6">
               <div><Badge variant="destructive">Admin</Badge><p className="text-sm text-muted-foreground mt-1">Full system access, can manage all users and settings.</p></div>
               <div><Badge variant="success">Manager</Badge><p className="text-sm text-muted-foreground mt-1">View own + team assets, access team audit reports.</p></div>
               <div><Badge variant="secondary">Employee</Badge><p className="text-sm text-muted-foreground mt-1">Can only view and manage own asset registrations.</p></div>
@@ -603,19 +603,20 @@ const UserManagement = () => {
       {/* Edit User Dialog */}
       {isAdmin && (
         <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Edit User Attributes</DialogTitle>
-              <DialogDescription>Update name and manager information for this user.</DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Edit User Attributes</DialogTitle>
+              <DialogDescription className="text-sm">Update name and manager information for this user.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">First Name</label>
                   <Input
                     value={editForm.first_name}
                     onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
                     placeholder="First name"
+                    className="text-base"
                   />
                 </div>
                 <div>
@@ -624,16 +625,18 @@ const UserManagement = () => {
                     value={editForm.last_name}
                     onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
                     placeholder="Last name"
+                    className="text-base"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Manager First Name</label>
                   <Input
                     value={editForm.manager_first_name}
                     onChange={(e) => setEditForm({ ...editForm, manager_first_name: e.target.value })}
                     placeholder="First name"
+                    className="text-base"
                   />
                 </div>
                 <div>
@@ -642,6 +645,7 @@ const UserManagement = () => {
                     value={editForm.manager_last_name}
                     onChange={(e) => setEditForm({ ...editForm, manager_last_name: e.target.value })}
                     placeholder="Last name"
+                    className="text-base"
                   />
                 </div>
               </div>
@@ -652,15 +656,16 @@ const UserManagement = () => {
                   onChange={(e) => setEditForm({ ...editForm, manager_email: e.target.value })}
                   placeholder="manager@example.com"
                   type="email"
+                  className="text-base"
                 />
               </div>
               {editingUser && (
                 <p className="text-xs text-muted-foreground">Editing: {editingUser.email}</p>
               )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
-              <Button onClick={handleUserUpdate} disabled={savingEdit}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setEditingUser(null)} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={handleUserUpdate} disabled={savingEdit} className="w-full sm:w-auto">
                 {savingEdit && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes
               </Button>
             </DialogFooter>
@@ -671,14 +676,14 @@ const UserManagement = () => {
       {/* Delete User Dialog */}
       {isAdmin && (
         <Dialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, user: null })}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Confirm Delete User</DialogTitle>
-              <DialogDescription>Are you sure you want to delete "{deleteDialog.user?.name}"? This cannot be undone.</DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Confirm Delete User</DialogTitle>
+              <DialogDescription className="text-sm">Are you sure you want to delete "{deleteDialog.user?.name}"? This cannot be undone.</DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialog({ open: false, user: null })}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setDeleteDialog({ open: false, user: null })} className="w-full sm:w-auto">Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm} className="w-full sm:w-auto">Delete</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -687,13 +692,13 @@ const UserManagement = () => {
       {/* Add User Dialog */}
       {isAdmin && (
         <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>Create a new user account with specified role and details.</DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Add New User</DialogTitle>
+              <DialogDescription className="text-sm">Create a new user account with specified role and details.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="add-email">Email *</Label>
                   <Input
@@ -702,6 +707,7 @@ const UserManagement = () => {
                     value={addUserForm.email}
                     onChange={(e) => setAddUserForm({ ...addUserForm, email: e.target.value })}
                     placeholder="user@company.com"
+                    className="text-base"
                   />
                 </div>
                 <div>
@@ -712,10 +718,11 @@ const UserManagement = () => {
                     value={addUserForm.password}
                     onChange={(e) => setAddUserForm({ ...addUserForm, password: e.target.value })}
                     placeholder="At least 6 characters"
+                    className="text-base"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="add-first-name">First Name *</Label>
                   <Input
@@ -723,6 +730,7 @@ const UserManagement = () => {
                     value={addUserForm.first_name}
                     onChange={(e) => setAddUserForm({ ...addUserForm, first_name: e.target.value })}
                     placeholder="John"
+                    className="text-base"
                   />
                 </div>
                 <div>
@@ -732,6 +740,7 @@ const UserManagement = () => {
                     value={addUserForm.last_name}
                     onChange={(e) => setAddUserForm({ ...addUserForm, last_name: e.target.value })}
                     placeholder="Doe"
+                    className="text-base"
                   />
                 </div>
               </div>
@@ -751,7 +760,7 @@ const UserManagement = () => {
               </div>
               <div className="border-t pt-4">
                 <p className="text-sm font-medium mb-3">Manager Information (Optional)</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="add-manager-first">Manager First Name</Label>
                     <Input
@@ -759,6 +768,7 @@ const UserManagement = () => {
                       value={addUserForm.manager_first_name}
                       onChange={(e) => setAddUserForm({ ...addUserForm, manager_first_name: e.target.value })}
                       placeholder="Jane"
+                      className="text-base"
                     />
                   </div>
                   <div>
@@ -768,6 +778,7 @@ const UserManagement = () => {
                       value={addUserForm.manager_last_name}
                       onChange={(e) => setAddUserForm({ ...addUserForm, manager_last_name: e.target.value })}
                       placeholder="Smith"
+                      className="text-base"
                     />
                   </div>
                 </div>
@@ -779,13 +790,14 @@ const UserManagement = () => {
                     value={addUserForm.manager_email}
                     onChange={(e) => setAddUserForm({ ...addUserForm, manager_email: e.target.value })}
                     placeholder="manager@company.com"
+                    className="text-base"
                   />
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddUser} disabled={addingUser}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setAddUserDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={handleAddUser} disabled={addingUser} className="w-full sm:w-auto">
                 {addingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create User
               </Button>
             </DialogFooter>

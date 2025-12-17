@@ -764,6 +764,7 @@ const initDb = async () => {
       primary_color TEXT DEFAULT '#3B82F6',
       include_logo_in_emails INTEGER DEFAULT 0,
       app_url TEXT,
+      footer_label TEXT DEFAULT 'SOC2 Compliance - KeyData Asset Registration System',
       updated_at TIMESTAMP NOT NULL,
       updated_by TEXT
     )
@@ -781,6 +782,7 @@ const initDb = async () => {
       primary_color TEXT DEFAULT '#3B82F6',
       include_logo_in_emails INTEGER DEFAULT 0,
       app_url TEXT,
+      footer_label TEXT DEFAULT 'SOC2 Compliance - KeyData Asset Registration System',
       updated_at TEXT NOT NULL,
       updated_by TEXT
     )
@@ -1433,8 +1435,8 @@ const initDb = async () => {
   if (!checkBranding) {
     const now = new Date().toISOString();
     await dbRun(`
-      INSERT INTO branding_settings (id, site_name, sub_title, primary_color, include_logo_in_emails, updated_at)
-      VALUES (1, 'KARS', 'KeyData Asset Registration System', '#3B82F6', 0, ?)
+      INSERT INTO branding_settings (id, site_name, sub_title, primary_color, include_logo_in_emails, footer_label, updated_at)
+      VALUES (1, 'KARS', 'KeyData Asset Registration System', '#3B82F6', 0, 'SOC2 Compliance - KeyData Asset Registration System', ?)
     `, [now]);
   }
 
@@ -2871,6 +2873,7 @@ export const brandingSettingsDb = {
           primary_color = ?,
           include_logo_in_emails = ?,
           app_url = ?,
+          footer_label = ?,
           updated_at = ?,
           updated_by = ?
       WHERE id = 1
@@ -2886,6 +2889,7 @@ export const brandingSettingsDb = {
       settings.primary_color !== undefined ? settings.primary_color : '#3B82F6',
       settings.include_logo_in_emails !== undefined ? (settings.include_logo_in_emails ? 1 : 0) : 0,
       settings.app_url !== undefined ? settings.app_url : null,
+      settings.footer_label !== undefined ? settings.footer_label : 'SOC2 Compliance - KeyData Asset Registration System',
       now,
       userEmail
     ]);
