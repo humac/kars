@@ -49,7 +49,7 @@ function AppNew() {
   const { pendingCount } = usePendingAttestations();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [brandingLogo, setBrandingLogo] = useState(null);
-  const [footerLabel, setFooterLabel] = useState('SOC2 Compliance - KeyData Asset Registration System');
+  const [footerLabel, setFooterLabel] = useState('SOC2 Compliance - Asset Compliance System');
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
     return localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -108,11 +108,11 @@ function AppNew() {
       }
       
       // Update page title
-      const siteName = data.site_name || 'KARS';
+      const siteName = data.site_name || 'ACS';
       document.title = siteName;
       
       // Set footer label
-      setFooterLabel(data.footer_label || 'SOC2 Compliance - KeyData Asset Registration System');
+      setFooterLabel(data.footer_label || 'SOC2 Compliance - Asset Compliance System');
     } catch (error) {
       console.error('Failed to load branding:', error);
     }
@@ -238,7 +238,7 @@ function AppNew() {
                   <div className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-lg bg-primary">
                     <Laptop className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary-foreground" />
                   </div>
-                  <span className="font-semibold text-base md:text-lg hidden sm:block">KARS</span>
+                  <span className="font-semibold text-base md:text-lg hidden sm:block">ACS</span>
                 </>
               )}
             </div>

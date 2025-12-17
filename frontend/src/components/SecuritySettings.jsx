@@ -14,7 +14,7 @@ const SecuritySettings = () => {
   const { toast } = useToast();
   const [passkeySettings, setPasskeySettings] = useState({
     rp_id: 'localhost',
-    rp_name: 'KARS - KeyData Asset Registration System',
+    rp_name: 'ACS - Asset Compliance System',
     origin: 'http://localhost:5173',
     enabled: true,
     managed_by_env: false
@@ -136,7 +136,7 @@ const SecuritySettings = () => {
                   value={passkeySettings.rp_name}
                   onChange={(e) => setPasskeySettings({ ...passkeySettings, rp_name: e.target.value })}
                   disabled={passkeySettings.managed_by_env || loading}
-                  placeholder="KARS - KeyData Asset Registration System"
+                  placeholder="ACS - Asset Compliance System"
                 />
                 <p className="text-sm text-muted-foreground">
                   Friendly name shown to users during passkey registration

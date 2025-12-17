@@ -2,19 +2,19 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { encryptValue, decryptValue, generateMasterKey } from './encryption.js';
 
 describe('Encryption Utilities', () => {
-  const originalEnv = process.env.KARS_MASTER_KEY;
+  const originalEnv = process.env.ACS_MASTER_KEY;
 
   beforeEach(() => {
     // Set a test master key (32 bytes = 256 bits)
-    process.env.KARS_MASTER_KEY = generateMasterKey('base64');
+    process.env.ACS_MASTER_KEY = generateMasterKey('base64');
   });
 
   afterEach(() => {
     // Restore original environment
     if (originalEnv) {
-      process.env.KARS_MASTER_KEY = originalEnv;
+      process.env.ACS_MASTER_KEY = originalEnv;
     } else {
-      delete process.env.KARS_MASTER_KEY;
+      delete process.env.ACS_MASTER_KEY;
     }
   });
 
@@ -71,20 +71,20 @@ describe('Encryption Utilities', () => {
       expect(encrypted1).not.toBe(encrypted2);
     });
 
-    it('should throw error if KARS_MASTER_KEY is not set', () => {
-      delete process.env.KARS_MASTER_KEY;
+    it('should throw error if ACS_MASTER_KEY is not set', () => {
+      delete process.env.ACS_MASTER_KEY;
       
       expect(() => {
         encryptValue('test');
-      }).toThrow('KARS_MASTER_KEY environment variable is not set');
+      }).toThrow('ACS_MASTER_KEY environment variable is not set');
     });
 
-    it('should throw error if KARS_MASTER_KEY is invalid length', () => {
-      process.env.KARS_MASTER_KEY = Buffer.from('short', 'utf8').toString('base64');
+    it('should throw error if ACS_MASTER_KEY is invalid length', () => {
+      process.env.ACS_MASTER_KEY = Buffer.from('short', 'utf8').toString('base64');
       
       expect(() => {
         encryptValue('test');
-      }).toThrow('KARS_MASTER_KEY must be exactly 32 bytes');
+      }).toThrow('ACS_MASTER_KEY must be exactly 32 bytes');
     });
   });
 
@@ -145,13 +145,13 @@ describe('Encryption Utilities', () => {
       }).toThrow('Decryption failed');
     });
 
-    it('should throw error if KARS_MASTER_KEY is not set', () => {
+    it('should throw error if ACS_MASTER_KEY is not set', () => {
       const encrypted = encryptValue('test');
-      delete process.env.KARS_MASTER_KEY;
+      delete process.env.ACS_MASTER_KEY;
       
       expect(() => {
         decryptValue(encrypted);
-      }).toThrow('KARS_MASTER_KEY environment variable is not set');
+      }).toThrow('ACS_MASTER_KEY environment variable is not set');
     });
 
     it('should throw error if decrypting with wrong key', () => {
@@ -159,7 +159,7 @@ describe('Encryption Utilities', () => {
       const encrypted = encryptValue(plaintext);
       
       // Change the key
-      process.env.KARS_MASTER_KEY = generateMasterKey('base64');
+      process.env.ACS_MASTER_KEY = generateMasterKey('base64');
       
       expect(() => {
         decryptValue(encrypted);

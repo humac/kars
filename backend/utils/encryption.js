@@ -7,10 +7,10 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 // Get master key from environment variable
 const getMasterKey = () => {
-  const key = process.env.KARS_MASTER_KEY;
+  const key = process.env.ACS_MASTER_KEY;
   
   if (!key) {
-    throw new Error('KARS_MASTER_KEY environment variable is not set. Please set a 256-bit (32-byte) key encoded as base64 or hex.');
+    throw new Error('ACS_MASTER_KEY environment variable is not set. Please set a 256-bit (32-byte) key encoded as base64 or hex.');
   }
   
   // Try to decode as base64 first, then hex
@@ -26,7 +26,7 @@ const getMasterKey = () => {
   }
   
   if (keyBuffer.length !== 32) {
-    throw new Error(`KARS_MASTER_KEY must be exactly 32 bytes (256 bits). Current length: ${keyBuffer.length} bytes. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
+    throw new Error(`ACS_MASTER_KEY must be exactly 32 bytes (256 bits). Current length: ${keyBuffer.length} bytes. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
   }
   
   return keyBuffer;
@@ -36,7 +36,7 @@ const getMasterKey = () => {
  * Encrypts a string value using AES-256-GCM
  * @param {string} plaintext - The value to encrypt
  * @returns {string} Encrypted value in format: iv:authTag:ciphertext (all base64-encoded)
- * @throws {Error} If encryption fails or KARS_MASTER_KEY is not set
+ * @throws {Error} If encryption fails or ACS_MASTER_KEY is not set
  */
 export const encryptValue = (plaintext) => {
   if (!plaintext) {
@@ -105,7 +105,7 @@ export const decryptValue = (encryptedData) => {
 };
 
 /**
- * Generates a random 256-bit key suitable for KARS_MASTER_KEY
+ * Generates a random 256-bit key suitable for ACS_MASTER_KEY
  * @param {string} encoding - The encoding format ('base64' or 'hex')
  * @returns {string} Random 32-byte key in the specified encoding
  */

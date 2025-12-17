@@ -1,7 +1,7 @@
 {
   "name": "ars-frontend",
   "version": "1.0.0",
-  "description": "Frontend for KARS - KeyData Asset Registration System",
+  "description": "Frontend for ACS - Asset Compliance System",
   "type": "module",
   "repository": {
     "type": "git",
