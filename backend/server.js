@@ -22,6 +22,7 @@ import {
   verifyAuthenticationResponse
 } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
+import { mountRoutes } from './routes/index.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -261,6 +262,21 @@ const autoAssignManagerRole = async (email, triggeredBy) => {
     return false;
   }
 };
+
+// ===== Mount Route Modules =====
+// Routes extracted to separate modules for maintainability
+mountRoutes(app, {
+  // Database
+  companyDb,
+  auditDb,
+  userDb,
+  // Auth middleware
+  authenticate,
+  authorize,
+  // File upload
+  upload,
+  parseCSVFile,
+});
 
 // ===== Authentication Endpoints =====
 
