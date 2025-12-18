@@ -9,19 +9,12 @@ import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } 
 import { testHubSpotConnection, syncCompaniesToACS } from './hubspot.js';
 import { encryptValue } from './utils/encryption.js';
 import { safeJsonParse, safeJsonParseArray } from './utils/json.js';
-import { VALID_STATUSES, VALID_ROLES } from './utils/constants.js';
+import { VALID_ROLES } from './utils/constants.js';
 import { sendTestEmail, sendPasswordResetEmail } from './services/smtpMailer.js';
-import { randomBytes, webcrypto as nodeWebcrypto } from 'crypto';
+import { webcrypto as nodeWebcrypto } from 'crypto';
 import multer from 'multer';
-import { readFile, unlink } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import os from 'os';
-import {
-  generateRegistrationOptions,
-  verifyRegistrationResponse,
-  generateAuthenticationOptions,
-  verifyAuthenticationResponse
-} from '@simplewebauthn/server';
-import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import { mountRoutes } from './routes/index.js';
 
 const app = express();
@@ -196,27 +189,6 @@ const serializePasskey = (passkey) => ({
   ...passkey,
   transports: safeJsonParseArray(passkey?.transports),
 });
-
-/**
- * Sanitizes text for safe logging by limiting length and removing newlines
- * @param {string} text - Text to sanitize
- * @param {number} maxLength - Maximum length (default 500)
- * @returns {string} Sanitized text
- */
-const sanitizeForLog = (text, maxLength = 500) => {
-  if (!text) return '';
-  // Remove newlines and limit length to prevent log injection
-  return text.replace(/[\r\n]/g, ' ').substring(0, maxLength);
-};
-
-/**
- * Constructs a display name from user object
- * @param {Object} user - User object with first_name, last_name, name, email
- * @returns {string} Formatted user name
- */
-const getUserDisplayName = (user) => {
-  return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.name || user.email;
-};
 
 /**
  * Auto-assign manager role to a user if they have employees reporting to them

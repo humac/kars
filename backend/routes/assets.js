@@ -425,11 +425,8 @@ export default function createAssetsRouter(deps) {
       const {
         employee_first_name,
         employee_last_name,
-        employee_email,
-        company_name,
         asset_type,
-        serial_number,
-        asset_tag
+        serial_number
       } = req.body;
 
       const validAssetTypes = (await assetTypeDb.getActive()).map(t => t.name.toLowerCase());
