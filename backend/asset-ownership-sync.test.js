@@ -12,8 +12,9 @@ describe('Asset Ownership Sync', () => {
     await assetDb.init();
 
     // Create test company (required for assets with company_id FK)
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const companyResult = await companyDb.create({
-      name: `Test Company ${Date.now()}`,
+      name: `OwnershipSync-TestCo-${uniqueId}`,
       description: 'Test company for ownership sync tests'
     });
     testCompany = await companyDb.getById(companyResult.id);
