@@ -9,7 +9,7 @@ import { generateMFASecret, verifyTOTP, generateBackupCodes, formatBackupCode } 
 import { testHubSpotConnection, syncCompaniesToACS } from './hubspot.js';
 import { encryptValue } from './utils/encryption.js';
 import { safeJsonParse, safeJsonParseArray } from './utils/json.js';
-import { VALID_STATUSES, VALID_ROLES, isValidEmail } from './utils/constants.js';
+import { VALID_STATUSES, VALID_ROLES } from './utils/constants.js';
 import { sendTestEmail, sendPasswordResetEmail } from './services/smtpMailer.js';
 import { randomBytes, webcrypto as nodeWebcrypto } from 'crypto';
 import multer from 'multer';
