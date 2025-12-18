@@ -184,10 +184,12 @@ ACS helps consulting organizations maintain accountability for client-owned asse
 - **Multi-Platform Docker Support** - ARM64 and AMD64 containers
 - **GitHub Actions CI/CD** - Automated builds and deployment
 - **Portainer Integration** - Webhook-based deployment with auto-pull
+- **Railway Deployment** - Production platform with managed PostgreSQL
 - **Cloudflare Tunnel** - Secure external access with SSL
 - **Health Checks** - Automated container monitoring
 - **Auto-Restart** - Self-healing containers
 - **Modern Material-UI Interface** - Professional design with responsive layout
+- **📖 DevOps Documentation** - Comprehensive guides in [/devops](devops/) folder
 
 ---
 
@@ -541,7 +543,7 @@ docker-compose down -v
 docker-compose up -d
 ```
 
-**More:** See the [wiki](../../wiki) for deployment and admin guides.
+**More:** See the [wiki](../../wiki) for deployment and admin guides, or the [DevOps Documentation](/devops) for comprehensive operational guides.
 
 ---
 
@@ -640,6 +642,35 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
+## 📚 DevOps Documentation
+
+Comprehensive operational documentation for deploying, monitoring, and maintaining KARS in production.
+
+### 📖 Core Documentation
+- **[DevOps Hub](/devops/README.md)** - Main documentation index
+- **[Runbook](/devops/RUNBOOK.md)** - Step-by-step deployment procedures
+- **[Incident Response](/devops/INCIDENT-RESPONSE.md)** - Emergency response procedures
+- **[Release Checklist](/devops/RELEASE-CHECKLIST.md)** - Weekly release process
+
+### 📊 Architecture Diagrams
+- **[CI/CD Overview](/devops/diagrams/ci-cd-overview.md)** - Complete pipeline architecture
+- **[GitHub Actions](/devops/diagrams/github-actions-workflow.md)** - Workflow details
+- **[Docker Build](/devops/diagrams/docker-build-process.md)** - Multi-platform builds
+- **[Portainer Deployment](/devops/diagrams/portainer-deployment.md)** - Staging deployment
+- **[Railway Deployment](/devops/diagrams/railway-deployment.md)** - Production deployment
+- **[Monitoring & Health](/devops/diagrams/monitoring-health-checks.md)** - Monitoring setup
+- **[Security Scanning](/devops/diagrams/security-scanning.md)** - Security pipeline
+- **[And more...](/devops/diagrams/)** - 11 comprehensive workflow diagrams
+
+### 🚂 Railway Platform
+- **[Railway Overview](/devops/railway/README.md)** - Platform documentation
+- **[Setup Guide](/devops/railway/SETUP.md)** - Initial deployment
+- **[Configuration](/devops/railway/CONFIGURATION.md)** - Settings and variables
+- **[Database Management](/devops/railway/DATABASE.md)** - PostgreSQL operations
+- **[Troubleshooting](/devops/railway/TROUBLESHOOTING.md)** - Common issues
+
+---
+
 **Ready to get started?** See the [Quick Start Guide](../../wiki/Quick-Start)!
 
-**Deploying to production?** Check [QUICKSTART-PORTAINER.md](QUICKSTART-PORTAINER.md)!
+**Deploying to production?** Check [QUICKSTART-PORTAINER.md](QUICKSTART-PORTAINER.md) or [Railway Setup](/devops/railway/SETUP.md)!
