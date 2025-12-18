@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { unlink } from 'fs/promises';
 import { VALID_STATUSES } from '../utils/constants.js';
+import { requireFields, validateStatus, validateIdArray } from '../middleware/validation.js';
 
 /**
  * Create and configure the assets router
@@ -166,7 +167,7 @@ export default function createAssetsRouter(deps) {
   });
 
   // Create new asset
-  router.post('/', authenticate, async (req, res) => {
+  router.post('/', authenticate, requireFields('employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'asset_type', 'serial_number', 'asset_tag'), async (req, res) => {
     try {
       const {
         employee_first_name,
@@ -182,13 +183,6 @@ export default function createAssetsRouter(deps) {
         serial_number,
         asset_tag
       } = req.body;
-
-      if (!employee_first_name || !employee_last_name || !employee_email || !company_name || !asset_type || !serial_number || !asset_tag) {
-        return res.status(400).json({
-          error: 'Missing required fields',
-          required: ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'asset_type', 'serial_number', 'asset_tag']
-        });
-      }
 
       const validAssetTypes = (await assetTypeDb.getActive()).map(t => t.name.toLowerCase());
       if (!validAssetTypes.includes(asset_type.toLowerCase())) {
@@ -234,24 +228,9 @@ export default function createAssetsRouter(deps) {
   });
 
   // Bulk status update
-  router.patch('/bulk/status', authenticate, async (req, res) => {
+  router.patch('/bulk/status', authenticate, validateIdArray('ids'), requireFields('status'), validateStatus(), async (req, res) => {
     try {
       const { ids, status } = req.body;
-
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: 'Asset IDs array is required' });
-      }
-
-      if (!status) {
-        return res.status(400).json({ error: 'Status is required' });
-      }
-
-      if (!VALID_STATUSES.includes(status)) {
-        return res.status(400).json({
-          error: 'Invalid status',
-          validStatuses: VALID_STATUSES
-        });
-      }
 
       const user = await userDb.getById(req.user.id);
       const assets = await assetDb.getByIds(ids);
@@ -310,13 +289,9 @@ export default function createAssetsRouter(deps) {
   });
 
   // Bulk delete
-  router.delete('/bulk/delete', authenticate, authorize('admin'), async (req, res) => {
+  router.delete('/bulk/delete', authenticate, authorize('admin'), validateIdArray('ids'), async (req, res) => {
     try {
       const { ids } = req.body;
-
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: 'Asset IDs array is required' });
-      }
 
       const assets = await assetDb.getByIds(ids);
       const assetMap = new Map(assets.map(asset => [asset.id, asset]));
@@ -362,17 +337,9 @@ export default function createAssetsRouter(deps) {
   });
 
   // Bulk manager update
-  router.patch('/bulk/manager', authenticate, authorize('admin'), async (req, res) => {
+  router.patch('/bulk/manager', authenticate, authorize('admin'), validateIdArray('ids'), requireFields('manager_first_name', 'manager_last_name', 'manager_email'), async (req, res) => {
     try {
       const { ids, manager_first_name, manager_last_name, manager_email } = req.body;
-
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: 'Asset IDs array is required' });
-      }
-
-      if (!manager_first_name || !manager_last_name || !manager_email) {
-        return res.status(400).json({ error: 'Manager first name, last name, and email are required' });
-      }
 
       const assets = await assetDb.getByIds(ids);
       const assetMap = new Map(assets.map(asset => [asset.id, asset]));
@@ -419,20 +386,9 @@ export default function createAssetsRouter(deps) {
   });
 
   // Update asset status
-  router.patch('/:id/status', authenticate, async (req, res) => {
+  router.patch('/:id/status', authenticate, requireFields('status'), validateStatus(), async (req, res) => {
     try {
       const { status, notes } = req.body;
-
-      if (!status) {
-        return res.status(400).json({ error: 'Status is required' });
-      }
-
-      if (!VALID_STATUSES.includes(status)) {
-        return res.status(400).json({
-          error: 'Invalid status',
-          validStatuses: VALID_STATUSES
-        });
-      }
 
       const asset = await assetDb.getById(req.params.id);
       if (!asset) {
@@ -501,9 +457,12 @@ export default function createAssetsRouter(deps) {
         asset_tag
       } = req.body;
 
-      if (!employee_first_name || !employee_last_name || !employee_email || !company_name || !asset_type || !serial_number || !asset_tag) {
+      // Validate required fields
+      const missingFields = ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'asset_type', 'serial_number', 'asset_tag']
+        .filter(field => !req.body[field]);
+      if (missingFields.length > 0) {
         return res.status(400).json({
-          error: 'Missing required fields',
+          error: `Missing required fields: ${missingFields.join(', ')}`,
           required: ['employee_first_name', 'employee_last_name', 'employee_email', 'company_name', 'asset_type', 'serial_number', 'asset_tag']
         });
       }

@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { requireFields } from '../middleware/validation.js';
 
 /**
  * Create and configure the MFA router
@@ -82,13 +83,9 @@ export default function createMFARouter(deps) {
 
   // ===== Verify MFA Enrollment =====
 
-  router.post('/verify-enrollment', authenticate, async (req, res) => {
+  router.post('/verify-enrollment', authenticate, requireFields('token'), async (req, res) => {
     try {
       const { token } = req.body;
-
-      if (!token) {
-        return res.status(400).json({ error: 'Verification token is required' });
-      }
 
       // Get pending enrollment
       const enrollKey = `enroll_${req.user.id}`;
@@ -136,13 +133,9 @@ export default function createMFARouter(deps) {
 
   // ===== Disable MFA =====
 
-  router.post('/disable', authenticate, async (req, res) => {
+  router.post('/disable', authenticate, requireFields('password'), async (req, res) => {
     try {
       const { password } = req.body;
-
-      if (!password) {
-        return res.status(400).json({ error: 'Password is required to disable MFA' });
-      }
 
       // Verify password
       const user = await userDb.getById(req.user.id);
@@ -174,13 +167,9 @@ export default function createMFARouter(deps) {
 
   // ===== Verify MFA Login =====
 
-  router.post('/verify-login', async (req, res) => {
+  router.post('/verify-login', requireFields('mfaSessionId', 'token'), async (req, res) => {
     try {
       const { mfaSessionId, token, useBackupCode } = req.body;
-
-      if (!mfaSessionId || !token) {
-        return res.status(400).json({ error: 'Session ID and token are required' });
-      }
 
       // Get pending login
       const pendingLogin = mfaSessions.get(mfaSessionId);

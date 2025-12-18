@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { requireFields, validateRole } from '../middleware/validation.js';
 
 /**
  * Create and configure the users router
@@ -20,8 +21,6 @@ export default function createUsersRouter(deps) {
     // Auth
     authenticate,
     authorize,
-    // Constants
-    VALID_ROLES,
   } = deps;
 
   // ===== Get All Users =====
@@ -38,7 +37,7 @@ export default function createUsersRouter(deps) {
 
   // ===== Update User Details (Admin Only) =====
 
-  router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
+  router.put('/:id', authenticate, authorize('admin'), requireFields('first_name', 'last_name', 'manager_first_name', 'manager_last_name', 'manager_email'), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { first_name, last_name, manager_first_name, manager_last_name, manager_email, profile_image } = req.body;
@@ -46,14 +45,6 @@ export default function createUsersRouter(deps) {
       const targetUser = await userDb.getById(userId);
       if (!targetUser) {
         return res.status(404).json({ error: 'User not found' });
-      }
-
-      if (!first_name || !last_name) {
-        return res.status(400).json({ error: 'First name and last name are required' });
-      }
-
-      if (!manager_first_name || !manager_last_name || !manager_email) {
-        return res.status(400).json({ error: 'Manager first name, last name, and email are required' });
       }
 
       let normalizedProfileImage = targetUser.profile_image;
@@ -149,17 +140,10 @@ export default function createUsersRouter(deps) {
 
   // ===== Update User Role (Admin Only) =====
 
-  router.put('/:id/role', authenticate, authorize('admin'), async (req, res) => {
+  router.put('/:id/role', authenticate, authorize('admin'), requireFields('role'), validateRole(), async (req, res) => {
     try {
       const { role } = req.body;
       const userId = parseInt(req.params.id);
-
-      // Validation
-      if (!role || !VALID_ROLES.includes(role)) {
-        return res.status(400).json({
-          error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`
-        });
-      }
 
       const user = await userDb.getById(userId);
       if (!user) {

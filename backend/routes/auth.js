@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { requireFields, validateEmail } from '../middleware/validation.js';
 
 /**
  * Create and configure the auth router
@@ -160,13 +161,9 @@ export default function createAuthRouter(deps) {
 
   // ===== Login =====
 
-  router.post('/login', authRateLimiter, async (req, res) => {
+  router.post('/login', authRateLimiter, requireFields('email', 'password'), async (req, res) => {
     try {
       const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
-      }
 
       const user = await userDb.getByEmail(email);
       if (!user) {
@@ -238,13 +235,9 @@ export default function createAuthRouter(deps) {
 
   // ===== Password Reset =====
 
-  router.post('/forgot-password', passwordResetRateLimiter, async (req, res) => {
+  router.post('/forgot-password', passwordResetRateLimiter, requireFields('email'), async (req, res) => {
     try {
       const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
 
       const user = await userDb.getByEmail(email);
 
@@ -323,13 +316,9 @@ export default function createAuthRouter(deps) {
     }
   });
 
-  router.post('/reset-password', async (req, res) => {
+  router.post('/reset-password', requireFields('token', 'password'), async (req, res) => {
     try {
       const { token, password } = req.body;
-
-      if (!token || !password) {
-        return res.status(400).json({ error: 'Token and password are required' });
-      }
 
       // Validate password strength
       if (password.length < 8) {
@@ -409,14 +398,9 @@ export default function createAuthRouter(deps) {
     }
   });
 
-  router.put('/profile', authenticate, async (req, res) => {
+  router.put('/profile', authenticate, requireFields('first_name', 'last_name'), async (req, res) => {
     try {
       const { first_name, last_name, manager_first_name, manager_last_name, manager_email } = req.body;
-
-      // Validation
-      if (!first_name || !last_name) {
-        return res.status(400).json({ error: 'First name and last name are required' });
-      }
 
       const user = await userDb.getById(req.user.id);
       if (!user) {
@@ -475,24 +459,9 @@ export default function createAuthRouter(deps) {
 
   // ===== Complete Profile (for OIDC users) =====
 
-  router.post('/complete-profile', authenticate, async (req, res) => {
+  router.post('/complete-profile', authenticate, requireFields('manager_first_name', 'manager_last_name', 'manager_email'), validateEmail('manager_email'), async (req, res) => {
     try {
       const { manager_first_name, manager_last_name, manager_email } = req.body;
-
-      // Validation
-      if (!manager_first_name || !manager_last_name || !manager_email) {
-        return res.status(400).json({
-          error: 'Manager first name, last name, and email are required'
-        });
-      }
-
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(manager_email)) {
-        return res.status(400).json({
-          error: 'Please provide a valid email address'
-        });
-      }
 
       // Get current user
       const user = await userDb.getById(req.user.id);
@@ -598,16 +567,9 @@ export default function createAuthRouter(deps) {
 
   // ===== Change Password =====
 
-  router.put('/change-password', authenticate, async (req, res) => {
+  router.put('/change-password', authenticate, requireFields('currentPassword', 'newPassword', 'confirmPassword'), async (req, res) => {
     try {
       const { currentPassword, newPassword, confirmPassword } = req.body;
-
-      // Validation
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        return res.status(400).json({
-          error: 'Current password, new password, and confirmation are required'
-        });
-      }
 
       if (newPassword !== confirmPassword) {
         return res.status(400).json({

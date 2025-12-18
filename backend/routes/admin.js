@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { unlink } from 'fs/promises';
+import { requireFields } from '../middleware/validation.js';
 
 /**
  * Create and configure the admin router
@@ -732,15 +733,10 @@ export default function createAdminRouter(deps) {
   });
 
   // Update email template
-  router.put('/email-templates/:key', authenticate, authorize('admin'), async (req, res) => {
+  router.put('/email-templates/:key', authenticate, authorize('admin'), requireFields('subject', 'html_body', 'text_body'), async (req, res) => {
     try {
       const { key } = req.params;
       const { subject, html_body, text_body } = req.body;
-
-      // Validate required fields
-      if (!subject || !html_body || !text_body) {
-        return res.status(400).json({ error: 'Subject, HTML body, and text body are required' });
-      }
 
       // Check if template exists
       const existing = await emailTemplateDb.getByKey(key);
@@ -921,14 +917,9 @@ export default function createAdminRouter(deps) {
   });
 
   // Create asset type
-  router.post('/asset-types', authenticate, authorize('admin'), async (req, res) => {
+  router.post('/asset-types', authenticate, authorize('admin'), requireFields('name', 'display_name'), async (req, res) => {
     try {
       const { name, display_name, description, is_active, sort_order } = req.body;
-
-      // Validation
-      if (!name || !display_name) {
-        return res.status(400).json({ error: 'name and display_name are required' });
-      }
 
       // Check if name already exists
       const existing = await assetTypeDb.getByName(name);
