@@ -24,6 +24,7 @@ import { Download, Sparkles, Loader2 } from 'lucide-react';
 /**
  * Bulk actions toolbar and dialog for selected assets.
  * Displays selection count and provides bulk edit, export, and delete functionality.
+ * Role-aware: delete only shown to admins, bulk edit shown to admins and asset owners.
  */
 export default function BulkAssetActions({
   selectedIds,
@@ -32,6 +33,7 @@ export default function BulkAssetActions({
   onClearSelection,
   onBulkDelete,
   onRefresh,
+  currentUser,
 }) {
   const { getAuthHeaders } = useAuth();
   const { toast } = useToast();
@@ -41,6 +43,12 @@ export default function BulkAssetActions({
   const [formLoading, setFormLoading] = useState(false);
 
   const selectedCount = selectedIds.size;
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Check if user can edit any of the selected assets (admin or owns them)
+  const canBulkEdit = isAdmin || (currentUser?.email &&
+    filteredAssets.some(a => selectedIds.has(a.id) &&
+      a.employee_email?.toLowerCase() === currentUser.email.toLowerCase()));
 
   const handleBulkStatusUpdate = async () => {
     const ids = Array.from(selectedIds);
@@ -145,19 +153,23 @@ export default function BulkAssetActions({
               <span className="text-sm font-medium whitespace-nowrap">{selectedCount} selected</span>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
+              {canBulkEdit && (
+                <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
+              )}
               <Button variant="ghost" size="sm" onClick={handleExportSelected}>
                 <Download className="h-4 w-4 mr-1" />Export
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={handleBulkDelete}
-                disabled={formLoading}
-              >
-                Delete
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={handleBulkDelete}
+                  disabled={formLoading}
+                >
+                  Delete
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={onClearSelection}>Clear</Button>
             </div>
           </div>

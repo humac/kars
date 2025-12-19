@@ -106,23 +106,20 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   }
 
   const canEdit = (asset) => {
-    // Admins and editors can edit any asset
-    if (currentUser?.roles?.includes('admin')) return true;
-    if (currentUser?.roles?.includes('editor')) return true;
-    
+    // Admin can edit any asset
+    if (currentUser?.role === 'admin') return true;
+
     // Users can edit their own assets (match by email)
     if (currentUser?.email && asset.employee_email) {
       return currentUser.email.toLowerCase() === asset.employee_email.toLowerCase();
     }
-    
+
     return false;
   };
 
   const canDelete = (asset) => {
-    // Admin can delete any asset
-    if (currentUser?.roles?.includes('admin')) return true;
-    // Users can only delete their own assets
-    if (currentUser?.email === asset.employee_email) return true;
+    // Only admin can delete assets
+    if (currentUser?.role === 'admin') return true;
     return false;
   };
 
@@ -366,6 +363,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
             onClearSelection={clearSelection}
             onBulkDelete={handleBulkDelete}
             onRefresh={onRefresh}
+            currentUser={currentUser}
           />
         </div>
 
