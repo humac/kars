@@ -410,19 +410,18 @@ export default function createAuthRouter(deps) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Build update object
-      const updates = {
+      // Build profile object, preserving existing values for optional fields
+      const profile = {
         first_name,
         last_name,
-        name: `${first_name} ${last_name}`
+        name: `${first_name} ${last_name}`,
+        manager_first_name: manager_first_name !== undefined ? manager_first_name : user.manager_first_name,
+        manager_last_name: manager_last_name !== undefined ? manager_last_name : user.manager_last_name,
+        manager_email: manager_email !== undefined ? manager_email : user.manager_email,
+        profile_image: user.profile_image
       };
 
-      // Manager fields are optional for profile updates
-      if (manager_first_name !== undefined) updates.manager_first_name = manager_first_name;
-      if (manager_last_name !== undefined) updates.manager_last_name = manager_last_name;
-      if (manager_email !== undefined) updates.manager_email = manager_email;
-
-      await userDb.update(user.id, updates);
+      await userDb.updateProfile(user.id, profile);
 
       // If manager changed, sync assets
       if (manager_email && manager_email !== user.manager_email) {
@@ -431,12 +430,18 @@ export default function createAuthRouter(deps) {
 
       const updatedUser = await userDb.getById(user.id);
 
+      // Track which fields were actually updated
+      const updatedFields = ['first_name', 'last_name', 'name'];
+      if (manager_first_name !== undefined) updatedFields.push('manager_first_name');
+      if (manager_last_name !== undefined) updatedFields.push('manager_last_name');
+      if (manager_email !== undefined) updatedFields.push('manager_email');
+
       await auditDb.log(
         'UPDATE_PROFILE',
         'user',
         user.id,
         user.email,
-        { updated_fields: Object.keys(updates) },
+        { updated_fields: updatedFields },
         user.email
       );
 
