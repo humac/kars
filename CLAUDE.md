@@ -63,7 +63,6 @@ Web application that supports organizational SOC2 compliance by tracking client 
 │   ├── oidc.js                # SSO integration
 │   ├── hubspot.js             # HubSpot integration
 │   ├── *.test.js              # Jest test suites
-│   ├── .env.example           # Environment configuration template
 │   └── package.json           # Backend dependencies
 ├── frontend/                   # React application (50 JSX files)
 │   ├── src/
@@ -162,7 +161,7 @@ cd kars
 # 2. Backend setup
 cd backend
 npm install
-cp .env.example .env
+cp ../.env.example .env
 # Edit .env: Set JWT_SECRET and optional configs
 npm run dev  # Starts on http://localhost:3001
 
@@ -1616,7 +1615,7 @@ git push origin feature/my-feature      # Push branch
 | Page components | `frontend/src/components/*.jsx` |
 | Tests (backend) | `backend/*.test.js` |
 | Tests (frontend) | `frontend/src/**/*.test.jsx` |
-| Environment config | `backend/.env.example` |
+| Environment config | `.env.example` |
 | CI/CD workflows | `.github/workflows/*.yml` |
 | Docker configs | `docker-compose*.yml` |
 

@@ -32,8 +32,9 @@ This document provides AI agents with guidance for working with the ACS (Asset C
 │   ├── mfa.js                 # TOTP/backup codes
 │   ├── oidc.js                # SSO integration
 │   ├── hubspot.js             # HubSpot integration
-│   ├── *.test.js              # Jest test suites
-│   └── .env.example           # Environment template
+│   └── *.test.js              # Jest test suites
+│
+├── .env.example                # Environment template (root)
 │
 ├── frontend/                   # React application
 │   ├── src/

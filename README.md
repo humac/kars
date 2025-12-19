@@ -240,7 +240,7 @@ cd kars
 # 2. Backend setup
 cd backend
 npm install
-cp .env.example .env
+cp ../.env.example .env
 # Set JWT_SECRET and (optional) PASSKEY_* / OIDC_* values
 npm run dev  # starts API on http://localhost:3001
 
