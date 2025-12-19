@@ -213,22 +213,38 @@ router.delete('/:id', authenticate, requireDeletePermission, handler);
 
 ---
 
-### Missing Structured Logging
+### ✅ RESOLVED: Missing Structured Logging
 
-**Current:** 180+ `console.log/console.error` statements
+~~**Current:** 180+ `console.log/console.error` statements~~
 
-**Fix:** Use structured logging:
+**Resolution:** Implemented pino-based structured logging across the entire backend:
+
 ```javascript
+// utils/logger.js - Core logging utility
 import pino from 'pino';
 
 const logger = pino({
-  level: process.env.LOG_LEVEL || 'info'
+  level: process.env.LOG_LEVEL || (isTest ? 'silent' : 'info')
 });
 
-// Usage:
-logger.info({ userId: req.user.id, action: 'asset_created' }, 'Asset created');
-logger.error({ err: error, userId: req.user.id }, 'Failed to update asset');
+export const createChildLogger = (bindings) => logger.child(bindings);
+export const logError = (error, message, context) => { ... };
 ```
+
+**Applied to 24 files:**
+- `server.js` - Server startup and database initialization
+- All 11 route modules - Request handling and error logging
+- `auth.js`, `oidc.js` - Authentication flows
+- `services/smtpMailer.js` - Email sending (7 log statements)
+- `services/attestationScheduler.js` - Scheduled tasks (13 log statements)
+- `middleware/authorization.js` - Permission checks
+- `utils/responses.js`, `utils/json.js` - Utility error handling
+
+**Result:** Replaced 180+ console statements with structured logs that include:
+- Module context via child loggers (`{ module: 'assets' }`)
+- Request context (`userId`, `email`, `action`)
+- Error serialization with stack traces
+- Automatic silencing in test environment
 
 ---
 
@@ -525,7 +541,7 @@ useEffect(() => {
   - `server.js` reduced from ~6,000 lines to 364 lines
 - [x] Create validation middleware ✅ Done (middleware/validation.js)
 - [x] Standardize error responses ✅ Done (utils/responses.js)
-- [ ] Add structured logging (optional enhancement)
+- [x] Add structured logging ✅ Done (utils/logger.js with pino)
 - [x] Extract constants ✅ Done (utils/constants.js)
 
 ### Phase 3: Frontend Refactoring (2-3 weeks)
@@ -570,8 +586,9 @@ The codebase has several strong points worth maintaining:
 | 2025-12-18 | **Phase 2 Route Refactoring (Part 2 - Complete):** Extracted remaining auth-related routes into 5 additional modules: `routes/auth.js` (8 endpoints - login, register, password, profile), `routes/mfa.js` (5 endpoints - MFA enroll/verify/disable), `routes/passkeys.js` (7 endpoints - WebAuthn registration/auth), `routes/users.js` (4 endpoints - user management), `routes/oidc.js` (3 endpoints - SSO login/callback). Removed 5,690 lines of duplicate routes from server.js (now 364 lines). Fixed flaky tests for test isolation. All 457 tests passing. **Phase 2 Backend Refactoring is now complete.** |
 | 2025-12-18 | **Validation Middleware Integration:** Applied existing validation middleware (`requireFields`, `validateEmail`, `validateRole`, `validateStatus`, `validateIdArray`) across 5 route modules (auth.js, users.js, mfa.js, assets.js, admin.js) to replace ~18 duplicate validation blocks. Removed 115 lines of boilerplate validation code. All 457 tests passing. |
 | 2025-12-18 | **Authorization Middleware:** Created `middleware/authorization.js` with `requireAsset` and `requireAssetPermission` middleware factories. Applied to 4 routes in assets.js (GET /:id, PATCH /:id/status, PUT /:id, DELETE /:id). Removed ~45 lines of duplicate authorization code. All 457 tests passing. |
+| 2025-12-19 | **Structured Logging:** Installed pino and created `utils/logger.js` with `createChildLogger` and `logError` helpers. Replaced 180+ `console.log/error` statements across 24 files (all route modules, server.js, auth.js, oidc.js, services, middleware, utils). Logger auto-silences in test environment. All 457 tests passing. |
 
 ---
 
 **Review completed:** December 17, 2025
-**Last updated:** December 18, 2025
+**Last updated:** December 19, 2025
