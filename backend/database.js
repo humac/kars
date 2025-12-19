@@ -1,3 +1,8 @@
+/**
+ * @file Database abstraction layer supporting SQLite and PostgreSQL
+ * @see ./types/database.d.ts for TypeScript type definitions
+ */
+
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve, isAbsolute } from 'path';
