@@ -336,97 +336,42 @@ export const useFetch = (url, options = {}) => {
 
 ---
 
-### Code Duplication in Frontend
+### ✅ RESOLVED: Code Duplication in Frontend
 
-**Pattern 1: Manager name resolution (3+ locations)**
-```javascript
-// AssetTable.jsx, UserManagement.jsx, CompanyManagement.jsx
-const name = `${first_name} ${last_name}`.trim();
-```
+~~**Pattern 1: Manager name resolution (3+ locations)**~~
 
-**Fix:**
-```javascript
-// utils/user.js
-export const formatFullName = (firstName, lastName) =>
-  `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown';
-```
+**Resolution:** Created `utils/user.js` with `formatFullName` helper (done previously).
 
-**Pattern 2: Filter/pagination logic (4 occurrences)**
+~~**Pattern 2: Filter/pagination logic (4 occurrences)**~~
 
-**Fix:** Create custom hook:
-```javascript
-// hooks/useTableFilters.js
-export const useTableFilters = (items, searchFields, defaultPageSize = 10) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+**Resolution:** Created `hooks/useTableFilters.js` with reusable filter/pagination logic:
+- Consolidated duplicate state (searchTerm, page, pageSize)
+- Handles automatic page reset when filters change
+- Supports custom filter functions for complex filtering
+- Applied to CompanyManagement.jsx and UserManagement.jsx
+- Removed ~50 lines of duplicate code
 
-  const filteredItems = useMemo(() =>
-    items.filter(item =>
-      searchFields.some(field =>
-        String(item[field]).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    ),
-    [items, searchTerm, searchFields]
-  );
+~~**Pattern 3: Hex to HSL conversion (2 locations)**~~
 
-  const paginatedItems = useMemo(() =>
-    filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [filteredItems, currentPage, pageSize]
-  );
-
-  return {
-    searchTerm, setSearchTerm,
-    currentPage, setCurrentPage,
-    pageSize, setPageSize,
-    filteredItems, paginatedItems,
-    totalPages: Math.ceil(filteredItems.length / pageSize)
-  };
-};
-```
-
-**Pattern 3: Hex to HSL conversion (2 locations)**
-- `App.jsx:72-96`
-- `Login.jsx:100-121`
-
-**Fix:** Extract to utility:
-```javascript
-// utils/color.js
-export const hexToHSL = (hex) => {
-  const r = parseInt(hex.substring(0, 2), 16) / 255;
-  const g = parseInt(hex.substring(2, 4), 16) / 255;
-  const b = parseInt(hex.substring(4, 6), 16) / 255;
-  // ... rest of calculation
-  return { h, s, l };
-};
-```
+**Resolution:** Created `utils/color.js` with `hexToHSL` and `applyPrimaryColor` functions:
+- Extracted from App.jsx and Login.jsx
+- Removed ~44 lines of duplicate code
 
 ---
 
-### Performance Issues
+### ✅ RESOLVED: Performance Issues
 
-**1. Unstable useCallback dependencies**
-```javascript
-// AssetTable.jsx
-const getManagerDisplayName = useCallback((asset) => { ... }, [getFullName]);
-// getFullName from context may not be stable
-```
+~~**1. Unstable useCallback dependencies**~~
 
-**2. Missing React.memo on list items**
-```javascript
-// Should be memoized:
-const AssetTableRow = React.memo(({ asset, ...props }) => (
-  <TableRow>...</TableRow>
-));
-```
+**Resolution:** Wrapped `getAuthHeaders` in `useCallback` with `[token]` dependency in AuthContext.jsx. This single fix resolves unstable dependencies across 10+ useEffect hooks.
 
-**3. Fetching in unstable useEffect dependencies**
-```javascript
-// AssetsPage.jsx
-useEffect(() => {
-  loadAssets();
-}, [getAuthHeaders]); // getAuthHeaders recreated on every render!
-```
+~~**2. Missing React.memo on list items**~~
+
+**Resolution:** Created memoized `AssetTableRow` and `AssetCard` components (done previously).
+
+~~**3. Fetching in unstable useEffect dependencies**~~
+
+**Resolution:** Fixed by memoizing `getAuthHeaders` in AuthContext.jsx (same as #1).
 
 ---
 
@@ -587,6 +532,7 @@ The codebase has several strong points worth maintaining:
 | 2025-12-18 | **Validation Middleware Integration:** Applied existing validation middleware (`requireFields`, `validateEmail`, `validateRole`, `validateStatus`, `validateIdArray`) across 5 route modules (auth.js, users.js, mfa.js, assets.js, admin.js) to replace ~18 duplicate validation blocks. Removed 115 lines of boilerplate validation code. All 457 tests passing. |
 | 2025-12-18 | **Authorization Middleware:** Created `middleware/authorization.js` with `requireAsset` and `requireAssetPermission` middleware factories. Applied to 4 routes in assets.js (GET /:id, PATCH /:id/status, PUT /:id, DELETE /:id). Removed ~45 lines of duplicate authorization code. All 457 tests passing. |
 | 2025-12-19 | **Structured Logging:** Installed pino and created `utils/logger.js` with `createChildLogger` and `logError` helpers. Replaced 180+ `console.log/error` statements across 24 files (all route modules, server.js, auth.js, oidc.js, services, middleware, utils). Logger auto-silences in test environment. All 457 tests passing. |
+| 2025-12-19 | **Frontend Quick Wins (Part 2):** Created `utils/color.js` with `hexToHSL` and `applyPrimaryColor` utilities, consolidated duplicate code from App.jsx and Login.jsx. Wrapped `getAuthHeaders` in `useCallback` in AuthContext.jsx to fix unstable useEffect dependencies across 10+ components. Created `hooks/useTableFilters.js` for reusable filter/pagination logic, applied to CompanyManagement.jsx and UserManagement.jsx. All 65 frontend tests passing. |
 
 ---
 
