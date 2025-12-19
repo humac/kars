@@ -6,6 +6,9 @@
 import { Router } from 'express';
 import { unlink } from 'fs/promises';
 import { requireFields } from '../middleware/validation.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'admin' });
 
 /**
  * Create and configure the admin router
@@ -64,7 +67,7 @@ export default function createAdminRouter(deps) {
         has_client_secret: !!client_secret
       });
     } catch (error) {
-      console.error('Get OIDC settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get OIDC settings error');
       res.status(500).json({ error: 'Failed to get OIDC settings' });
     }
   });
@@ -113,7 +116,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ message: 'OIDC settings updated successfully' });
     } catch (error) {
-      console.error('Update OIDC settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update OIDC settings error');
       res.status(500).json({ error: 'Failed to update OIDC settings' });
     }
   });
@@ -138,7 +141,7 @@ export default function createAdminRouter(deps) {
         footer_label
       } = req.body;
 
-      console.log('[Branding] Update request received:', {
+      logger.info({
         user: req.user.email,
         filename: logo_filename,
         content_type: logo_content_type,
@@ -151,23 +154,23 @@ export default function createAdminRouter(deps) {
         include_logo_in_emails,
         app_url,
         footer_label
-      });
+      }, '[Branding] Update request received');
 
       // Validate logo data if provided
       if (logo_data && !logo_data.startsWith('data:image/')) {
-        console.error('[Branding] Invalid logo data format - does not start with data:image/');
+        logger.error({ userId: req.user?.id }, '[Branding] Invalid logo data format - does not start with data:image/');
         return res.status(400).json({ error: 'Invalid logo data format' });
       }
 
       // Validate favicon data if provided
       if (favicon_data && !favicon_data.startsWith('data:image/')) {
-        console.error('[Branding] Invalid favicon data format - does not start with data:image/');
+        logger.error({ userId: req.user?.id }, '[Branding] Invalid favicon data format - does not start with data:image/');
         return res.status(400).json({ error: 'Invalid favicon data format' });
       }
 
       // Validate primary color if provided (basic hex color validation)
       if (primary_color && !/^#[0-9A-Fa-f]{6}$/.test(primary_color)) {
-        console.error('[Branding] Invalid primary color format:', primary_color);
+        logger.error({ userId: req.user?.id, primary_color }, '[Branding] Invalid primary color format');
         return res.status(400).json({ error: 'Invalid primary color format. Use hex format like #3B82F6' });
       }
 
@@ -186,7 +189,7 @@ export default function createAdminRouter(deps) {
         footer_label
       }, req.user.email);
 
-      console.log('[Branding] Settings updated successfully in database');
+      logger.info({ userId: req.user?.id }, '[Branding] Settings updated successfully in database');
 
       // Build audit log details
       const changes = [];
@@ -210,7 +213,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ message: 'Branding settings updated successfully' });
     } catch (error) {
-      console.error('Update branding settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update branding settings error');
       res.status(500).json({ error: 'Failed to update branding settings' });
     }
   });
@@ -231,7 +234,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ message: 'Logo removed successfully' });
     } catch (error) {
-      console.error('Delete branding settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Delete branding settings error');
       res.status(500).json({ error: 'Failed to remove logo' });
     }
   });
@@ -266,7 +269,7 @@ export default function createAdminRouter(deps) {
 
       res.json(settings);
     } catch (error) {
-      console.error('Get passkey settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get passkey settings error');
       res.status(500).json({ error: 'Failed to get passkey settings' });
     }
   });
@@ -328,7 +331,7 @@ export default function createAdminRouter(deps) {
         restart_required: true
       });
     } catch (error) {
-      console.error('Update passkey settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update passkey settings error');
       res.status(500).json({ error: 'Failed to update passkey settings' });
     }
   });
@@ -351,7 +354,7 @@ export default function createAdminRouter(deps) {
     try {
       res.json(formatDatabaseSettings());
     } catch (error) {
-      console.error('Get database settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get database settings error');
       res.status(500).json({ error: 'Failed to load database settings' });
     }
   });
@@ -374,7 +377,7 @@ export default function createAdminRouter(deps) {
         restartRequired: true
       });
     } catch (error) {
-      console.error('Update database settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update database settings error');
       res.status(500).json({ error: error.message || 'Failed to update database settings' });
     }
   });
@@ -397,7 +400,7 @@ export default function createAdminRouter(deps) {
         imported: results
       });
     } catch (error) {
-      console.error('SQLite import failed:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'SQLite import failed');
       res.status(500).json({ error: error.message || 'Failed to import SQLite data' });
     } finally {
       await unlink(req.file.path).catch(() => {});
@@ -536,7 +539,7 @@ export default function createAdminRouter(deps) {
       const settings = await hubspotSettingsDb.get();
       res.json(settings);
     } catch (error) {
-      console.error('Get HubSpot settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get HubSpot settings error');
       res.status(500).json({ error: 'Failed to load HubSpot settings' });
     }
   });
@@ -566,7 +569,7 @@ export default function createAdminRouter(deps) {
       const updatedSettings = await hubspotSettingsDb.get();
       res.json({ message: 'HubSpot settings saved successfully', settings: updatedSettings });
     } catch (error) {
-      console.error('Update HubSpot settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update HubSpot settings error');
       res.status(500).json({ error: error.message || 'Failed to update HubSpot settings' });
     }
   });
@@ -588,7 +591,7 @@ export default function createAdminRouter(deps) {
         res.status(400).json({ error: result.message });
       }
     } catch (error) {
-      console.error('HubSpot connection test error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'HubSpot connection test error');
       res.status(500).json({ error: error.message || 'Failed to test HubSpot connection' });
     }
   });
@@ -678,7 +681,7 @@ export default function createAdminRouter(deps) {
         throw syncError;
       }
     } catch (error) {
-      console.error('HubSpot sync error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'HubSpot sync error');
       res.status(500).json({ error: error.message || 'Failed to sync companies from HubSpot' });
     }
   });
@@ -690,7 +693,7 @@ export default function createAdminRouter(deps) {
       const history = await hubspotSyncLogDb.getHistory(limit);
       res.json(history);
     } catch (error) {
-      console.error('Get HubSpot sync history error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get HubSpot sync history error');
       res.status(500).json({ error: 'Failed to load sync history' });
     }
   });
@@ -703,7 +706,7 @@ export default function createAdminRouter(deps) {
       const settings = await smtpSettingsDb.get();
       res.json(settings);
     } catch (error) {
-      console.error('Get SMTP settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get SMTP settings error');
       res.status(500).json({ error: 'Failed to load notification settings' });
     }
   });
@@ -745,7 +748,7 @@ export default function createAdminRouter(deps) {
           const encryptedPassword = encryptValue(password);
           updateData.password_encrypted = encryptedPassword;
         } catch (error) {
-          console.error('Password encryption error:', error);
+          logger.error({ err: error, userId: req.user?.id }, 'Password encryption error');
           return res.status(500).json({
             error: 'Failed to encrypt password. Please check KARS_MASTER_KEY configuration.'
           });
@@ -771,7 +774,7 @@ export default function createAdminRouter(deps) {
       const updatedSettings = await smtpSettingsDb.get();
       res.json(updatedSettings);
     } catch (error) {
-      console.error('Update SMTP settings error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update SMTP settings error');
       res.status(500).json({ error: 'Failed to update notification settings' });
     }
   });
@@ -816,7 +819,7 @@ export default function createAdminRouter(deps) {
         });
       }
     } catch (error) {
-      console.error('Send test email error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Send test email error');
       res.status(500).json({
         error: 'Failed to send test email',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -832,7 +835,7 @@ export default function createAdminRouter(deps) {
       const templates = await emailTemplateDb.getAll();
       res.json({ success: true, templates });
     } catch (error) {
-      console.error('Get email templates error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get email templates error');
       res.status(500).json({ error: 'Failed to load email templates' });
     }
   });
@@ -849,7 +852,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ success: true, template });
     } catch (error) {
-      console.error('Get email template error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get email template error');
       res.status(500).json({ error: 'Failed to load email template' });
     }
   });
@@ -881,7 +884,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ success: true, message: 'Email template updated successfully' });
     } catch (error) {
-      console.error('Update email template error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update email template error');
       res.status(500).json({ error: 'Failed to update email template' });
     }
   });
@@ -912,7 +915,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ success: true, message: 'Email template reset to default values' });
     } catch (error) {
-      console.error('Reset email template error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Reset email template error');
       res.status(500).json({ error: 'Failed to reset email template' });
     }
   });
@@ -1011,7 +1014,7 @@ export default function createAdminRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Preview email template error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Preview email template error');
       res.status(500).json({ error: 'Failed to generate preview' });
     }
   });
@@ -1033,7 +1036,7 @@ export default function createAdminRouter(deps) {
 
       res.json(assetTypesWithUsage);
     } catch (error) {
-      console.error('Error fetching all asset types:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching all asset types');
       res.status(500).json({ error: 'Failed to fetch asset types' });
     }
   });
@@ -1071,7 +1074,7 @@ export default function createAdminRouter(deps) {
 
       res.status(201).json(newAssetType);
     } catch (error) {
-      console.error('Error creating asset type:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error creating asset type');
       res.status(500).json({ error: 'Failed to create asset type' });
     }
   });
@@ -1117,7 +1120,7 @@ export default function createAdminRouter(deps) {
 
       res.json(updatedAssetType);
     } catch (error) {
-      console.error('Error updating asset type:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error updating asset type');
       res.status(500).json({ error: 'Failed to update asset type' });
     }
   });
@@ -1155,7 +1158,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ message: 'Asset type deleted successfully' });
     } catch (error) {
-      console.error('Error deleting asset type:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error deleting asset type');
       res.status(500).json({ error: 'Failed to delete asset type' });
     }
   });
@@ -1183,7 +1186,7 @@ export default function createAdminRouter(deps) {
 
       res.json({ message: 'Asset types reordered successfully' });
     } catch (error) {
-      console.error('Error reordering asset types:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error reordering asset types');
       res.status(500).json({ error: 'Failed to reorder asset types' });
     }
   });

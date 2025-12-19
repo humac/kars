@@ -5,6 +5,9 @@
 
 import { Router } from 'express';
 import { unlink } from 'fs/promises';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'companies' });
 
 /**
  * Create and configure the companies router
@@ -28,7 +31,7 @@ export default function createCompaniesRouter(deps) {
       const companies = await companyDb.getAll();
       res.json(companies);
     } catch (error) {
-      console.error('Error fetching companies:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching companies');
       res.status(500).json({ error: 'Failed to fetch companies' });
     }
   });
@@ -40,7 +43,7 @@ export default function createCompaniesRouter(deps) {
       const companyNames = companies.map(c => ({ id: c.id, name: c.name }));
       res.json(companyNames);
     } catch (error) {
-      console.error('Error fetching company names:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching company names');
       res.status(500).json({ error: 'Failed to fetch company names' });
     }
   });
@@ -98,7 +101,7 @@ export default function createCompaniesRouter(deps) {
         errors
       });
     } catch (error) {
-      console.error('Error importing companies:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error importing companies');
       res.status(500).json({ error: 'Failed to import companies' });
     } finally {
       await unlink(req.file.path);
@@ -114,7 +117,7 @@ export default function createCompaniesRouter(deps) {
       }
       res.json(company);
     } catch (error) {
-      console.error('Error fetching company:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching company');
       res.status(500).json({ error: 'Failed to fetch company' });
     }
   });
@@ -141,7 +144,7 @@ export default function createCompaniesRouter(deps) {
         company: newCompany
       });
     } catch (error) {
-      console.error('Error creating company:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error creating company');
 
       if (error.message.includes('UNIQUE constraint failed')) {
         return res.status(409).json({ error: 'A company with this name already exists' });
@@ -178,7 +181,7 @@ export default function createCompaniesRouter(deps) {
         company: updatedCompany
       });
     } catch (error) {
-      console.error('Error updating company:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error updating company');
 
       if (error.message.includes('UNIQUE constraint failed')) {
         return res.status(409).json({ error: 'A company with this name already exists' });
@@ -205,7 +208,7 @@ export default function createCompaniesRouter(deps) {
       await companyDb.delete(req.params.id);
       res.json({ message: 'Company deleted successfully' });
     } catch (error) {
-      console.error('Error deleting company:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error deleting company');
       res.status(500).json({ error: 'Failed to delete company' });
     }
   });

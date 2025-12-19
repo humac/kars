@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { userDb } from './database.js';
+import { createChildLogger } from './utils/logger.js';
+
+const logger = createChildLogger({ module: 'auth' });
 
 // Validate JWT_SECRET is always set
 if (!process.env.JWT_SECRET) {
@@ -78,7 +81,7 @@ export const authenticate = async (req, res, next) => {
     };
     next();
   } catch (error) {
-    console.error('Authentication error:', error);
+    logger.error({ err: error }, 'Authentication error');
     return res.status(401).json({ error: 'Authentication failed' });
   }
 };
@@ -134,7 +137,7 @@ export const optionalAuth = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Optional authentication error:', error);
+    logger.error({ err: error }, 'Optional authentication error');
     next();
   }
 };

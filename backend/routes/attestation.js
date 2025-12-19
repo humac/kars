@@ -4,6 +4,9 @@
  */
 
 import { Router } from 'express';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'attestation' });
 
 /**
  * Helper to get user display name
@@ -106,7 +109,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, campaignId: result.id });
     } catch (error) {
-      console.error('Error creating attestation campaign:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error creating attestation campaign');
       res.status(500).json({ error: 'Failed to create attestation campaign' });
     }
   });
@@ -125,7 +128,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, campaigns });
     } catch (error) {
-      console.error('Error fetching attestation campaigns:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching attestation campaigns');
       res.status(500).json({ error: 'Failed to fetch attestation campaigns' });
     }
   });
@@ -154,7 +157,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, campaign, stats });
     } catch (error) {
-      console.error('Error fetching campaign details:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching campaign details');
       res.status(500).json({ error: 'Failed to fetch campaign details' });
     }
   });
@@ -194,7 +197,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error updating campaign:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error updating campaign');
       res.status(500).json({ error: 'Failed to update campaign' });
     }
   });
@@ -238,7 +241,7 @@ export default function createAttestationRouter(deps) {
             return res.status(400).json({ error: 'No asset owners found in the selected companies' });
           }
         } catch (parseError) {
-          console.error('Error parsing target_company_ids:', parseError);
+          logger.error({ err: parseError, userId: req.user?.id }, 'Error parsing target_company_ids');
           return res.status(500).json({ error: 'Invalid target company IDs format' });
         }
       } else if (campaign.target_type === 'selected' && campaign.target_user_ids) {
@@ -247,7 +250,7 @@ export default function createAttestationRouter(deps) {
           const allUsers = await userDb.getAll();
           users = allUsers.filter(u => targetIds.includes(u.id));
         } catch (parseError) {
-          console.error('Error parsing target_user_ids:', parseError);
+          logger.error({ err: parseError, userId: req.user?.id }, 'Error parsing target_user_ids');
           return res.status(500).json({ error: 'Invalid target user IDs format' });
         }
       } else {
@@ -276,7 +279,7 @@ export default function createAttestationRouter(deps) {
               emailsSent++;
             }
           } catch (emailError) {
-            console.error(`Failed to send email to ${user.email}:`, emailError);
+            logger.error({ err: emailError, userId: req.user?.id, userEmail: user.email }, 'Failed to send email to user');
           }
         }
       }
@@ -319,7 +322,7 @@ export default function createAttestationRouter(deps) {
             inviteEmailsSent++;
           }
         } catch (emailError) {
-          console.error(`Failed to send invite email to ${owner.employee_email}:`, emailError);
+          logger.error({ err: emailError, userId: req.user?.id, employeeEmail: owner.employee_email }, 'Failed to send invite email to owner');
         }
       }
 
@@ -347,7 +350,7 @@ export default function createAttestationRouter(deps) {
         inviteEmailsSent
       });
     } catch (error) {
-      console.error('Error starting campaign:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error starting campaign');
       res.status(500).json({ error: 'Failed to start campaign' });
     }
   });
@@ -369,7 +372,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error cancelling campaign:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error cancelling campaign');
       res.status(500).json({ error: 'Failed to cancel campaign' });
     }
   });
@@ -396,7 +399,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, message: 'Campaign deleted successfully' });
     } catch (error) {
-      console.error('Error deleting campaign:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error deleting campaign');
       res.status(500).json({ error: 'Failed to delete campaign' });
     }
   });
@@ -438,7 +441,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, campaign, records: detailedRecords });
     } catch (error) {
-      console.error('Error fetching campaign dashboard:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching campaign dashboard');
       res.status(500).json({ error: 'Failed to fetch campaign dashboard' });
     }
   });
@@ -468,7 +471,7 @@ export default function createAttestationRouter(deps) {
       res.setHeader('Content-Disposition', `attachment; filename="attestation-${campaign.name.replace(/[^a-z0-9]/gi, '-')}.csv"`);
       res.send(csv);
     } catch (error) {
-      console.error('Error exporting campaign:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error exporting campaign');
       res.status(500).json({ error: 'Failed to export campaign' });
     }
   });
@@ -493,7 +496,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, attestations: detailedRecords });
     } catch (error) {
-      console.error('Error fetching user attestations:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching user attestations');
       res.status(500).json({ error: 'Failed to fetch attestations' });
     }
   });
@@ -524,7 +527,7 @@ export default function createAttestationRouter(deps) {
           const targetCompanyIds = JSON.parse(campaign.target_company_ids);
           userAssets = userAssets.filter(asset => targetCompanyIds.includes(asset.company_id));
         } catch (parseError) {
-          console.error('Error parsing target_company_ids:', parseError);
+          logger.error({ err: parseError, userId: req.user?.id }, 'Error parsing target_company_ids');
         }
       }
 
@@ -540,7 +543,7 @@ export default function createAttestationRouter(deps) {
         newAssets
       });
     } catch (error) {
-      console.error('Error fetching attestation record:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching attestation record');
       res.status(500).json({ error: 'Failed to fetch attestation record' });
     }
   });
@@ -598,7 +601,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error updating asset attestation:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error updating asset attestation');
       res.status(500).json({ error: 'Failed to update asset attestation' });
     }
   });
@@ -665,7 +668,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error adding new asset during attestation:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error adding new asset during attestation');
       res.status(500).json({ error: 'Failed to add new asset' });
     }
   });
@@ -716,10 +719,10 @@ export default function createAttestationRouter(deps) {
               req.user.email
             );
           } catch (auditError) {
-            console.error('Failed to log asset creation audit:', auditError);
+            logger.error({ err: auditError, userId: req.user?.id }, 'Failed to log asset creation audit');
           }
         } catch (assetError) {
-          console.error('Error creating asset from attestation:', assetError);
+          logger.error({ err: assetError, userId: req.user?.id }, 'Error creating asset from attestation');
         }
       }
 
@@ -751,12 +754,12 @@ export default function createAttestationRouter(deps) {
           await sendAttestationCompleteAdminNotification(adminEmails, employeeName, req.user.email, campaign);
         }
       } catch (emailError) {
-        console.error('Failed to send admin notification:', emailError);
+        logger.error({ err: emailError, userId: req.user?.id }, 'Failed to send admin notification');
       }
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error completing attestation:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error completing attestation');
       res.status(500).json({ error: 'Failed to complete attestation' });
     }
   });
@@ -804,7 +807,7 @@ export default function createAttestationRouter(deps) {
         ssoButtonText
       });
     } catch (error) {
-      console.error('Error validating invite token:', error);
+      logger.error({ err: error }, 'Error validating invite token');
       res.status(500).json({ error: 'Failed to validate invite token' });
     }
   });
@@ -836,7 +839,7 @@ export default function createAttestationRouter(deps) {
         pending_invites: formattedInvites
       });
     } catch (error) {
-      console.error('Error fetching pending invites:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching pending invites');
       res.status(500).json({ error: 'Failed to fetch pending invites' });
     }
   });
@@ -897,7 +900,7 @@ export default function createAttestationRouter(deps) {
             });
           }
         } catch (emailError) {
-          console.error(`Failed to resend invite to ${invite.employee_email}:`, emailError);
+          logger.error({ err: emailError, userId: req.user?.id, employeeEmail: invite.employee_email }, 'Failed to resend invite to employee');
         }
       }
 
@@ -912,7 +915,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, emailsSent });
     } catch (error) {
-      console.error('Error resending invites:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error resending invites');
       res.status(500).json({ error: 'Failed to resend invites' });
     }
   });
@@ -973,7 +976,7 @@ export default function createAttestationRouter(deps) {
         res.status(500).json({ error: result.error || 'Failed to send invite' });
       }
     } catch (error) {
-      console.error('Error resending invite:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error resending invite');
       res.status(500).json({ error: 'Failed to resend invite' });
     }
   });
@@ -1015,7 +1018,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, message: 'Reminder sent successfully' });
     } catch (error) {
-      console.error('Error sending reminder:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error sending reminder');
       res.status(500).json({ error: 'Failed to send reminder' });
     }
   });
@@ -1061,7 +1064,7 @@ export default function createAttestationRouter(deps) {
               return { success: false, recordId };
             }
           } catch (error) {
-            console.error(`Error sending reminder for record ${recordId}:`, error);
+            logger.error({ err: error, userId: req.user?.id, recordId }, 'Error sending reminder for record');
             return { success: false, recordId };
           }
         })
@@ -1081,7 +1084,7 @@ export default function createAttestationRouter(deps) {
 
       res.json({ success: true, sent, failed });
     } catch (error) {
-      console.error('Error sending bulk reminders:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error sending bulk reminders');
       res.status(500).json({ error: 'Failed to send bulk reminders' });
     }
   });
@@ -1140,7 +1143,7 @@ export default function createAttestationRouter(deps) {
         res.status(500).json({ error: result.error || 'Failed to send escalation' });
       }
     } catch (error) {
-      console.error('Error sending escalation:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error sending escalation');
       res.status(500).json({ error: 'Failed to send escalation' });
     }
   });

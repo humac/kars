@@ -11,6 +11,9 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse
 } from '@simplewebauthn/server';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'passkeys' });
 
 /**
  * Create and configure the passkeys router
@@ -44,7 +47,7 @@ export default function createPasskeysRouter(deps) {
       const passkeys = await passkeyDb.listByUser(req.user.id);
       res.json({ passkeys: passkeys.map(serializePasskey) });
     } catch (error) {
-      console.error('Failed to list passkeys:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Failed to list passkeys');
       res.status(500).json({ error: 'Unable to load passkeys' });
     }
   });
@@ -55,7 +58,7 @@ export default function createPasskeysRouter(deps) {
     try {
       res.json({ enabled: await isPasskeyEnabled() });
     } catch (error) {
-      console.error('Failed to load passkey config:', error);
+      logger.error({ err: error }, 'Failed to load passkey config');
       res.json({ enabled: true });
     }
   });
@@ -71,13 +74,13 @@ export default function createPasskeysRouter(deps) {
       const config = await getPasskeyConfig();
       const origin = getExpectedOrigin(req);
 
-      console.log('[Passkey Registration] Configuration:', {
+      logger.info({
         rpID: config.rpID,
         rpName: config.rpName,
         expectedOrigin: origin,
         requestOrigin: req.get('origin'),
         userEmail: req.user.email
-      });
+      }, '[Passkey Registration] Configuration');
 
       const userPasskeys = await passkeyDb.listByUser(req.user.id);
 
@@ -86,7 +89,7 @@ export default function createPasskeysRouter(deps) {
         pk.credential_id && typeof pk.credential_id === 'string'
       );
 
-      console.log('[Passkey Registration] User has', validPasskeys.length, 'existing passkeys');
+      logger.info({ validPasskeysCount: validPasskeys.length }, '[Passkey Registration] User has existing passkeys');
 
       const options = await generateRegistrationOptions({
         rpName: config.rpName,
@@ -111,11 +114,11 @@ export default function createPasskeysRouter(deps) {
       res.json({ options });
     } catch (error) {
       const config = await getPasskeyConfig();
-      console.error('Failed to generate passkey registration options:', error);
-      console.error('[Passkey Registration] RP ID:', config.rpID);
-      console.error('[Passkey Registration] Expected Origin:', getExpectedOrigin(req));
-      console.error('[Passkey Registration] Request Origin:', req.get('origin'));
-      console.error('[Passkey Registration] Hint: Ensure PASSKEY_RP_ID matches your domain and you\'re accessing via the correct hostname (use localhost, not 127.0.0.1 for local development)');
+      logger.error({ err: error }, 'Failed to generate passkey registration options');
+      logger.error({ rpID: config.rpID }, '[Passkey Registration] RP ID');
+      logger.error({ expectedOrigin: getExpectedOrigin(req) }, '[Passkey Registration] Expected Origin');
+      logger.error({ requestOrigin: req.get('origin') }, '[Passkey Registration] Request Origin');
+      logger.error('[Passkey Registration] Hint: Ensure PASSKEY_RP_ID matches your domain and you\'re accessing via the correct hostname (use localhost, not 127.0.0.1 for local development)');
       res.status(500).json({ error: 'Unable to start passkey registration' });
     }
   });
@@ -132,12 +135,12 @@ export default function createPasskeysRouter(deps) {
       const { credential, name } = req.body;
       const expectedChallenge = pendingPasskeyRegistrations.get(req.user.id);
 
-      console.log('[Passkey Registration] Starting verification for user:', req.user.email);
-      console.log('[Passkey Registration] Credential received:', {
+      logger.info({ userEmail: req.user.email }, '[Passkey Registration] Starting verification for user');
+      logger.info({
         id: credential?.id?.substring(0, 20) + '...',
         type: credential?.type,
         hasResponse: !!credential?.response
-      });
+      }, '[Passkey Registration] Credential received');
 
       if (!expectedChallenge) {
         return res.status(400).json({ error: 'No passkey registration in progress' });
@@ -150,10 +153,10 @@ export default function createPasskeysRouter(deps) {
         expectedRPID: config.rpID
       });
 
-      console.log('[Passkey Registration] Verification result:', {
+      logger.info({
         verified: verification?.verified,
         hasRegistrationInfo: !!verification?.registrationInfo
-      });
+      }, '[Passkey Registration] Verification result');
 
       if (!verification?.verified || !verification.registrationInfo) {
         return res.status(400).json({ error: 'Passkey registration verification failed' });
@@ -168,7 +171,7 @@ export default function createPasskeysRouter(deps) {
           try {
             return isoBase64URL.toBuffer(value);
           } catch (err) {
-            console.error('[Passkey Registration] Failed to normalize string buffer:', err);
+            logger.error({ err }, '[Passkey Registration] Failed to normalize string buffer');
             return undefined;
           }
         }
@@ -177,7 +180,7 @@ export default function createPasskeysRouter(deps) {
         if (value instanceof ArrayBuffer) return Buffer.from(value);
         if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
 
-        console.error('[Passkey Registration] Unsupported buffer type:', typeof value);
+        logger.error({ valueType: typeof value }, '[Passkey Registration] Unsupported buffer type');
         return undefined;
       };
 
@@ -197,7 +200,7 @@ export default function createPasskeysRouter(deps) {
 
       const { credentialDeviceType, credentialBackedUp } = registrationInfo;
 
-      console.log('[Passkey Registration] Extracted data:', {
+      logger.info({
         credentialIDLength: credentialID?.length || credentialID?.byteLength || 0,
         credentialIDType: typeof credentialID,
         credentialPublicKeyLength: credentialPublicKey?.length || credentialPublicKey?.byteLength || 0,
@@ -205,18 +208,18 @@ export default function createPasskeysRouter(deps) {
         counter,
         credentialDeviceType,
         credentialBackedUp
-      });
+      }, '[Passkey Registration] Extracted data');
 
       const credentialIdBase64 = credentialID ? isoBase64URL.fromBuffer(credentialID) : credential?.rawId;
       const publicKeyBase64 = credentialPublicKey ? isoBase64URL.fromBuffer(credentialPublicKey) : undefined;
 
       if (!credentialIdBase64 || !publicKeyBase64) {
-        console.error('[Passkey Registration] Missing credential data after verification:', {
+        logger.error({
           credentialIDPresent: !!credentialID,
           credentialPublicKeyPresent: !!credentialPublicKey,
           credentialIdBase64Length: credentialIdBase64?.length || 0,
           publicKeyBase64Length: publicKeyBase64?.length || 0
-        });
+        }, '[Passkey Registration] Missing credential data after verification');
 
         pendingPasskeyRegistrations.delete(req.user.id);
         return res.status(400).json({
@@ -224,10 +227,10 @@ export default function createPasskeysRouter(deps) {
         });
       }
 
-      console.log('[Passkey Registration] Converted to base64:', {
+      logger.info({
         credentialIdBase64Length: credentialIdBase64?.length || 0,
         publicKeyBase64Length: publicKeyBase64?.length || 0
-      });
+      }, '[Passkey Registration] Converted to base64');
 
       const record = await passkeyDb.create({
         userId: req.user.id,
@@ -238,20 +241,20 @@ export default function createPasskeysRouter(deps) {
         transports: credential?.response?.transports || []
       });
 
-      console.log('[Passkey Registration] Created record with ID:', record.id);
+      logger.info({ recordId: record.id }, '[Passkey Registration] Created record with ID');
 
       pendingPasskeyRegistrations.delete(req.user.id);
       const savedPasskey = await passkeyDb.getById(record.id);
 
-      console.log('[Passkey Registration] Retrieved saved passkey:', {
+      logger.info({
         id: savedPasskey?.id,
         credentialIdLength: savedPasskey?.credential_id?.length || 0,
         publicKeyLength: savedPasskey?.public_key?.length || 0
-      });
+      }, '[Passkey Registration] Retrieved saved passkey');
 
       res.json({ passkey: serializePasskey(savedPasskey) });
     } catch (error) {
-      console.error('Failed to verify passkey registration:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Failed to verify passkey registration');
       res.status(500).json({ error: 'Unable to verify passkey registration' });
     }
   });
@@ -279,7 +282,7 @@ export default function createPasskeysRouter(deps) {
         }
 
         const userPasskeys = await passkeyDb.listByUser(user.id);
-        console.log(`[Passkey Auth] User ${user.email} has ${userPasskeys.length} passkeys`);
+        logger.info({ userEmail: user.email, passkeysCount: userPasskeys.length }, '[Passkey Auth] User has passkeys');
 
         if (!userPasskeys.length) {
           return res.status(400).json({ error: 'No passkeys registered for this account. Please register a passkey first from your profile settings.' });
@@ -290,11 +293,11 @@ export default function createPasskeysRouter(deps) {
           pk.credential_id && typeof pk.credential_id === 'string'
         );
 
-        console.log(`[Passkey Auth] ${validPasskeys.length} valid passkeys out of ${userPasskeys.length} total`);
+        logger.info({ validPasskeysCount: validPasskeys.length, totalPasskeys: userPasskeys.length }, '[Passkey Auth] Valid passkeys out of total');
 
         if (validPasskeys.length === 0) {
-          console.error('[Passkey Auth] Invalid passkey data detected for user:', user.email);
-          console.error('[Passkey Auth] Passkey details:', userPasskeys.map(pk => ({
+          logger.error({ userEmail: user.email }, '[Passkey Auth] Invalid passkey data detected for user');
+          logger.error({ passkeyDetails: userPasskeys.map(pk => ({
             id: pk.id,
             name: pk.name,
             credential_id: pk.credential_id,
@@ -302,17 +305,17 @@ export default function createPasskeysRouter(deps) {
             credential_id_length: pk.credential_id ? pk.credential_id.length : 0,
             public_key: pk.public_key ? 'present' : 'missing',
             created_at: pk.created_at
-          })));
+          })) }, '[Passkey Auth] Passkey details');
 
           // Clean up invalid passkeys automatically
-          console.log('[Passkey Auth] Attempting to clean up invalid passkeys...');
+          logger.info('[Passkey Auth] Attempting to clean up invalid passkeys');
           for (const pk of userPasskeys) {
             if (!pk.credential_id || typeof pk.credential_id !== 'string') {
               try {
                 await passkeyDb.delete(pk.id);
-                console.log(`[Passkey Auth] Deleted invalid passkey ID ${pk.id}`);
+                logger.info({ passkeyId: pk.id }, '[Passkey Auth] Deleted invalid passkey ID');
               } catch (deleteErr) {
-                console.error(`[Passkey Auth] Failed to delete invalid passkey ID ${pk.id}:`, deleteErr);
+                logger.error({ err: deleteErr, passkeyId: pk.id }, '[Passkey Auth] Failed to delete invalid passkey ID');
               }
             }
           }
@@ -351,7 +354,7 @@ export default function createPasskeysRouter(deps) {
 
       res.json({ options });
     } catch (error) {
-      console.error('Failed to generate passkey authentication options:', error);
+      logger.error({ err: error }, 'Failed to generate passkey authentication options');
       res.status(500).json({ error: 'Unable to start passkey sign in' });
     }
   });
@@ -381,7 +384,7 @@ export default function createPasskeysRouter(deps) {
           clientChallenge = Buffer.from(clientDataJson.challenge, 'base64url').toString('base64url');
         }
       } catch (err) {
-        console.warn('[Passkey Auth] Failed to parse clientDataJSON challenge:', err.message);
+        logger.warn({ err, message: err.message }, '[Passkey Auth] Failed to parse clientDataJSON challenge');
       }
 
       // Look up passkey by credential ID
@@ -463,7 +466,7 @@ export default function createPasskeysRouter(deps) {
 
       res.json({ token, user });
     } catch (error) {
-      console.error('Failed to verify passkey authentication:', error);
+      logger.error({ err: error }, 'Failed to verify passkey authentication');
       res.status(500).json({ error: 'Unable to verify passkey sign in' });
     }
   });
@@ -481,7 +484,7 @@ export default function createPasskeysRouter(deps) {
       await passkeyDb.delete(req.params.id);
       res.json({ message: 'Passkey removed' });
     } catch (error) {
-      console.error('Failed to delete passkey:', error);
+      logger.error({ err: error, passkeyId: req.params.id, userId: req.user?.id }, 'Failed to delete passkey');
       res.status(500).json({ error: 'Unable to delete passkey' });
     }
   });

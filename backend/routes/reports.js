@@ -4,6 +4,9 @@
  */
 
 import { Router } from 'express';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'reports' });
 
 /**
  * Create and configure the reports router
@@ -77,7 +80,7 @@ export default function createReportsRouter(deps) {
 
       res.json(summary);
     } catch (error) {
-      console.error('Error generating summary report:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error generating summary report');
       res.status(500).json({ error: 'Failed to generate summary report' });
     }
   });
@@ -172,7 +175,7 @@ export default function createReportsRouter(deps) {
         complianceScore
       });
     } catch (error) {
-      console.error('Error generating enhanced summary:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error generating enhanced summary');
       res.status(500).json({ error: 'Failed to generate enhanced summary' });
     }
   });
@@ -244,7 +247,7 @@ export default function createReportsRouter(deps) {
         recentActivity
       });
     } catch (error) {
-      console.error('Error generating enhanced statistics:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error generating enhanced statistics');
       res.status(500).json({ error: 'Failed to generate enhanced statistics' });
     }
   });
@@ -284,7 +287,7 @@ export default function createReportsRouter(deps) {
             total
           });
         } catch (err) {
-          console.error(`Error getting records for campaign ${campaign.id}:`, err);
+          logger.error({ err, userId: req.user?.id, campaignId: campaign.id }, 'Error getting records for campaign');
         }
       }
 
@@ -301,7 +304,7 @@ export default function createReportsRouter(deps) {
           }).length;
           overdueAttestations += overdue;
         } catch (err) {
-          console.error(`Error calculating overdue for campaign ${campaign.id}:`, err);
+          logger.error({ err, userId: req.user?.id, campaignId: campaign.id }, 'Error calculating overdue for campaign');
         }
       }
 
@@ -317,7 +320,7 @@ export default function createReportsRouter(deps) {
             const records = await attestationRecordDb.getByCampaignId(campaign.id);
             attestedThisQuarter += records.filter(r => r.status === 'completed').length;
           } catch (err) {
-            console.error(`Error counting quarterly attestations for campaign ${campaign.id}:`, err);
+            logger.error({ err, userId: req.user?.id, campaignId: campaign.id }, 'Error counting quarterly attestations for campaign');
           }
         }
       }
@@ -390,7 +393,7 @@ export default function createReportsRouter(deps) {
         checklist
       });
     } catch (error) {
-      console.error('Error generating compliance report:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error generating compliance report');
       res.status(500).json({ error: 'Failed to generate compliance report' });
     }
   });
@@ -510,7 +513,7 @@ export default function createReportsRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Error generating trends report:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error generating trends report');
       res.status(500).json({ error: 'Failed to generate trends report' });
     }
   });

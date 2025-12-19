@@ -3,6 +3,10 @@
  * Handles resource-level permission checks
  */
 
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'authorization' });
+
 /**
  * Middleware factory that fetches an asset and returns 404 if not found.
  * Attaches the asset to req.asset for subsequent middleware/handlers.
@@ -23,7 +27,7 @@ export const requireAsset = (assetDb) => async (req, res, next) => {
     req.asset = asset;
     next();
   } catch (error) {
-    console.error('Error fetching asset:', error);
+    logger.error({ err: error, assetId: req.params.id }, 'Error fetching asset');
     res.status(500).json({ error: 'Failed to fetch asset' });
   }
 };
@@ -87,7 +91,7 @@ export const requireAssetPermission = (assetDb, userDb, options = {}) => async (
       error: `You do not have permission to ${action} this asset`
     });
   } catch (error) {
-    console.error('Error checking asset permission:', error);
+    logger.error({ err: error, assetId: req.params.id, userId: req.user?.id }, 'Error checking asset permission');
     res.status(500).json({ error: 'Failed to check permissions' });
   }
 };

@@ -5,6 +5,9 @@
 
 import { Router } from 'express';
 import { randomBytes } from 'crypto';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'oidc' });
 
 /**
  * Create and configure the OIDC router
@@ -84,7 +87,7 @@ export default function createOIDCRouter(deps) {
       const authUrl = await getAuthorizationUrl(state);
       res.json({ authUrl, state });
     } catch (error) {
-      console.error('OIDC login init error:', error);
+      logger.error({ err: error }, 'OIDC login init error');
       res.status(500).json({ error: 'Failed to initiate OIDC login' });
     }
   });
@@ -101,7 +104,7 @@ export default function createOIDCRouter(deps) {
 
       // Check for OIDC errors
       if (oidcError) {
-        console.error('OIDC error:', oidcError, error_description);
+        logger.error({ oidcError, error_description }, 'OIDC error');
         return res.status(400).json({
           error: 'OIDC authentication failed',
           details: error_description || oidcError
@@ -142,11 +145,11 @@ export default function createOIDCRouter(deps) {
 
         if (user) {
           // Link existing user to OIDC
-          console.log(`Linking existing user ${userData.email} to OIDC subject ${userData.oidcSub}`);
+          logger.info({ email: userData.email, oidcSub: userData.oidcSub }, 'Linking existing user to OIDC subject');
           await userDb.linkOIDC(user.id, userData.oidcSub);
         } else {
           // Create new user (JIT provisioning)
-          console.log(`Creating new user via OIDC: ${userData.email} with role ${userData.role}`);
+          logger.info({ email: userData.email, role: userData.role }, 'Creating new user via OIDC');
           const result = await userDb.createFromOIDC({
             email: userData.email,
             name: userData.fullName,
@@ -200,11 +203,11 @@ export default function createOIDCRouter(deps) {
             // Note: attestation_ready email removed - user will be redirected to attestations page
             hasActiveAttestation = true;
 
-            console.log(`Converted pending invite to attestation record for ${user.email} in campaign ${campaign.name}`);
+            logger.info({ email: user.email, campaignName: campaign.name }, 'Converted pending invite to attestation record');
           }
         }
       } catch (inviteError) {
-        console.error('Error converting pending attestation invites:', inviteError);
+        logger.error({ err: inviteError }, 'Error converting pending attestation invites');
         // Don't fail login if invite conversion fails
       }
 
@@ -230,7 +233,7 @@ export default function createOIDCRouter(deps) {
         redirectToAttestations: hasActiveAttestation
       });
     } catch (error) {
-      console.error('OIDC callback error:', error);
+      logger.error({ err: error }, 'OIDC callback error');
       res.status(500).json({ error: 'Failed to process OIDC callback', details: error.message });
     }
   });

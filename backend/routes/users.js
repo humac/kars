@@ -5,6 +5,9 @@
 
 import { Router } from 'express';
 import { requireFields, validateRole } from '../middleware/validation.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'users' });
 
 /**
  * Create and configure the users router
@@ -30,7 +33,7 @@ export default function createUsersRouter(deps) {
       const users = await userDb.getAll();
       res.json(users);
     } catch (error) {
-      console.error('Get users error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get users error');
       res.status(500).json({ error: 'Failed to get users' });
     }
   });
@@ -114,7 +117,7 @@ export default function createUsersRouter(deps) {
             manager_email
           );
         } catch (error) {
-          console.error('Failed to update manager on assets:', error);
+          logger.error({ err: error, userEmail: updatedUser.email }, 'Failed to update manager on assets');
         }
       }
 
@@ -133,7 +136,7 @@ export default function createUsersRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Admin update user error:', error);
+      logger.error({ err: error, userId: req.user?.id, targetUserId: req.params.id }, 'Admin update user error');
       res.status(500).json({ error: 'Failed to update user' });
     }
   });
@@ -191,7 +194,7 @@ export default function createUsersRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Update user role error:', error);
+      logger.error({ err: error, userId: req.user?.id, targetUserId: req.params.id }, 'Update user role error');
       res.status(500).json({ error: 'Failed to update user role' });
     }
   });
@@ -232,7 +235,7 @@ export default function createUsersRouter(deps) {
       await userDb.delete(userId);
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
-      console.error('Delete user error:', error);
+      logger.error({ err: error, userId: req.user?.id, targetUserId: req.params.id }, 'Delete user error');
       res.status(500).json({ error: 'Failed to delete user' });
     }
   });

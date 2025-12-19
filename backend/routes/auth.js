@@ -5,6 +5,9 @@
 
 import { Router } from 'express';
 import { requireFields, validateEmail } from '../middleware/validation.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'auth' });
 
 /**
  * Create and configure the auth router
@@ -80,7 +83,7 @@ export default function createAuthRouter(deps) {
       let userRole = 'employee';
       if (isFirstUser || isAdminEmail) {
         userRole = 'admin';
-        console.log(`Creating admin user: ${email} (${isFirstUser ? 'first user' : 'admin email match'})`);
+        logger.info({ email, isFirstUser, isAdminEmail }, `Creating admin user: ${email} (${isFirstUser ? 'first user' : 'admin email match'})`);
       }
 
       // Create user
@@ -101,7 +104,7 @@ export default function createAuthRouter(deps) {
       // Sync asset ownership for pre-loaded assets
       const syncResult = await syncAssetOwnership(newUser.email);
       if (syncResult.ownerUpdates > 0 || syncResult.managerUpdates > 0) {
-        console.log(`Synced asset ownership for ${newUser.email}: ${syncResult.ownerUpdates} as owner, ${syncResult.managerUpdates} as manager`);
+        logger.info({ email: newUser.email, ownerUpdates: syncResult.ownerUpdates, managerUpdates: syncResult.managerUpdates }, `Synced asset ownership for ${newUser.email}: ${syncResult.ownerUpdates} as owner, ${syncResult.managerUpdates} as manager`);
 
         await auditDb.log(
           'sync_assets',
@@ -154,7 +157,7 @@ export default function createAuthRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error({ err: error }, 'Registration error');
       res.status(500).json({ error: 'Registration failed' });
     }
   });
@@ -228,7 +231,7 @@ export default function createAuthRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error({ err: error }, 'Login error');
       res.status(500).json({ error: 'Login failed' });
     }
   });
@@ -243,7 +246,7 @@ export default function createAuthRouter(deps) {
 
       // Always return success to prevent email enumeration
       if (!user) {
-        console.log(`Password reset requested for non-existent email: ${email}`);
+        logger.info({ email }, `Password reset requested for non-existent email: ${email}`);
         return res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
       }
 
@@ -265,9 +268,9 @@ export default function createAuthRouter(deps) {
 
       try {
         await sendPasswordResetEmail(user.email, user.first_name || user.name || 'User', resetLink);
-        console.log(`Password reset email sent to ${email}`);
+        logger.info({ email }, `Password reset email sent to ${email}`);
       } catch (emailError) {
-        console.error('Failed to send password reset email:', emailError);
+        logger.error({ err: emailError, email }, 'Failed to send password reset email');
         // Don't fail the request if email fails - user can request again
       }
 
@@ -282,7 +285,7 @@ export default function createAuthRouter(deps) {
 
       res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
     } catch (error) {
-      console.error('Forgot password error:', error);
+      logger.error({ err: error }, 'Forgot password error');
       res.status(500).json({ error: 'Failed to process password reset request' });
     }
   });
@@ -311,7 +314,7 @@ export default function createAuthRouter(deps) {
 
       res.json({ valid: true });
     } catch (error) {
-      console.error('Verify reset token error:', error);
+      logger.error({ err: error }, 'Verify reset token error');
       res.status(500).json({ valid: false, error: 'Failed to verify reset token' });
     }
   });
@@ -366,7 +369,7 @@ export default function createAuthRouter(deps) {
 
       res.json({ message: 'Password has been reset successfully' });
     } catch (error) {
-      console.error('Reset password error:', error);
+      logger.error({ err: error }, 'Reset password error');
       res.status(500).json({ error: 'Failed to reset password' });
     }
   });
@@ -393,7 +396,7 @@ export default function createAuthRouter(deps) {
         profile_complete: Boolean(user.first_name && user.last_name && user.manager_email)
       });
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get profile error');
       res.status(500).json({ error: 'Failed to get profile' });
     }
   });
@@ -452,7 +455,7 @@ export default function createAuthRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Update profile error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Update profile error');
       res.status(500).json({ error: 'Failed to update profile' });
     }
   });
@@ -505,7 +508,7 @@ export default function createAuthRouter(deps) {
           );
 
           if (updatedAssets.changes > 0) {
-            console.log(`Updated manager info for ${updatedAssets.changes} assets for employee ${updatedUser.email}`);
+            logger.info({ email: updatedUser.email, changes: updatedAssets.changes }, `Updated manager info for ${updatedAssets.changes} assets for employee ${updatedUser.email}`);
 
             // Log audit for asset manager sync
             await auditDb.log(
@@ -528,7 +531,7 @@ export default function createAuthRouter(deps) {
           }
         }
       } catch (syncError) {
-        console.error('Error syncing manager info to assets during profile completion:', syncError);
+        logger.error({ err: syncError, userId: req.user?.id }, 'Error syncing manager info to assets during profile completion');
         // Don't fail profile completion if asset sync fails
       }
 
@@ -538,7 +541,7 @@ export default function createAuthRouter(deps) {
         try {
           await autoAssignManagerRole(manager_email, updatedUser.email);
         } catch (roleError) {
-          console.error('Error auto-assigning manager role during profile completion:', roleError);
+          logger.error({ err: roleError, userId: req.user?.id }, 'Error auto-assigning manager role during profile completion');
           // Don't fail profile completion if role assignment fails
         }
       }
@@ -560,7 +563,7 @@ export default function createAuthRouter(deps) {
         }
       });
     } catch (error) {
-      console.error('Complete profile error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Complete profile error');
       res.status(500).json({ error: 'Failed to complete profile' });
     }
   });
@@ -613,7 +616,7 @@ export default function createAuthRouter(deps) {
 
       res.json({ message: 'Password changed successfully' });
     } catch (error) {
-      console.error('Change password error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Change password error');
       res.status(500).json({ error: 'Failed to change password' });
     }
   });

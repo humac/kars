@@ -8,6 +8,9 @@ import { unlink } from 'fs/promises';
 import { VALID_STATUSES } from '../utils/constants.js';
 import { requireFields, validateStatus, validateIdArray } from '../middleware/validation.js';
 import { requireAsset, requireAssetPermission } from '../middleware/authorization.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'assets' });
 
 /**
  * Create and configure the assets router
@@ -39,7 +42,7 @@ export default function createAssetsRouter(deps) {
       const filteredAssets = await assetDb.getScopedForUser(user);
       res.json(filteredAssets);
     } catch (error) {
-      console.error('Error fetching assets:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching assets');
       res.status(500).json({ error: 'Failed to fetch assets' });
     }
   });
@@ -57,7 +60,7 @@ export default function createAssetsRouter(deps) {
       const assets = await assetDb.search(filters);
       res.json(assets);
     } catch (error) {
-      console.error('Error searching assets:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error searching assets');
       res.status(500).json({ error: 'Failed to search assets' });
     }
   });
@@ -156,7 +159,7 @@ export default function createAssetsRouter(deps) {
         errors
       });
     } catch (error) {
-      console.error('Error importing assets:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error importing assets');
       res.status(500).json({ error: 'Failed to import assets' });
     } finally {
       await unlink(req.file.path);
@@ -219,7 +222,7 @@ export default function createAssetsRouter(deps) {
         asset: newAsset
       });
     } catch (error) {
-      console.error('Error creating asset:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error creating asset');
       res.status(500).json({ error: 'Failed to register asset' });
     }
   });
@@ -280,7 +283,7 @@ export default function createAssetsRouter(deps) {
         failed: results.failed
       });
     } catch (error) {
-      console.error('Error bulk updating status:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error bulk updating status');
       res.status(500).json({ error: 'Failed to update assets' });
     }
   });
@@ -328,7 +331,7 @@ export default function createAssetsRouter(deps) {
         failed: results.failed
       });
     } catch (error) {
-      console.error('Error bulk deleting assets:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error bulk deleting assets');
       res.status(500).json({ error: 'Failed to delete assets' });
     }
   });
@@ -377,7 +380,7 @@ export default function createAssetsRouter(deps) {
         failed: results.failed
       });
     } catch (error) {
-      console.error('Error bulk updating manager:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error bulk updating manager');
       res.status(500).json({ error: 'Failed to update assets' });
     }
   });
@@ -413,7 +416,7 @@ export default function createAssetsRouter(deps) {
         asset: updatedAsset
       });
     } catch (error) {
-      console.error('Error updating status:', error);
+      logger.error({ err: error, assetId: req.params.id, userId: req.user?.id }, 'Error updating status');
       res.status(500).json({ error: 'Failed to update status' });
     }
   });
@@ -457,7 +460,7 @@ export default function createAssetsRouter(deps) {
         asset: updatedAsset
       });
     } catch (error) {
-      console.error('Error updating asset:', error);
+      logger.error({ err: error, assetId: req.params.id, userId: req.user?.id }, 'Error updating asset');
       res.status(500).json({ error: 'Failed to update asset' });
     }
   });
@@ -483,7 +486,7 @@ export default function createAssetsRouter(deps) {
 
       res.json({ message: 'Asset deleted successfully' });
     } catch (error) {
-      console.error('Error deleting asset:', error);
+      logger.error({ err: error, assetId: req.params.id, userId: req.user?.id }, 'Error deleting asset');
       res.status(500).json({ error: 'Failed to delete asset' });
     }
   });

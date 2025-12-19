@@ -4,6 +4,9 @@
  */
 
 import { Router } from 'express';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'audit' });
 
 /**
  * Create and configure the audit router
@@ -43,7 +46,7 @@ export default function createAuditRouter(deps) {
 
       res.json(logs);
     } catch (error) {
-      console.error('Error fetching audit logs:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching audit logs');
       res.status(500).json({ error: 'Failed to fetch audit logs' });
     }
   });
@@ -54,7 +57,7 @@ export default function createAuditRouter(deps) {
       const logs = await auditDb.getByEntity(req.params.type, req.params.id);
       res.json(logs);
     } catch (error) {
-      console.error('Error fetching entity audit logs:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching entity audit logs');
       res.status(500).json({ error: 'Failed to fetch entity audit logs' });
     }
   });
@@ -66,7 +69,7 @@ export default function createAuditRouter(deps) {
       const logs = await auditDb.getRecent(limit);
       res.json(logs);
     } catch (error) {
-      console.error('Error fetching recent audit logs:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching recent audit logs');
       res.status(500).json({ error: 'Failed to fetch recent audit logs' });
     }
   });
@@ -77,7 +80,7 @@ export default function createAuditRouter(deps) {
       const stats = await auditDb.getStats(req.query.startDate, req.query.endDate);
       res.json(stats);
     } catch (error) {
-      console.error('Error fetching audit stats:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error fetching audit stats');
       res.status(500).json({ error: 'Failed to fetch audit stats' });
     }
   });
@@ -125,7 +128,7 @@ export default function createAuditRouter(deps) {
       res.setHeader('Content-Disposition', `attachment; filename=audit-logs-${new Date().toISOString().split('T')[0]}.csv`);
       res.send(csv);
     } catch (error) {
-      console.error('Error exporting audit logs:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Error exporting audit logs');
       res.status(500).json({ error: 'Failed to export audit logs' });
     }
   });

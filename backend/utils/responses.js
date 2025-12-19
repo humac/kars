@@ -3,6 +3,10 @@
  * Ensures consistent response format across all endpoints
  */
 
+import { createChildLogger } from './logger.js';
+
+const logger = createChildLogger({ module: 'responses' });
+
 /**
  * Send a success response
  * @param {Object} res - Express response object
@@ -103,7 +107,7 @@ export const conflict = (res, message) =>
 export const serverError = (res, error = null) => {
   // Log the actual error for debugging
   if (error) {
-    console.error('Server error:', error);
+    logger.error({ err: error }, 'Server error');
   }
 
   return errorResponse(res, 'An internal server error occurred', {

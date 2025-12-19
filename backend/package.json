@@ -36,6 +36,7 @@
     "nodemailer": "^7.0.11",
     "openid-client": "^6.8.1",
     "pg": "^8.11.3",
+    "pino": "^10.1.0",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0"
   },

@@ -14,6 +14,9 @@ import createMFARouter from './mfa.js';
 import createPasskeysRouter from './passkeys.js';
 import createUsersRouter from './users.js';
 import createOIDCRouter from './oidc.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'routes' });
 
 /**
  * Mount all route modules on the Express app
@@ -49,7 +52,7 @@ export function mountRoutes(app, deps) {
         companiesCount: companies.length
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      logger.error({ err: error }, 'Error fetching stats');
       res.status(500).json({ error: 'Failed to fetch stats' });
     }
   });
@@ -150,7 +153,7 @@ export function mountRoutes(app, deps) {
       const settings = await deps.brandingSettingsDb.get();
       res.json(settings || {});
     } catch (error) {
-      console.error('Get branding settings error:', error);
+      logger.error({ err: error }, 'Get branding settings error');
       res.status(500).json({ error: 'Failed to load branding settings' });
     }
   });
@@ -257,7 +260,7 @@ export function mountRoutes(app, deps) {
   });
   app.use('/api/auth/oidc', oidcRouter);
 
-  console.log('Mounted route modules: assets, companies, audit, reports, admin, attestation, auth, mfa, passkeys, users, oidc');
+  logger.info('Mounted route modules: assets, companies, audit, reports, admin, attestation, auth, mfa, passkeys, users, oidc');
 }
 
 export default mountRoutes;

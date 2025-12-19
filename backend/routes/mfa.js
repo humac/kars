@@ -5,6 +5,9 @@
 
 import { Router } from 'express';
 import { requireFields } from '../middleware/validation.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'mfa' });
 
 /**
  * Create and configure the MFA router
@@ -42,7 +45,7 @@ export default function createMFARouter(deps) {
         hasBackupCodes: safeJsonParseArray(mfaStatus?.mfa_backup_codes).length > 0
       });
     } catch (error) {
-      console.error('Get MFA status error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'Get MFA status error');
       res.status(500).json({ error: 'Failed to get MFA status' });
     }
   });
@@ -76,7 +79,7 @@ export default function createMFARouter(deps) {
         message: 'Scan QR code with your authenticator app'
       });
     } catch (error) {
-      console.error('MFA enrollment error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'MFA enrollment error');
       res.status(500).json({ error: 'Failed to start MFA enrollment' });
     }
   });
@@ -126,7 +129,7 @@ export default function createMFARouter(deps) {
         backupCodes: backupCodes.map(formatBackupCode)
       });
     } catch (error) {
-      console.error('MFA verification error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'MFA verification error');
       res.status(500).json({ error: 'Failed to verify MFA enrollment' });
     }
   });
@@ -160,7 +163,7 @@ export default function createMFARouter(deps) {
 
       res.json({ message: 'MFA disabled successfully' });
     } catch (error) {
-      console.error('MFA disable error:', error);
+      logger.error({ err: error, userId: req.user?.id }, 'MFA disable error');
       res.status(500).json({ error: 'Failed to disable MFA' });
     }
   });
@@ -225,7 +228,7 @@ export default function createMFARouter(deps) {
         }
       });
     } catch (error) {
-      console.error('MFA login verification error:', error);
+      logger.error({ err: error }, 'MFA login verification error');
       res.status(500).json({ error: 'Failed to verify MFA' });
     }
   });

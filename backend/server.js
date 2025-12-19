@@ -16,6 +16,7 @@ import multer from 'multer';
 import { readFile } from 'fs/promises';
 import os from 'os';
 import { mountRoutes } from './routes/index.js';
+import logger from './utils/logger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -100,7 +101,7 @@ const getPasskeyConfig = async () => {
       };
     }
   } catch (err) {
-    console.error('Failed to load passkey settings from database:', err);
+    logger.error({ err }, 'Failed to load passkey settings from database');
   }
 
   // Fallback to defaults
@@ -116,7 +117,7 @@ const isPasskeyEnabled = async () => {
     const dbSettings = await passkeySettingsDb.get();
     return dbSettings?.enabled !== 0;
   } catch (err) {
-    console.error('Failed to read passkey enabled state:', err);
+    logger.error({ err }, 'Failed to read passkey enabled state');
     return true;
   }
 };
@@ -225,10 +226,10 @@ const initializeOIDCFromSettings = async () => {
     if (settings && settings.enabled === 1) {
       await initializeOIDC(settings);
     } else {
-      console.log('OIDC is disabled in settings');
+      logger.info('OIDC is disabled in settings');
     }
   } catch (err) {
-    console.error('OIDC initialization failed:', err.message);
+    logger.error({ err }, 'OIDC initialization failed');
   }
 };
 
@@ -278,7 +279,7 @@ const autoAssignManagerRole = async (email, triggeredBy) => {
 
     // Update user role to manager
     await userDb.updateRole(user.id, 'manager');
-    console.log(`Auto-assigned manager role to ${email}`);
+    logger.info({ email }, 'Auto-assigned manager role');
 
     // Log the role change in audit
     await auditDb.log(
@@ -297,7 +298,7 @@ const autoAssignManagerRole = async (email, triggeredBy) => {
 
     return true;
   } catch (error) {
-    console.error(`Error auto-assigning manager role to ${email}:`, error);
+    logger.error({ err: error, email }, 'Error auto-assigning manager role');
     return false;
   }
 };
@@ -399,14 +400,13 @@ const startServer = async () => {
     }
     
     await initializeOIDCFromSettings();
-    console.log(`Using ${databaseEngine.toUpperCase()} database backend`);
+    logger.info({ engine: databaseEngine.toUpperCase() }, 'Database backend initialized');
 
     app.listen(PORT, () => {
-    console.log(`ACS API running on http://localhost:${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/api/health`);
+      logger.info({ port: PORT, healthCheck: '/api/health' }, 'ACS API server started');
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error({ err: error }, 'Failed to start server');
     process.exit(1);
   }
 };
