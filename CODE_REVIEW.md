@@ -439,8 +439,8 @@ export const useFetch = (url, options = {}) => {
 
 ### Recommended Test Priority
 
-1. **Immediate:** Security-critical paths (auth, authorization)
-2. **High:** User-facing workflows (login, registration, asset CRUD)
+1. ~~**Immediate:** Security-critical paths (auth, authorization)~~ ✅ Done
+2. ~~**High:** User-facing workflows (login, registration, asset CRUD)~~ ✅ Partial (CompanyManagement, password reset)
 3. **Medium:** Admin features and settings
 4. **Low:** Charts and visualization components
 
@@ -460,7 +460,7 @@ export const useFetch = (url, options = {}) => {
 
 1. ~~Extract `formatFullName` utility~~ ✅ Done
 2. ~~Add sr-only text to icon buttons~~ ✅ Done (aria-labels added)
-3. Fix unstable useEffect dependencies
+3. ~~Fix unstable useEffect dependencies~~ ✅ Done (memoized getAuthHeaders)
 4. ~~Add React.memo to table row components~~ ✅ Done
 
 ---
