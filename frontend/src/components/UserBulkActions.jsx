@@ -9,6 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 /**
@@ -26,6 +34,7 @@ export default function UserBulkActions({
   const [bulkRole, setBulkRole] = useState('');
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const selectedCount = selectedIds.size;
 
@@ -58,10 +67,11 @@ export default function UserBulkActions({
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteConfirm = async () => {
     const ids = getOperableIds();
     if (!ids.length) return;
 
+    setDeleteDialogOpen(false);
     setDeleting(true);
     try {
       for (const id of ids) {
@@ -109,13 +119,29 @@ export default function UserBulkActions({
           size="sm"
           variant="ghost"
           className="text-destructive hover:text-destructive"
-          onClick={handleBulkDelete}
+          onClick={() => setDeleteDialogOpen(true)}
           disabled={deleting}
         >
           {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Delete
         </Button>
         <Button size="sm" variant="ghost" onClick={onClearSelection}>Clear</Button>
       </div>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Confirm Delete Users</DialogTitle>
+            <DialogDescription className="text-sm">
+              Are you sure you want to delete {getOperableIds().length} user{getOperableIds().length === 1 ? '' : 's'}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDeleteConfirm} className="w-full sm:w-auto">Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

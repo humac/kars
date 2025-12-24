@@ -144,7 +144,17 @@ const UserManagement = () => {
   const clearUserSelection = () => setSelectedUserIds(new Set());
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never';
-  const getRoleColor = (role) => ({ admin: 'destructive', manager: 'success', employee: 'default', attestation_coordinator: 'outline' }[role] || 'secondary');
+
+  // Role styling that matches the Role Descriptions section
+  const getRoleBadgeProps = (role) => {
+    const styles = {
+      admin: { variant: 'destructive', className: '' },
+      manager: { variant: 'default', className: 'bg-green-600 hover:bg-green-600' },
+      employee: { variant: 'secondary', className: '' },
+      attestation_coordinator: { variant: 'outline', className: 'bg-purple-600 text-white border-purple-600 hover:bg-purple-600' }
+    };
+    return styles[role] || { variant: 'secondary', className: '' };
+  };
 
   const isAllUsersSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.has(u.id));
   const isSomeUsersSelected = paginatedUsers.some((u) => selectedUserIds.has(u.id)) && !isAllUsersSelected;
@@ -248,7 +258,7 @@ const UserManagement = () => {
                           <h4 className="font-medium truncate">{u.name}</h4>
                           <p className="text-sm text-muted-foreground truncate">{u.email}</p>
                         </div>
-                        <Badge variant={getRoleColor(u.role)} className="uppercase">{u.role}</Badge>
+                        <Badge variant={getRoleBadgeProps(u.role).variant} className={cn("uppercase", getRoleBadgeProps(u.role).className)}>{u.role}</Badge>
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                         <div>
@@ -328,7 +338,7 @@ const UserManagement = () => {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Badge variant={getRoleColor(u.role)} className="uppercase">{u.role}</Badge>
+                            <Badge variant={getRoleBadgeProps(u.role).variant} className={cn("uppercase", getRoleBadgeProps(u.role).className)}>{u.role}</Badge>
                           )}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
