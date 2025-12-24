@@ -138,39 +138,43 @@ export default function createAuthRouter(deps) {
 
       // Check if this user is a manager for existing assets and should be auto-assigned manager role
       const autoAssignManagerRoleIfNeeded = deps.autoAssignManagerRoleIfNeeded;
+      let roleUpdated = false;
       if (autoAssignManagerRoleIfNeeded) {
-        await autoAssignManagerRoleIfNeeded(newUser.email);
+        roleUpdated = await autoAssignManagerRoleIfNeeded(newUser.email);
       }
 
-      // Generate JWT token
+      // Re-fetch user if role was updated to get the latest data for JWT
+      const finalUser = roleUpdated ? await userDb.getById(newUser.id) : newUser;
+
+      // Generate JWT token with the potentially updated role
       const token = generateToken({
-        id: newUser.id,
-        email: newUser.email,
-        role: newUser.role
+        id: finalUser.id,
+        email: finalUser.email,
+        role: finalUser.role
       });
 
       // Log audit
       await auditDb.log(
         'REGISTER',
         'user',
-        newUser.id,
-        newUser.email,
-        { role: newUser.role, manager_email },
-        newUser.email
+        finalUser.id,
+        finalUser.email,
+        { role: finalUser.role, manager_email },
+        finalUser.email
       );
 
       res.status(201).json({
         message: 'User registered successfully',
         token,
         user: {
-          id: newUser.id,
-          email: newUser.email,
-          first_name: newUser.first_name,
-          last_name: newUser.last_name,
-          role: newUser.role,
-          manager_first_name: newUser.manager_first_name,
-          manager_last_name: newUser.manager_last_name,
-          manager_email: newUser.manager_email
+          id: finalUser.id,
+          email: finalUser.email,
+          first_name: finalUser.first_name,
+          last_name: finalUser.last_name,
+          role: finalUser.role,
+          manager_first_name: finalUser.manager_first_name,
+          manager_last_name: finalUser.manager_last_name,
+          manager_email: finalUser.manager_email
         }
       });
     } catch (error) {

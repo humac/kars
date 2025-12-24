@@ -259,6 +259,7 @@ const serializePasskey = (passkey) => ({
 
 /**
  * Auto-assign manager role to a user if they have employees reporting to them
+ * (i.e., they are listed as manager_email on any asset)
  * @param {string} email - The email of the user to potentially assign manager role to
  * @param {string} triggeredBy - Email of the user who triggered this action (for audit log)
  * @returns {Promise<boolean>} - Returns true if role was updated, false otherwise
@@ -277,9 +278,17 @@ const autoAssignManagerRole = async (email, triggeredBy) => {
       return false;
     }
 
-    // Update user role to manager
+    // Check if this user is listed as manager on any assets
+    const assetsAsManager = await assetDb.getByManagerEmail(email);
+    if (!assetsAsManager || assetsAsManager.length === 0) {
+      // User is not a manager on any assets, keep as employee
+      logger.debug({ email }, 'User has no assets as manager, keeping employee role');
+      return false;
+    }
+
+    // User has assets where they are the manager - upgrade to manager role
     await userDb.updateRole(user.id, 'manager');
-    logger.info({ email }, 'Auto-assigned manager role');
+    logger.info({ email, assetCount: assetsAsManager.length }, 'Auto-assigned manager role based on asset manager assignments');
 
     // Log the role change in audit
     await auditDb.log(
@@ -291,9 +300,10 @@ const autoAssignManagerRole = async (email, triggeredBy) => {
         old_role: user.role,
         new_role: 'manager',
         auto_assigned: true,
-        triggered_by: triggeredBy
+        triggered_by: triggeredBy || 'system',
+        assets_as_manager: assetsAsManager.length
       },
-      triggeredBy
+      triggeredBy || 'system'
     );
 
     return true;
