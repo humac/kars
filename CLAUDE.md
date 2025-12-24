@@ -63,7 +63,6 @@ Web application that supports organizational SOC2 compliance by tracking client 
 │   ├── oidc.js                # SSO integration
 │   ├── hubspot.js             # HubSpot integration
 │   ├── *.test.js              # Jest test suites
-│   ├── .env.example           # Environment configuration template
 │   └── package.json           # Backend dependencies
 ├── frontend/                   # React application (50 JSX files)
 │   ├── src/
@@ -162,7 +161,7 @@ cd kars
 # 2. Backend setup
 cd backend
 npm install
-cp .env.example .env
+cp ../.env.example .env
 # Edit .env: Set JWT_SECRET and optional configs
 npm run dev  # Starts on http://localhost:3001
 
@@ -314,6 +313,39 @@ import {
   importSqliteDatabase // Migration helper
 } from './database.js';
 ```
+
+### Database Method Index
+
+**⚠️ CRITICAL: Always verify method names exist before using them. Update this index when adding/removing methods.**
+
+| Database Object | Available Methods |
+|-----------------|-------------------|
+| `assetDb` | `init`, `create`, `getAll`, `getById`, `search`, `updateStatus`, `update`, `delete`, `getByEmployeeEmail`, `getByManagerEmail`, `getRegisteredOwnersByCompanyIds`, `linkAssetsToUser`, `updateManagerForEmployee`, `updateManagerIdForOwner`, `getByIds`, `bulkUpdateStatus`, `bulkDelete`, `bulkUpdateManager`, `getEmployeeEmailsByManager`, `getScopedForUser`, `getUnregisteredOwners`, `getUnregisteredOwnersByCompanyIds` |
+| `userDb` | `create`, `getByEmail`, `getById`, `getAll`, `getByManagerEmail`, `updateRole`, `updateLastLogin`, `delete`, `updateProfile`, `updatePassword`, `getByOIDCSub`, `createFromOIDC`, `linkOIDC`, `enableMFA`, `disableMFA`, `getMFAStatus`, `completeProfile`, `useBackupCode`, `getByEmails`, `getByRole` |
+| `companyDb` | `create`, `createWithHubSpotId`, `getAll`, `getById`, `getByName`, `getByHubSpotId`, `update`, `updateByHubSpotId`, `setHubSpotId`, `delete`, `hasAssets`, `getAssetCount` |
+| `auditDb` | `log`, `getAll`, `getByEntity`, `getRecent`, `getStats` |
+| `passkeyDb` | `listByUser`, `getByCredentialId`, `getById`, `create`, `delete`, `updateCounter` |
+| `passwordResetTokenDb` | `create(userId, token, expiresAt)`, `findByToken`, `markAsUsed`, `deleteExpired`, `deleteByUserId` |
+| `oidcSettingsDb` | `get`, `update` |
+| `brandingSettingsDb` | `get`, `update`, `delete` |
+| `passkeySettingsDb` | `get`, `update` |
+| `hubspotSettingsDb` | `get`, `getAccessToken`, `update`, `updateSyncStatus` |
+| `hubspotSyncLogDb` | `log`, `getHistory` |
+| `smtpSettingsDb` | `get`, `getPassword`, `update` |
+| `systemSettingsDb` | `get`, `update`, `clear` |
+| `assetTypeDb` | `getAll`, `getActive`, `getById`, `getByName`, `create`, `update`, `delete`, `getUsageCount`, `reorder` |
+| `emailTemplateDb` | `getAll`, `getByKey`, `update`, `reset` |
+| `attestationCampaignDb` | `create`, `getAll`, `getById`, `update`, `delete` |
+| `attestationRecordDb` | `create`, `getByCampaignId`, `getById`, `getByUserAndCampaign`, `getByUserId`, `update` |
+| `attestationAssetDb` | `create`, `getByRecordId`, `update` |
+| `attestationNewAssetDb` | `create`, `getByRecordId` |
+| `attestationPendingInviteDb` | `create`, `getById`, `getByToken`, `getByEmail`, `getByCampaignId`, `getActiveByEmail`, `update`, `delete` |
+
+**When modifying database.js:**
+1. Add new methods to this index
+2. Remove deleted methods from this index
+3. Update method signatures if parameters change
+4. Update copilot-instructions.md with the same changes
 
 ### Common Patterns
 
@@ -1616,7 +1648,7 @@ git push origin feature/my-feature      # Push branch
 | Page components | `frontend/src/components/*.jsx` |
 | Tests (backend) | `backend/*.test.js` |
 | Tests (frontend) | `frontend/src/**/*.test.jsx` |
-| Environment config | `backend/.env.example` |
+| Environment config | `.env.example` |
 | CI/CD workflows | `.github/workflows/*.yml` |
 | Docker configs | `docker-compose*.yml` |
 
@@ -1656,6 +1688,57 @@ git push origin feature/my-feature      # Push branch
 | GET | `/api/audit` | ✅ | All | Audit logs (role-filtered) |
 | GET | `/api/settings/*` | ✅ | Admin | Various settings |
 
+### API Response Contracts
+
+**CRITICAL: When creating or modifying API endpoints, you MUST document the response structure and ensure frontend/backend property names match exactly.**
+
+#### Standard Response Format
+
+All API responses should follow this structure:
+
+```javascript
+// Success response
+res.json({
+  success: true,
+  data: { ... },           // or named property like 'assets', 'users'
+  message: 'Optional message'
+});
+
+// Error response
+res.status(400).json({
+  success: false,
+  error: 'Error message',
+  message: 'User-friendly message'
+});
+```
+
+#### Documented Response Properties
+
+When an endpoint returns special properties that the frontend depends on, document them here:
+
+| Endpoint | Response Property | Type | Description |
+|----------|------------------|------|-------------|
+| `POST /api/auth/login` | `requiresMFA` | boolean | True if MFA verification needed |
+| `POST /api/auth/login` | `mfaSessionId` | string | Session ID for MFA verification |
+| `GET /api/auth/verify-reset-token/:token` | `valid` | boolean | True if reset token is valid |
+| `GET /api/auth/validate-invite/:token` | `valid` | boolean | True if invite token is valid |
+| `POST /api/auth/mfa/verify-login` | `token` | string | JWT token after MFA success |
+| `POST /api/auth/mfa/verify-login` | `user` | object | User object after MFA success |
+
+#### When Adding/Modifying API Endpoints
+
+1. **Check existing frontend usage**: Search for fetch calls to the endpoint
+2. **Use consistent property names**: Match existing patterns (e.g., `valid` not `isValid`, `requiresMFA` not `mfaRequired`)
+3. **Update this documentation**: Add any new response properties to the table above
+4. **Add integration tests**: Test the full frontend→backend flow for critical paths
+
+#### Property Naming Conventions
+
+- Use `camelCase` for JSON response properties: `requiresMFA`, `mfaSessionId`
+- Use `snake_case` for database columns: `employee_email`, `created_at`
+- Boolean properties: prefer `is*` or action verbs (`valid`, `enabled`, `requiresMFA`)
+- Never mix conventions: don't use `mfa_required` in JSON responses
+
 ---
 
 ## Summary
@@ -1676,6 +1759,6 @@ When in doubt, **read existing code** for patterns and follow them consistently.
 
 ---
 
-**Last Updated**: 2025-12-10
+**Last Updated**: 2025-12-19
 **Repository**: https://github.com/humac/kars
 **Live Demo**: https://kars.jvhlabs.com

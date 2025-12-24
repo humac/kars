@@ -1,6 +1,9 @@
 import nodemailer from 'nodemailer';
 import { smtpSettingsDb, brandingSettingsDb, emailTemplateDb } from '../database.js';
 import { decryptValue } from '../utils/encryption.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'smtp' });
 
 /**
  * SMTP Mailer Service
@@ -475,7 +478,7 @@ Complete your attestation here: ${attestationUrl}`;
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation launch email:', error);
+    logger.error({ err: error }, 'Failed to send attestation launch email');
     return { success: false, error: error.message };
   }
 };
@@ -559,7 +562,7 @@ Complete your attestation here: ${attestationUrl}`;
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation reminder email:', error);
+    logger.error({ err: error }, 'Failed to send attestation reminder email');
     return { success: false, error: error.message };
   }
 };
@@ -657,7 +660,7 @@ This is an automated escalation notification sent because the attestation has be
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation escalation email:', error);
+    logger.error({ err: error }, 'Failed to send attestation escalation email');
     return { success: false, error: error.message };
   }
 };
@@ -735,7 +738,7 @@ Completed: ${new Date().toLocaleString()}`;
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation completion notification:', error);
+    logger.error({ err: error }, 'Failed to send attestation completion notification');
     return { success: false, error: error.message };
   }
 };
@@ -900,7 +903,7 @@ This invitation is valid until the campaign ends${campaign.end_date ? ` on ${new
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation registration invite:', error);
+    logger.error({ err: error }, 'Failed to send attestation registration invite');
     return { success: false, error: error.message };
   }
 };
@@ -1036,7 +1039,7 @@ ${ssoEnabled ? `SSO Login: ${ssoLoginUrl}\n\n` : ''}Register Manually: ${manualR
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation unregistered reminder:', error);
+    logger.error({ err: error }, 'Failed to send attestation unregistered reminder');
     return { success: false, error: error.message };
   }
 };
@@ -1148,7 +1151,7 @@ This is an automated escalation notification to help ensure timely completion of
     await transport.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send attestation unregistered escalation:', error);
+    logger.error({ err: error }, 'Failed to send attestation unregistered escalation');
     return { success: false, error: error.message };
   }
 };

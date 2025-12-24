@@ -120,7 +120,7 @@ describe('AssetTable Component', () => {
   });
 
   it('renders asset table with assets', () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -139,7 +139,7 @@ describe('AssetTable Component', () => {
   });
 
   it('shows "No assets found" when assets array is empty', () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -155,7 +155,7 @@ describe('AssetTable Component', () => {
 
   it('allows admin users to edit assets', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -174,7 +174,7 @@ describe('AssetTable Component', () => {
 
   it('disables edit for non-admin/non-editor users', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['user'] };
+    const currentUser = { role: 'employee', email: 'user@test.com' };
     
     render(
       <AssetTable
@@ -191,7 +191,7 @@ describe('AssetTable Component', () => {
   });
 
   it('calls onEdit when edit button is clicked', async () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -209,7 +209,7 @@ describe('AssetTable Component', () => {
 
   it('shows confirmation dialog before deleting', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     global.fetch.mockResolvedValueOnce({ ok: true });
     
     render(
@@ -233,7 +233,7 @@ describe('AssetTable Component', () => {
 
   it('calls delete API and onDelete callback when confirmed', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     global.fetch.mockResolvedValueOnce({ ok: true });
     
     render(
@@ -263,7 +263,7 @@ describe('AssetTable Component', () => {
   });
 
   it('displays manager information in the table', () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -281,7 +281,7 @@ describe('AssetTable Component', () => {
 
   it('filters assets by manager name', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -305,7 +305,7 @@ describe('AssetTable Component', () => {
 
   it('filters assets by manager email', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     
     render(
       <AssetTable
@@ -328,7 +328,7 @@ describe('AssetTable Component', () => {
   });
 
   it('displays manager name from manager_first_name and manager_last_name fields', () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     const assetsWithDenormalizedManager = [
       {
         id: 1,
@@ -357,7 +357,7 @@ describe('AssetTable Component', () => {
   });
 
   it('displays manager name resolved from manager_id via UsersContext', () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     const assetsWithManagerId = [
       {
         id: 2,
@@ -384,7 +384,7 @@ describe('AssetTable Component', () => {
   });
 
   it('displays only manager_email when no name fields or manager_id available', () => {
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     const assetsWithEmailOnly = [
       {
         id: 3,
@@ -414,7 +414,7 @@ describe('AssetTable Component', () => {
 
   it('searches by manager name resolved from manager_id', async () => {
     const user = userEvent.setup();
-    const currentUser = { roles: ['admin'] };
+    const currentUser = { role: 'admin', email: 'admin@test.com' };
     const assetsWithManagerId = [
       {
         id: 1,
@@ -456,8 +456,8 @@ describe('AssetTable Component', () => {
   });
 
   it('allows users to edit their own assets', async () => {
-    const currentUser = { 
-      roles: ['user'],
+    const currentUser = {
+      role: 'employee',
       email: 'john@example.com'
     };
     
@@ -475,8 +475,8 @@ describe('AssetTable Component', () => {
   });
 
   it('prevents users from editing other users\' assets', async () => {
-    const currentUser = { 
-      roles: ['user'],
+    const currentUser = {
+      role: 'employee',
       email: 'john@example.com'
     };
     
@@ -506,12 +506,12 @@ describe('AssetTable Component', () => {
     expect(screen.getAllByText('Alice Smith')[0]).toBeInTheDocument();
   });
 
-  it('allows editors to edit all assets', async () => {
-    const currentUser = { 
-      roles: ['editor'],
-      email: 'editor@example.com'
+  it('allows managers to view all assets (read-only)', async () => {
+    const currentUser = {
+      role: 'manager',
+      email: 'manager@example.com'
     };
-    
+
     render(
       <AssetTable
         assets={sampleAssets}
@@ -521,7 +521,7 @@ describe('AssetTable Component', () => {
       />
     );
 
-    // Editor should be able to see all assets
+    // Manager should be able to see all assets
     expect(screen.getAllByText('John Doe')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Jane Smith')[0]).toBeInTheDocument();
   });

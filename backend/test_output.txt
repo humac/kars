@@ -1,0 +1,106 @@
+  console.log
+    Asset types already exist (12 found), skipping seeding
+
+      at Object.initDb [as init] (database.js:1537:13)
+
+  console.log
+    Checking for missing email templates...
+
+      at Object.initDb [as init] (database.js:1541:11)
+
+  console.log
+    All email templates already exist
+
+      at Object.initDb [as init] (database.js:1582:13)
+
+  console.log
+    Checking for email templates with missing or incomplete variables...
+
+      at Object.initDb [as init] (database.js:1586:11)
+
+  console.log
+    All email template variables are up to date
+
+      at Object.initDb [as init] (database.js:1638:13)
+
+  console.log
+    Checking for templates with Handlebars block helpers...
+
+      at Object.initDb [as init] (database.js:1642:11)
+
+  console.log
+    Checking for email templates that need fallback URL sections...
+
+      at Object.initDb [as init] (database.js:1689:11)
+
+  console.log
+    All email templates already have fallback URLs
+
+      at Object.initDb [as init] (database.js:1739:13)
+
+  console.log
+    Removing obsolete attestation_ready email template...
+
+      at Object.initDb [as init] (database.js:1743:11)
+
+  console.log
+    Removed obsolete attestation_ready template
+
+      at Object.initDb [as init] (database.js:1750:13)
+
+  console.log
+    Database initialized using SQLite
+
+      at Object.initDb [as init] (database.js:1795:11)
+
+  console.log
+    updateManagerForEmployee called: {
+      employeeEmail: 'employee-1766179419461@test.com',
+      managerFirstName: 'John',
+      managerLastName: 'Smith',
+      managerEmail: 'john.smith.1766179419461@test.com'
+    }
+
+      at Object.updateManagerForEmployee (database.js:2173:13)
+
+  console.log
+    updateManagerForEmployee called: {
+      employeeEmail: 'employee-1766179419461@test.com',
+      managerFirstName: 'Mary',
+      managerLastName: 'Jane van der Berg',
+      managerEmail: 'mary.vandenberg.1766179419461@test.com'
+    }
+
+      at Object.updateManagerForEmployee (database.js:2173:13)
+
+  console.log
+    updateManagerForEmployee called: {
+      employeeEmail: 'employee-1766179419461@test.com',
+      managerFirstName: '',
+      managerLastName: '',
+      managerEmail: 'empty.name.1766179419461@test.com'
+    }
+
+      at Object.updateManagerForEmployee (database.js:2173:13)
+
+(node:127496) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS ./unregistered-manager.test.js
+  Unregistered Manager Name Display
+    Asset Creation with Unregistered Manager
+      ΓêÜ should store and display manager name when manager is not registered (9 ms)
+      ΓêÜ should override with user record when manager registers (12 ms)
+    updateManagerForEmployee with Unregistered Manager
+      ΓêÜ should update assets with unregistered manager name (19 ms)
+      ΓêÜ should handle multi-word last names correctly (20 ms)
+      ΓêÜ should handle empty or whitespace-only manager names (19 ms)
+    linkAssetsToUser with Unregistered Manager
+      ΓêÜ should link assets with unregistered manager details (23 ms)
+    bulkUpdateManager with Unregistered Manager
+      ΓêÜ should bulk update assets with unregistered manager details (31 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        0.809 s, estimated 1 s
+Ran all test suites matching /unregistered-manager.test.js/i.

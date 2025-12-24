@@ -1,5 +1,8 @@
 import { attestationCampaignDb, attestationRecordDb, userDb } from '../database.js';
 import { sendAttestationReminderEmail, sendAttestationEscalationEmail } from './smtpMailer.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const logger = createChildLogger({ module: 'scheduler' });
 
 /**
  * Attestation Scheduler Service
@@ -41,7 +44,7 @@ export const processReminders = async () => {
               await attestationRecordDb.update(record.id, {
                 reminder_sent_at: new Date().toISOString()
               });
-              console.log(`Reminder sent to ${user.email} for campaign ${campaign.name}`);
+              logger.info({ email: user.email, campaign: campaign.name }, 'Reminder sent');
             }
           }
         }
@@ -50,7 +53,7 @@ export const processReminders = async () => {
     
     return { success: true };
   } catch (error) {
-    console.error('Error processing attestation reminders:', error);
+    logger.error({ err: error }, 'Error processing attestation reminders');
     return { success: false, error: error.message };
   }
 };
@@ -95,7 +98,7 @@ export const processEscalations = async () => {
               await attestationRecordDb.update(record.id, {
                 escalation_sent_at: new Date().toISOString()
               });
-              console.log(`Escalation sent to ${user.manager_email} for employee ${user.email} in campaign ${campaign.name}`);
+              logger.info({ managerEmail: user.manager_email, employeeEmail: user.email, campaign: campaign.name }, 'Escalation sent');
             }
           }
         }
@@ -104,7 +107,7 @@ export const processEscalations = async () => {
     
     return { success: true };
   } catch (error) {
-    console.error('Error processing attestation escalations:', error);
+    logger.error({ err: error }, 'Error processing attestation escalations');
     return { success: false, error: error.message };
   }
 };
@@ -127,13 +130,13 @@ export const autoCloseExpiredCampaigns = async () => {
         await attestationCampaignDb.update(campaign.id, {
           status: 'completed'
         });
-        console.log(`Campaign ${campaign.name} auto-closed (expired)`);
+        logger.info({ campaign: campaign.name }, 'Campaign auto-closed (expired)');
       }
     }
     
     return { success: true };
   } catch (error) {
-    console.error('Error auto-closing expired campaigns:', error);
+    logger.error({ err: error }, 'Error auto-closing expired campaigns');
     return { success: false, error: error.message };
   }
 };
@@ -191,7 +194,7 @@ export const processUnregisteredReminders = async () => {
             await attestationPendingInviteDb.update(invite.id, {
               reminder_sent_at: new Date().toISOString()
             });
-            console.log(`Unregistered reminder sent to ${invite.employee_email} for campaign ${campaign.name}`);
+            logger.info({ email: invite.employee_email, campaign: campaign.name }, 'Unregistered reminder sent');
           }
         }
       }
@@ -199,7 +202,7 @@ export const processUnregisteredReminders = async () => {
     
     return { success: true };
   } catch (error) {
-    console.error('Error processing unregistered reminders:', error);
+    logger.error({ err: error }, 'Error processing unregistered reminders');
     return { success: false, error: error.message };
   }
 };
@@ -257,7 +260,7 @@ export const processUnregisteredEscalations = async () => {
             await attestationPendingInviteDb.update(invite.id, {
               escalation_sent_at: new Date().toISOString()
             });
-            console.log(`Unregistered escalation sent to ${managerEmail} for employee ${invite.employee_email} in campaign ${campaign.name}`);
+            logger.info({ managerEmail, employeeEmail: invite.employee_email, campaign: campaign.name }, 'Unregistered escalation sent');
           }
         }
       }
@@ -265,7 +268,7 @@ export const processUnregisteredEscalations = async () => {
     
     return { success: true };
   } catch (error) {
-    console.error('Error processing unregistered escalations:', error);
+    logger.error({ err: error }, 'Error processing unregistered escalations');
     return { success: false, error: error.message };
   }
 };
@@ -275,7 +278,7 @@ export const processUnregisteredEscalations = async () => {
  * This should be called periodically (e.g., daily via cron job or interval)
  */
 export const runScheduledTasks = async () => {
-  console.log('Running attestation scheduled tasks...');
+  logger.info('Running attestation scheduled tasks');
   
   await processReminders();
   await processEscalations();
@@ -283,7 +286,7 @@ export const runScheduledTasks = async () => {
   await processUnregisteredEscalations();
   await autoCloseExpiredCampaigns();
   
-  console.log('Attestation scheduled tasks completed');
+  logger.info('Attestation scheduled tasks completed');
 };
 
 // If running as a standalone process, run tasks every 24 hours
@@ -296,5 +299,5 @@ if (process.env.RUN_ATTESTATION_SCHEDULER === 'true') {
   // Then run every 24 hours
   setInterval(runScheduledTasks, INTERVAL);
   
-  console.log('Attestation scheduler started (24-hour interval)');
+  logger.info('Attestation scheduler started (24-hour interval)');
 }

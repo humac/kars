@@ -33,7 +33,7 @@ const ResetPassword = () => {
         const response = await fetch(`/api/auth/verify-reset-token/${token}`);
         const data = await response.json();
 
-        if (!response.ok || !data.success) {
+        if (!response.ok || !data.valid) {
           setError(data.error || 'Invalid or expired reset token');
           setTokenValid(false);
         } else {

@@ -1,10 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useTableFilters } from '@/hooks/useTableFilters';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -18,36 +18,51 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import TablePaginationControls from '@/components/TablePaginationControls';
+import AddUserDialog from '@/components/AddUserDialog';
+import EditUserDialog from '@/components/EditUserDialog';
+import UserBulkActions from '@/components/UserBulkActions';
 import { cn } from '@/lib/utils';
-import { Users, Trash2, Loader2, AlertTriangle, Edit, Search, Sparkles, Info, UserPlus } from 'lucide-react';
+import { Users, Trash2, Loader2, AlertTriangle, Edit, Search, Info, UserPlus } from 'lucide-react';
 
 const UserManagement = () => {
   const { getAuthHeaders, user } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState(null);
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', manager_first_name: '', manager_last_name: '', manager_email: '' });
-  const [savingEdit, setSavingEdit] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
-  const [usersPage, setUsersPage] = useState(1);
-  const [usersPageSize, setUsersPageSize] = useState(10);
-  const [bulkRole, setBulkRole] = useState('');
-  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
-  const [addUserForm, setAddUserForm] = useState({
-    email: '',
-    first_name: '',
-    last_name: '',
-    password: '',
-    role: 'employee',
-    manager_first_name: '',
-    manager_last_name: '',
-    manager_email: ''
+
+  // Custom filter function for users
+  const filterUsers = useCallback((items, term) => {
+    if (!term) return items;
+    const lowerTerm = term.toLowerCase();
+    return items.filter((u) => {
+      const managerFullName = `${u.manager_first_name || ''} ${u.manager_last_name || ''}`.trim().toLowerCase();
+      return (
+        u.name?.toLowerCase().includes(lowerTerm) ||
+        u.email?.toLowerCase().includes(lowerTerm) ||
+        managerFullName.includes(lowerTerm) ||
+        u.manager_email?.toLowerCase().includes(lowerTerm)
+      );
+    });
+  }, []);
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    page: usersPage,
+    setPage: setUsersPage,
+    pageSize: usersPageSize,
+    setPageSize: setUsersPageSize,
+    totalPages: totalUserPages,
+    filteredItems: filteredUsers,
+    paginatedItems: paginatedUsers,
+  } = useTableFilters(users, {
+    filterFn: filterUsers,
+    defaultPageSize: 10
   });
-  const [addingUser, setAddingUser] = useState(false);
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
@@ -83,53 +98,6 @@ const UserManagement = () => {
       fetchUsers();
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const openEditDialog = (user) => {
-    if (!isAdmin) return;
-    setEditingUser(user);
-    setEditForm({
-      first_name: user.first_name || '',
-      last_name: user.last_name || '',
-      manager_first_name: user.manager_first_name || '',
-      manager_last_name: user.manager_last_name || '',
-      manager_email: user.manager_email || ''
-    });
-  };
-
-  const handleUserUpdate = async () => {
-    if (!editingUser || !isAdmin) return;
-
-    if (!editForm.first_name || !editForm.last_name) {
-      toast({ title: "Missing info", description: "First and last name are required", variant: "destructive" });
-      return;
-    }
-
-    if (!editForm.manager_first_name || !editForm.manager_last_name || !editForm.manager_email) {
-      toast({ title: "Missing info", description: "Manager first name, last name, and email are required", variant: "destructive" });
-      return;
-    }
-
-    setSavingEdit(true);
-
-    try {
-      const response = await fetch(`/api/auth/users/${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify(editForm)
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update user');
-
-      toast({ title: "Success", description: `Updated ${editingUser.email}`, variant: "success" });
-      setEditingUser(null);
-      fetchUsers();
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setSavingEdit(false);
     }
   };
 
@@ -175,165 +143,8 @@ const UserManagement = () => {
 
   const clearUserSelection = () => setSelectedUserIds(new Set());
 
-  const handleBulkRoleUpdate = async () => {
-    if (!isAdmin) return;
-    const ids = Array.from(selectedUserIds).filter((id) => id !== user?.id);
-    if (!ids.length || !bulkRole) return;
-    setSavingEdit(true);
-    try {
-      for (const id of ids) {
-        const response = await fetch(`/api/auth/users/${id}/role`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ role: bulkRole })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to update role');
-      }
-      toast({ title: "Success", description: `Updated ${ids.length} user roles`, variant: "success" });
-      setBulkRole('');
-      clearUserSelection();
-      fetchUsers();
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
-  const handleBulkDeleteUsers = async () => {
-    if (!isAdmin) return;
-    const ids = Array.from(selectedUserIds).filter((id) => id !== user?.id);
-    if (!ids.length) return;
-    setBulkDeleting(true);
-    try {
-      for (const id of ids) {
-        const response = await fetch(`/api/auth/users/${id}`, { method: 'DELETE', headers: { ...getAuthHeaders() } });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to delete user');
-      }
-      toast({ title: "Success", description: `Deleted ${ids.length} user${ids.length === 1 ? '' : 's'}`, variant: "success" });
-      clearUserSelection();
-      fetchUsers();
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
-
-  const handleAddUser = async () => {
-    if (!isAdmin) return;
-
-    // Validation
-    if (!addUserForm.email || !addUserForm.password || !addUserForm.first_name || !addUserForm.last_name) {
-      toast({ title: "Missing info", description: "Email, password, first name, and last name are required", variant: "destructive" });
-      return;
-    }
-
-    if (addUserForm.password.length < 6) {
-      toast({ title: "Password too short", description: "Password must be at least 6 characters", variant: "destructive" });
-      return;
-    }
-
-    // Manager fields are optional, but if any is provided, all must be provided
-    const hasAnyManagerField = addUserForm.manager_first_name || addUserForm.manager_last_name || addUserForm.manager_email;
-    if (hasAnyManagerField) {
-      if (!addUserForm.manager_first_name || !addUserForm.manager_last_name || !addUserForm.manager_email) {
-        toast({ title: "Incomplete manager info", description: "If providing manager info, all fields (first name, last name, email) are required", variant: "destructive" });
-        return;
-      }
-    }
-
-    setAddingUser(true);
-
-    try {
-      // Use the registration endpoint
-      const payload = {
-        email: addUserForm.email,
-        password: addUserForm.password,
-        first_name: addUserForm.first_name,
-        last_name: addUserForm.last_name,
-      };
-
-      // Only include manager fields if they're all provided
-      if (hasAnyManagerField) {
-        payload.manager_first_name = addUserForm.manager_first_name;
-        payload.manager_last_name = addUserForm.manager_last_name;
-        payload.manager_email = addUserForm.manager_email;
-      } else {
-        // Provide default manager fields if none provided
-        payload.manager_first_name = 'Unknown';
-        payload.manager_last_name = 'Manager';
-        payload.manager_email = 'nomanager@example.com';
-      }
-
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to create user');
-
-      // If a specific role was selected, update it
-      if (addUserForm.role !== 'employee' && data.user?.id) {
-        await handleRoleChange(data.user.id, addUserForm.role);
-      }
-
-      toast({ title: "Success", description: `User ${addUserForm.email} created successfully`, variant: "success" });
-      setAddUserDialogOpen(false);
-      setAddUserForm({
-        email: '',
-        first_name: '',
-        last_name: '',
-        password: '',
-        role: 'employee',
-        manager_first_name: '',
-        manager_last_name: '',
-        manager_email: ''
-      });
-      fetchUsers();
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setAddingUser(false);
-    }
-  };
-
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never';
   const getRoleColor = (role) => ({ admin: 'destructive', manager: 'success', employee: 'default', attestation_coordinator: 'outline' }[role] || 'secondary');
-
-  const filteredUsers = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return users.filter((u) => {
-      const managerFullName = `${u.manager_first_name || ''} ${u.manager_last_name || ''}`.trim().toLowerCase();
-      return (
-        u.name?.toLowerCase().includes(term) ||
-        u.email?.toLowerCase().includes(term) ||
-        managerFullName.includes(term) ||
-        u.manager_email?.toLowerCase().includes(term)
-      );
-    });
-  }, [users, searchTerm]);
-
-  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize) || 1);
-
-  useEffect(() => {
-    setUsersPage(1);
-  }, [usersPageSize, filteredUsers.length]);
-
-  useEffect(() => {
-    if (usersPage > totalUserPages) {
-      setUsersPage(totalUserPages);
-    }
-  }, [usersPage, totalUserPages]);
-
-  const paginatedUsers = useMemo(() => {
-    const start = (usersPage - 1) * usersPageSize;
-    return filteredUsers.slice(start, start + usersPageSize);
-  }, [filteredUsers, usersPage, usersPageSize]);
 
   const isAllUsersSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.has(u.id));
   const isSomeUsersSelected = paginatedUsers.some((u) => selectedUserIds.has(u.id)) && !isAllUsersSelected;
@@ -397,37 +208,13 @@ const UserManagement = () => {
               </div>
             </div>
 
-            {isAdmin && selectedUserIds.size > 0 && (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 rounded-lg border px-2 py-1.5 bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">{selectedUserIds.size} selected</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Select value={bulkRole} onValueChange={setBulkRole}>
-                    <SelectTrigger className="w-36"><SelectValue placeholder="Bulk role" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="attestation_coordinator">Attestation Coordinator</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={handleBulkRoleUpdate} disabled={!bulkRole || savingEdit}>
-                    {savingEdit && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Apply role
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive"
-                    onClick={handleBulkDeleteUsers}
-                    disabled={bulkDeleting}
-                  >
-                    {bulkDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Delete
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={clearUserSelection}>Clear</Button>
-                </div>
-              </div>
+            {isAdmin && (
+              <UserBulkActions
+                selectedIds={selectedUserIds}
+                currentUserId={user?.id}
+                onClearSelection={clearUserSelection}
+                onUsersUpdated={fetchUsers}
+              />
             )}
           </div>
 
@@ -478,7 +265,7 @@ const UserManagement = () => {
                     </div>
                     {isAdmin && (
                       <div className="flex flex-col gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(u)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog({ open: true, user: u })} disabled={u.id === user.id}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
@@ -558,7 +345,7 @@ const UserManagement = () => {
                         {isAdmin && (
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(u)}>
+                              <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button
@@ -605,75 +392,11 @@ const UserManagement = () => {
 
       {/* Edit User Dialog */}
       {isAdmin && (
-        <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Edit User Attributes</DialogTitle>
-              <DialogDescription className="text-sm">Update name and manager information for this user.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">First Name</label>
-                  <Input
-                    value={editForm.first_name}
-                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                    placeholder="First name"
-                    className="text-base"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Last Name</label>
-                  <Input
-                    value={editForm.last_name}
-                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                    placeholder="Last name"
-                    className="text-base"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Manager First Name</label>
-                  <Input
-                    value={editForm.manager_first_name}
-                    onChange={(e) => setEditForm({ ...editForm, manager_first_name: e.target.value })}
-                    placeholder="First name"
-                    className="text-base"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Manager Last Name</label>
-                  <Input
-                    value={editForm.manager_last_name}
-                    onChange={(e) => setEditForm({ ...editForm, manager_last_name: e.target.value })}
-                    placeholder="Last name"
-                    className="text-base"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Manager Email</label>
-                <Input
-                  value={editForm.manager_email}
-                  onChange={(e) => setEditForm({ ...editForm, manager_email: e.target.value })}
-                  placeholder="manager@example.com"
-                  type="email"
-                  className="text-base"
-                />
-              </div>
-              {editingUser && (
-                <p className="text-xs text-muted-foreground">Editing: {editingUser.email}</p>
-              )}
-            </div>
-            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setEditingUser(null)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={handleUserUpdate} disabled={savingEdit} className="w-full sm:w-auto">
-                {savingEdit && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <EditUserDialog
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onUserUpdated={fetchUsers}
+        />
       )}
 
       {/* Delete User Dialog */}
@@ -694,118 +417,11 @@ const UserManagement = () => {
 
       {/* Add User Dialog */}
       {isAdmin && (
-        <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
-          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Add New User</DialogTitle>
-              <DialogDescription className="text-sm">Create a new user account with specified role and details.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="add-email">Email *</Label>
-                  <Input
-                    id="add-email"
-                    type="email"
-                    value={addUserForm.email}
-                    onChange={(e) => setAddUserForm({ ...addUserForm, email: e.target.value })}
-                    placeholder="user@company.com"
-                    className="text-base"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="add-password">Password *</Label>
-                  <Input
-                    id="add-password"
-                    type="password"
-                    value={addUserForm.password}
-                    onChange={(e) => setAddUserForm({ ...addUserForm, password: e.target.value })}
-                    placeholder="At least 6 characters"
-                    className="text-base"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="add-first-name">First Name *</Label>
-                  <Input
-                    id="add-first-name"
-                    value={addUserForm.first_name}
-                    onChange={(e) => setAddUserForm({ ...addUserForm, first_name: e.target.value })}
-                    placeholder="John"
-                    className="text-base"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="add-last-name">Last Name *</Label>
-                  <Input
-                    id="add-last-name"
-                    value={addUserForm.last_name}
-                    onChange={(e) => setAddUserForm({ ...addUserForm, last_name: e.target.value })}
-                    placeholder="Doe"
-                    className="text-base"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="add-role">Role *</Label>
-                <Select value={addUserForm.role} onValueChange={(v) => setAddUserForm({ ...addUserForm, role: v })}>
-                  <SelectTrigger id="add-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="attestation_coordinator">Attestation Coordinator</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium mb-3">Manager Information (Optional)</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="add-manager-first">Manager First Name</Label>
-                    <Input
-                      id="add-manager-first"
-                      value={addUserForm.manager_first_name}
-                      onChange={(e) => setAddUserForm({ ...addUserForm, manager_first_name: e.target.value })}
-                      placeholder="Jane"
-                      className="text-base"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="add-manager-last">Manager Last Name</Label>
-                    <Input
-                      id="add-manager-last"
-                      value={addUserForm.manager_last_name}
-                      onChange={(e) => setAddUserForm({ ...addUserForm, manager_last_name: e.target.value })}
-                      placeholder="Smith"
-                      className="text-base"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Label htmlFor="add-manager-email">Manager Email</Label>
-                  <Input
-                    id="add-manager-email"
-                    type="email"
-                    value={addUserForm.manager_email}
-                    onChange={(e) => setAddUserForm({ ...addUserForm, manager_email: e.target.value })}
-                    placeholder="manager@company.com"
-                    className="text-base"
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setAddUserDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={handleAddUser} disabled={addingUser} className="w-full sm:w-auto">
-                {addingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create User
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <AddUserDialog
+          open={addUserDialogOpen}
+          onOpenChange={setAddUserDialogOpen}
+          onUserAdded={fetchUsers}
+        />
       )}
     </div>
   );

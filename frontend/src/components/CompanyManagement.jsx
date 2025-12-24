@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useTableFilters } from '@/hooks/useTableFilters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,12 +33,34 @@ const CompanyManagementNew = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkDescription, setBulkDescription] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+
+  // Custom filter function for companies
+  const filterCompanies = useCallback((items, term) => {
+    if (!term) return items;
+    const lowerTerm = term.toLowerCase();
+    return items.filter((c) =>
+      c.name?.toLowerCase().includes(lowerTerm) ||
+      c.description?.toLowerCase().includes(lowerTerm)
+    );
+  }, []);
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    filteredItems: filteredCompanies,
+    paginatedItems: paginatedCompanies,
+  } = useTableFilters(companies, {
+    filterFn: filterCompanies,
+    defaultPageSize: 10
+  });
 
   useEffect(() => { fetchCompanies(); fetchAssets(); }, []);
 
@@ -147,30 +170,6 @@ const CompanyManagementNew = () => {
     setFormData({ name: '', description: '' });
     setShowForm(true);
   };
-
-  const filteredCompanies = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return companies.filter((c) =>
-      c.name?.toLowerCase().includes(term) ||
-      c.description?.toLowerCase().includes(term)
-    );
-  }, [companies, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / pageSize) || 1);
-  useEffect(() => {
-    setPage(1);
-  }, [pageSize, filteredCompanies.length]);
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  const paginatedCompanies = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredCompanies.slice(start, start + pageSize);
-  }, [filteredCompanies, page, pageSize]);
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {

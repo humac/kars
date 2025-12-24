@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -104,12 +104,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     if (!token) return {};
     return {
       'Authorization': `Bearer ${token}`
     };
-  };
+  }, [token]);
 
   const setAuthData = (newToken, userData) => {
     setToken(newToken);

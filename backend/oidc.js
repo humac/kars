@@ -1,4 +1,7 @@
 import * as client from 'openid-client';
+import { createChildLogger } from './utils/logger.js';
+
+const logger = createChildLogger({ module: 'oidc-client' });
 
 /**
  * Simple LRU Cache implementation for PKCE code verifiers
@@ -104,28 +107,28 @@ async function initializeOIDC(settings = null) {
   }
 
   if (!OIDC_CONFIG.enabled) {
-    console.log('OIDC is disabled');
+    logger.info('OIDC is disabled');
     config = null;
     return null;
   }
 
   if (!OIDC_CONFIG.issuerUrl || !OIDC_CONFIG.clientId) {
-    console.error('OIDC configuration missing: issuer_url and client_id are required');
+    logger.error('OIDC configuration missing: issuer_url and client_id are required');
     config = null;
     return null;
   }
 
   try {
-    console.log(`Initializing OIDC with issuer: ${OIDC_CONFIG.issuerUrl}`);
+    logger.info({ issuer: OIDC_CONFIG.issuerUrl }, 'Initializing OIDC');
 
     // Discover the issuer configuration
     const issuerUrl = new URL(OIDC_CONFIG.issuerUrl);
     config = await client.discovery(issuerUrl, OIDC_CONFIG.clientId, OIDC_CONFIG.clientSecret);
 
-    console.log('OIDC client initialized successfully');
+    logger.info('OIDC client initialized successfully');
     return config;
   } catch (error) {
-    console.error('Failed to initialize OIDC:', error.message);
+    logger.error({ err: error }, 'Failed to initialize OIDC');
     config = null;
     return null;
   }

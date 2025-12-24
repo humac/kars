@@ -66,7 +66,8 @@ app.post('/api/auth/complete-profile', authenticate, async (req, res) => {
       const combined_manager_name = `${manager_first_name} ${manager_last_name}`;
       const updatedAssets = await assetDb.updateManagerForEmployee(
         updatedUser.email,
-        combined_manager_name,
+        manager_first_name,
+        manager_last_name,
         manager_email
       );
 
@@ -400,10 +401,10 @@ describe('Profile Completion Flow', () => {
     // Step 5: Verify audit log contains asset sync entry
     const logs = await auditDb.getAll();
     const assetSyncLog = logs.find(
-      log => log.action === 'update' && 
-             log.entity_type === 'asset' && 
-             log.entity_name && 
-             log.entity_name.includes(`Manager synced for ${uniqueEmail}`)
+      log => log.action === 'update' &&
+        log.entity_type === 'asset' &&
+        log.entity_name &&
+        log.entity_name.includes(`Manager synced for ${uniqueEmail}`)
     );
 
     expect(assetSyncLog).toBeDefined();

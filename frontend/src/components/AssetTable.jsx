@@ -11,7 +11,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -21,19 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import TablePaginationControls from '@/components/TablePaginationControls';
 import AssetTableRow from '@/components/AssetTableRow';
 import AssetCard from '@/components/AssetCard';
-import { Laptop, Search, Sparkles, Download } from 'lucide-react';
+import AssetTableFilters from '@/components/AssetTableFilters';
+import BulkAssetActions from '@/components/BulkAssetActions';
+import { Laptop } from 'lucide-react';
 
 export default function AssetTable({ assets = [], onEdit, onDelete, currentUser, onRefresh, onAssetAdded }) {
   const { getAuthHeaders } = useAuth();
@@ -49,10 +41,6 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   const [companies, setCompanies] = useState([]);
   const [assetTypes, setAssetTypes] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState('');
-  const [bulkNote, setBulkNote] = useState('');
-  const [formLoading, setFormLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -118,23 +106,20 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
   }
 
   const canEdit = (asset) => {
-    // Admins and editors can edit any asset
-    if (currentUser?.roles?.includes('admin')) return true;
-    if (currentUser?.roles?.includes('editor')) return true;
-    
+    // Admin can edit any asset
+    if (currentUser?.role === 'admin') return true;
+
     // Users can edit their own assets (match by email)
     if (currentUser?.email && asset.employee_email) {
       return currentUser.email.toLowerCase() === asset.employee_email.toLowerCase();
     }
-    
+
     return false;
   };
 
   const canDelete = (asset) => {
-    // Admin can delete any asset
-    if (currentUser?.roles?.includes('admin')) return true;
-    // Users can only delete their own assets
-    if (currentUser?.email === asset.employee_email) return true;
+    // Only admin can delete assets
+    if (currentUser?.role === 'admin') return true;
     return false;
   };
 
@@ -317,35 +302,9 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
     setAssetTypeFilter('all');
   };
 
-  const handleBulkStatusUpdate = async () => {
-    const ids = Array.from(selectedIds);
-    if (!ids.length || !bulkStatus.trim()) return;
-    setFormLoading(true);
-    try {
-      const response = await fetch('/api/assets/bulk/status', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ ids, status: bulkStatus, notes: bulkNote || undefined })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update assets');
-      toast({ title: "Success", description: data.message, variant: "success" });
-      setBulkDialogOpen(false);
-      setBulkStatus('');
-      setBulkNote('');
-      clearSelection();
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
-    setFormLoading(true);
     try {
       for (const id of ids) {
         const response = await fetch(`/api/assets/${id}`, { method: 'DELETE', headers: { ...getAuthHeaders() } });
@@ -357,60 +316,16 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
       ids.forEach(id => onDelete(id));
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setFormLoading(false);
     }
   };
 
   const hasActiveFilters = () => {
-    return searchTerm !== '' || 
-           statusFilter !== 'all' || 
-           companyFilter !== 'all' || 
-           employeeFilter !== 'all' || 
+    return searchTerm !== '' ||
+           statusFilter !== 'all' ||
+           companyFilter !== 'all' ||
+           employeeFilter !== 'all' ||
            managerFilter !== 'all' ||
            assetTypeFilter !== 'all';
-  };
-
-  const handleExportSelected = () => {
-    const selectedAssets = filteredAssets.filter(a => selectedIds.has(a.id));
-    exportAssetsToCSV(selectedAssets, 'selected');
-  };
-
-  const handleExportFiltered = () => {
-    exportAssetsToCSV(filteredAssets, 'filtered');
-  };
-
-  const exportAssetsToCSV = (assetsToExport, exportType = 'export') => {
-    const headers = [
-      'employee_first_name',
-      'employee_last_name',
-      'employee_email',
-      'manager_first_name',
-      'manager_last_name',
-      'manager_email',
-      'company_name',
-      'asset_type',
-      'make',
-      'model',
-      'serial_number',
-      'asset_tag',
-      'status',
-      'registration_date',
-      'notes',
-    ];
-
-    const csvContent = [
-      headers.join(','),
-      ...assetsToExport.map(asset =>
-        headers.map(h => `"${(asset[h] || '').toString().replace(/"/g, '""')}"`).join(',')
-      ),
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `assets_${exportType}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
   };
 
   const isAllSelected = paginatedAssets.length > 0 && paginatedAssets.every((a) => selectedIds.has(a.id));
@@ -421,161 +336,35 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
       <div className="space-y-6">
         {/* Advanced Filters Section */}
         <div className="space-y-4">
-          {/* Search and Clear Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                placeholder="Search assets by name, manager, company, serial, tag, make, model..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={clearFilters}
-              className="sm:w-auto"
-            >
-              Clear Filters
-            </Button>
-          </div>
+          <AssetTableFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            assetTypeFilter={assetTypeFilter}
+            setAssetTypeFilter={setAssetTypeFilter}
+            companyFilter={companyFilter}
+            setCompanyFilter={setCompanyFilter}
+            employeeFilter={employeeFilter}
+            setEmployeeFilter={setEmployeeFilter}
+            managerFilter={managerFilter}
+            setManagerFilter={setManagerFilter}
+            companies={companies}
+            assetTypes={assetTypes}
+            uniqueEmployees={uniqueEmployees}
+            uniqueManagers={uniqueManagers}
+            onClearFilters={clearFilters}
+          />
 
-          {/* Filter Dropdowns Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="returned">Returned</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="damaged">Damaged</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Asset Type Filter */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Asset Type</Label>
-              <Select value={assetTypeFilter} onValueChange={setAssetTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {assetTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.name}>
-                      {type.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Company Filter */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Company</Label>
-              <Select value={companyFilter} onValueChange={setCompanyFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All companies" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Companies</SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.name}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Employee Filter */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Employee</Label>
-              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All employees" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
-                  {uniqueEmployees.map((employee) => (
-                    <SelectItem key={employee.email} value={employee.name}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Manager Filter */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Manager</Label>
-              <Select value={managerFilter} onValueChange={setManagerFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All managers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Managers</SelectItem>
-                  {uniqueManagers.map((manager) => (
-                    <SelectItem key={`${manager.email}-${manager.name}`} value={manager.name}>
-                      {manager.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Results Count and Bulk Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">
-                Showing {filteredAssets.length} of {assets.length} assets
-              </div>
-              {filteredAssets.length > 0 && hasActiveFilters() && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleExportFiltered}
-                  className="h-7"
-                >
-                  <Download className="h-3 w-3 mr-1" />
-                  Export Filtered ({filteredAssets.length})
-                </Button>
-              )}
-            </div>
-            {selectedIds.size > 0 && (
-              <div className="flex items-center gap-2 sm:gap-3 rounded-lg border px-3 py-1.5 bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium whitespace-nowrap">{selectedIds.size} selected</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
-                  <Button variant="ghost" size="sm" onClick={handleExportSelected}>
-                    <Download className="h-4 w-4 mr-1" />Export
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={handleBulkDelete}
-                  >
-                    Delete
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
-                </div>
-              </div>
-            )}
-          </div>
+          <BulkAssetActions
+            selectedIds={selectedIds}
+            filteredAssets={filteredAssets}
+            hasActiveFilters={hasActiveFilters()}
+            onClearSelection={clearSelection}
+            onBulkDelete={handleBulkDelete}
+            onRefresh={onRefresh}
+            currentUser={currentUser}
+          />
         </div>
 
         {/* Table */}
@@ -648,49 +437,6 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           </>
         )}
       </div>
-
-      {/* Bulk Edit Dialog */}
-      <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk edit selected assets</DialogTitle>
-            <DialogDescription>Update status for {selectedIds.size} asset{selectedIds.size === 1 ? '' : 's'}.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bulk-status">Status</Label>
-              <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="returned">Returned</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="damaged">Damaged</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bulk-note">Note (optional)</Label>
-              <Textarea
-                id="bulk-note"
-                placeholder="Add a note for this bulk update..."
-                value={bulkNote}
-                onChange={(e) => setBulkNote(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">This will update status for {selectedIds.size} asset{selectedIds.size === 1 ? '' : 's'}.</p>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setBulkDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleBulkStatusUpdate} disabled={formLoading || !bulkStatus.trim()}>
-                {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Apply changes
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, asset: null })}>

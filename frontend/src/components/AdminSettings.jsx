@@ -20,12 +20,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import TablePaginationControls from '@/components/TablePaginationControls';
 import { cn } from '@/lib/utils';
-import { Settings, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Plug, Bell, Laptop } from 'lucide-react';
+import { Settings, Database, Trash2, Loader2, AlertTriangle, Shield, Image, Plug, Bell, Laptop, Server } from 'lucide-react';
 import OIDCSettings from './OIDCSettings';
 import SecuritySettings from './SecuritySettings';
 import HubSpotSettings from './HubSpotSettings';
 import NotificationSettings from './NotificationSettings';
 import AssetTypesSettings from './AssetTypesSettings';
+import SystemSettings from './SystemSettings';
 
 const AdminSettingsNew = () => {
   const { getAuthHeaders, user } = useAuth();
@@ -252,6 +253,7 @@ const AdminSettingsNew = () => {
               <TabsTrigger value="branding" className="gap-2"><Image className="h-4 w-4" />Branding</TabsTrigger>
               <TabsTrigger value="asset-types" className="gap-2"><Laptop className="h-4 w-4" />Asset Types</TabsTrigger>
               <TabsTrigger value="security" className="gap-2"><Shield className="h-4 w-4" />Security</TabsTrigger>
+              <TabsTrigger value="system" className="gap-2"><Server className="h-4 w-4" />System</TabsTrigger>
               <TabsTrigger value="notifications" className="gap-2"><Bell className="h-4 w-4" />Notifications</TabsTrigger>
               <TabsTrigger value="integrations" className="gap-2"><Plug className="h-4 w-4" />Integrations</TabsTrigger>
               <TabsTrigger value="settings" className="gap-2"><Database className="h-4 w-4" />Database</TabsTrigger>
@@ -563,6 +565,10 @@ const AdminSettingsNew = () => {
 
             <TabsContent value="security">
               <SecuritySettings />
+            </TabsContent>
+
+            <TabsContent value="system">
+              <SystemSettings />
             </TabsContent>
 
             <TabsContent value="notifications">

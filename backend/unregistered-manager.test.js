@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { assetDb, userDb, companyDb } from './database.js';
 
+const uniqueSuffix = Date.now();
+
 describe('Unregistered Manager Name Display', () => {
   let testAssetId;
   let employeeUser;
@@ -13,14 +15,14 @@ describe('Unregistered Manager Name Display', () => {
 
     // Create test company (required for assets with company_id FK)
     const companyResult = await companyDb.create({
-      name: 'Test Company',
+      name: `Test Company ${uniqueSuffix}`,
       description: 'Test company for unregistered manager tests'
     });
     testCompany = await companyDb.getById(companyResult.id);
 
     // Create an employee user
     const employeeResult = await userDb.create({
-      email: 'employee-unregistered-test@test.com',
+      email: `employee-${uniqueSuffix}@test.com`,
       password_hash: 'hash1',
       name: 'Test Employee',
       role: 'employee',
@@ -28,7 +30,7 @@ describe('Unregistered Manager Name Display', () => {
       last_name: 'Employee'
     });
 
-    employeeUser = await userDb.getByEmail('employee-unregistered-test@test.com');
+    employeeUser = await userDb.getByEmail(`employee-${uniqueSuffix}@test.com`);
   });
 
   afterAll(async () => {
@@ -45,14 +47,14 @@ describe('Unregistered Manager Name Display', () => {
       const assetResult = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: 'Jane',
         manager_last_name: 'Doe',
-        manager_email: 'jane.doe.unregistered@test.com',
-        company_name: 'Test Company',
+        manager_email: `jane.doe.${uniqueSuffix}@test.com`,
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-001',
-        asset_tag: 'UNREG-TAG-001',
+        serial_number: `UNREG-SN-001-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-001-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -64,14 +66,14 @@ describe('Unregistered Manager Name Display', () => {
       // Manager name should be displayed from denormalized fields
       expect(asset.manager_first_name).toBe('Jane');
       expect(asset.manager_last_name).toBe('Doe');
-      expect(asset.manager_email).toBe('jane.doe.unregistered@test.com');
+      expect(asset.manager_email).toBe(`jane.doe.${uniqueSuffix}@test.com`);
       expect(asset.manager_id).toBeNull();
     });
 
     it('should override with user record when manager registers', async () => {
       // Register the manager as a user
       await userDb.create({
-        email: 'jane.doe.unregistered@test.com',
+        email: `jane.doe.${uniqueSuffix}@test.com`,
         password_hash: 'hash2',
         name: 'Jane Marie Doe',
         role: 'manager',
@@ -79,20 +81,20 @@ describe('Unregistered Manager Name Display', () => {
         last_name: 'Doe Updated'
       });
 
-      registeredManagerUser = await userDb.getByEmail('jane.doe.unregistered@test.com');
+      registeredManagerUser = await userDb.getByEmail(`jane.doe.${uniqueSuffix}@test.com`);
 
       // Update the asset to link to the registered manager
       await assetDb.update(testAssetId, {
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: 'Jane',
         manager_last_name: 'Doe',
-        manager_email: 'jane.doe.unregistered@test.com',
-        company_name: 'Test Company',
+        manager_email: `jane.doe.${uniqueSuffix}@test.com`,
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-001',
-        asset_tag: 'UNREG-TAG-001',
+        serial_number: `UNREG-SN-001-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-001-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -102,7 +104,7 @@ describe('Unregistered Manager Name Display', () => {
       // Manager name should now come from the user record via JOIN
       expect(asset.manager_first_name).toBe('Jane Marie');
       expect(asset.manager_last_name).toBe('Doe Updated');
-      expect(asset.manager_email).toBe('jane.doe.unregistered@test.com');
+      expect(asset.manager_email).toBe(`jane.doe.${uniqueSuffix}@test.com`);
       expect(asset.manager_id).toBe(registeredManagerUser.id);
     });
   });
@@ -113,14 +115,14 @@ describe('Unregistered Manager Name Display', () => {
       const assetResult = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: 'Old',
         manager_last_name: 'Manager',
-        manager_email: 'old.manager@test.com',
-        company_name: 'Test Company',
+        manager_email: `old.manager.${uniqueSuffix}@test.com`,
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-002',
-        asset_tag: 'UNREG-TAG-002',
+        serial_number: `UNREG-SN-002-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-002-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -128,9 +130,10 @@ describe('Unregistered Manager Name Display', () => {
 
       // Update the manager to an unregistered manager
       await assetDb.updateManagerForEmployee(
-        'employee-unregistered-test@test.com',
-        'John Smith',
-        'john.smith.unregistered@test.com'
+        `employee-${uniqueSuffix}@test.com`,
+        'John',
+        'Smith',
+        `john.smith.${uniqueSuffix}@test.com`
       );
 
       // Fetch the asset
@@ -139,7 +142,7 @@ describe('Unregistered Manager Name Display', () => {
       // Manager name should be split and stored
       expect(asset.manager_first_name).toBe('John');
       expect(asset.manager_last_name).toBe('Smith');
-      expect(asset.manager_email).toBe('john.smith.unregistered@test.com');
+      expect(asset.manager_email).toBe(`john.smith.${uniqueSuffix}@test.com`);
       expect(asset.manager_id).toBeNull();
 
       // Clean up
@@ -151,14 +154,14 @@ describe('Unregistered Manager Name Display', () => {
       const assetResult = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: 'Old',
         manager_last_name: 'Manager',
-        manager_email: 'old.manager@test.com',
-        company_name: 'Test Company',
+        manager_email: `old.manager.${uniqueSuffix}@test.com`,
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-003',
-        asset_tag: 'UNREG-TAG-003',
+        serial_number: `UNREG-SN-003-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-003-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -166,9 +169,10 @@ describe('Unregistered Manager Name Display', () => {
 
       // Update the manager with a multi-word last name
       await assetDb.updateManagerForEmployee(
-        'employee-unregistered-test@test.com',
-        'Mary Jane van der Berg',
-        'mary.vandenberg@test.com'
+        `employee-${uniqueSuffix}@test.com`,
+        'Mary',
+        'Jane van der Berg',
+        `mary.vandenberg.${uniqueSuffix}@test.com`
       );
 
       // Fetch the asset
@@ -177,7 +181,7 @@ describe('Unregistered Manager Name Display', () => {
       // Manager name should be split correctly
       expect(asset.manager_first_name).toBe('Mary');
       expect(asset.manager_last_name).toBe('Jane van der Berg');
-      expect(asset.manager_email).toBe('mary.vandenberg@test.com');
+      expect(asset.manager_email).toBe(`mary.vandenberg.${uniqueSuffix}@test.com`);
       expect(asset.manager_id).toBeNull();
 
       // Clean up
@@ -189,14 +193,14 @@ describe('Unregistered Manager Name Display', () => {
       const assetResult = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: 'Old',
         manager_last_name: 'Manager',
-        manager_email: 'old.manager@test.com',
-        company_name: 'Test Company',
+        manager_email: `old.manager.${uniqueSuffix}@test.com`,
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-007',
-        asset_tag: 'UNREG-TAG-007',
+        serial_number: `UNREG-SN-007-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-007-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -204,9 +208,10 @@ describe('Unregistered Manager Name Display', () => {
 
       // Update with empty manager name
       await assetDb.updateManagerForEmployee(
-        'employee-unregistered-test@test.com',
-        '   ',
-        'empty.name@test.com'
+        `employee-${uniqueSuffix}@test.com`,
+        '',
+        '',
+        `empty.name.${uniqueSuffix}@test.com`
       );
 
       // Fetch the asset
@@ -215,7 +220,7 @@ describe('Unregistered Manager Name Display', () => {
       // Manager names should be empty strings, not contain whitespace
       expect(asset.manager_first_name).toBe('');
       expect(asset.manager_last_name).toBe('');
-      expect(asset.manager_email).toBe('empty.name@test.com');
+      expect(asset.manager_email).toBe(`empty.name.${uniqueSuffix}@test.com`);
       expect(asset.manager_id).toBeNull();
 
       // Clean up
@@ -229,14 +234,14 @@ describe('Unregistered Manager Name Display', () => {
       const assetResult = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: '',
         manager_last_name: '',
         manager_email: '',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-004',
-        asset_tag: 'UNREG-TAG-004',
+        serial_number: `UNREG-SN-004-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-004-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -244,10 +249,10 @@ describe('Unregistered Manager Name Display', () => {
 
       // Link assets with unregistered manager
       await assetDb.linkAssetsToUser(
-        'employee-unregistered-test@test.com',
+        `employee-${uniqueSuffix}@test.com`,
         'Alice',
         'Williams',
-        'alice.williams@test.com'
+        `alice.williams.${uniqueSuffix}@test.com`
       );
 
       // Fetch the asset
@@ -256,7 +261,7 @@ describe('Unregistered Manager Name Display', () => {
       // Manager details should be stored
       expect(asset.manager_first_name).toBe('Alice');
       expect(asset.manager_last_name).toBe('Williams');
-      expect(asset.manager_email).toBe('alice.williams@test.com');
+      expect(asset.manager_email).toBe(`alice.williams.${uniqueSuffix}@test.com`);
       expect(asset.manager_id).toBeNull();
 
       // Clean up
@@ -270,28 +275,28 @@ describe('Unregistered Manager Name Display', () => {
       const asset1Result = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: '',
         manager_last_name: '',
         manager_email: '',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-005',
-        asset_tag: 'UNREG-TAG-005',
+        serial_number: `UNREG-SN-005-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-005-${uniqueSuffix}`,
         status: 'active'
       });
 
       const asset2Result = await assetDb.create({
         employee_first_name: 'Test',
         employee_last_name: 'Employee',
-        employee_email: 'employee-unregistered-test@test.com',
+        employee_email: `employee-${uniqueSuffix}@test.com`,
         manager_first_name: '',
         manager_last_name: '',
         manager_email: '',
-        company_name: 'Test Company',
+        company_name: testCompany.name,
         asset_type: 'laptop',
-        serial_number: 'UNREG-SN-006',
-        asset_tag: 'UNREG-TAG-006',
+        serial_number: `UNREG-SN-006-${uniqueSuffix}`,
+        asset_tag: `UNREG-TAG-006-${uniqueSuffix}`,
         status: 'active'
       });
 
@@ -302,7 +307,7 @@ describe('Unregistered Manager Name Display', () => {
         assetIds,
         'Robert',
         'Johnson',
-        'robert.johnson@test.com'
+        `robert.johnson.${uniqueSuffix}@test.com`
       );
 
       // Fetch both assets
@@ -312,12 +317,12 @@ describe('Unregistered Manager Name Display', () => {
       // Both should have the manager details
       expect(asset1.manager_first_name).toBe('Robert');
       expect(asset1.manager_last_name).toBe('Johnson');
-      expect(asset1.manager_email).toBe('robert.johnson@test.com');
+      expect(asset1.manager_email).toBe(`robert.johnson.${uniqueSuffix}@test.com`);
       expect(asset1.manager_id).toBeNull();
 
       expect(asset2.manager_first_name).toBe('Robert');
       expect(asset2.manager_last_name).toBe('Johnson');
-      expect(asset2.manager_email).toBe('robert.johnson@test.com');
+      expect(asset2.manager_email).toBe(`robert.johnson.${uniqueSuffix}@test.com`);
       expect(asset2.manager_id).toBeNull();
 
       // Clean up

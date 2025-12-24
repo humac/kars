@@ -12,8 +12,9 @@ describe('Asset Ownership Sync', () => {
     await assetDb.init();
 
     // Create test company (required for assets with company_id FK)
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const companyResult = await companyDb.create({
-      name: `Test Company ${Date.now()}`,
+      name: `OwnershipSync-TestCo-${uniqueId}`,
       description: 'Test company for ownership sync tests'
     });
     testCompany = await companyDb.getById(companyResult.id);
@@ -86,7 +87,7 @@ describe('Asset Ownership Sync', () => {
       });
 
       preloadedAsset = await assetDb.getById(assetResult.id);
-      
+
       // Verify owner_id is NULL (or undefined in the asset, depending on DB)
       expect(preloadedAsset.owner_id).toBeFalsy();
 
@@ -133,7 +134,7 @@ describe('Asset Ownership Sync', () => {
       });
 
       const asset = await assetDb.getById(assetResult.id);
-      
+
       // Verify manager_id is NULL
       expect(asset.manager_id).toBeFalsy();
 
@@ -165,7 +166,7 @@ describe('Asset Ownership Sync', () => {
 
     it('should handle non-existent email gracefully', async () => {
       const syncResult = await syncAssetOwnership('nonexistent@test.com');
-      
+
       expect(syncResult.ownerUpdates).toBe(0);
       expect(syncResult.managerUpdates).toBe(0);
     });
@@ -202,7 +203,7 @@ describe('Asset Ownership Sync', () => {
       });
 
       const asset = await assetDb.getById(assetResult.id);
-      
+
       // Verify owner_id is already set
       expect(asset.owner_id).toBe(user.id);
 
@@ -343,7 +344,8 @@ describe('Asset Ownership Sync', () => {
       // Update manager for employee
       await assetDb.updateManagerForEmployee(
         'emp-update-test@test.com',
-        'New Manager',
+        'New',
+        'Manager',
         'new-manager@test.com'
       );
 
@@ -356,6 +358,112 @@ describe('Asset Ownership Sync', () => {
       // Cleanup
       await assetDb.delete(assetResult.id);
       await userDb.delete(employee.id);
+    });
+  });
+
+  describe('Registration and Profile Update Integration', () => {
+    it('should update manager info on assets upon user registration', async () => {
+      // Note: This test simulates the logic in auth.js registration route manually
+      // since we can't easily import the router here. 
+
+      // 1. Create asset with old manager info (or just email-linked)
+      const assetResult = await assetDb.create({
+        employee_first_name: 'Register',
+        employee_last_name: 'Test',
+        employee_email: 'register-test@test.com',
+        manager_first_name: 'Old',
+        manager_last_name: 'Manager',
+        manager_email: 'old@manager.com',
+        company_name: testCompany.name,
+        asset_type: 'laptop',
+        serial_number: 'SN-REG-001',
+        asset_tag: 'TAG-REG-001',
+        status: 'active'
+      });
+
+      // 2. "Register" user (create user + call updateManagerForEmployee)
+      const userResult = await userDb.create({
+        email: 'register-test@test.com',
+        password_hash: 'hash_reg',
+        name: 'Register Test',
+        role: 'employee',
+        first_name: 'Register',
+        last_name: 'Test',
+        manager_first_name: 'New',
+        manager_last_name: 'Boss',
+        manager_email: 'new@boss.com'
+      });
+
+      // Simulate auth.js logic
+      await syncAssetOwnership('register-test@test.com');
+      await assetDb.updateManagerForEmployee(
+        'register-test@test.com',
+        'New',
+        'Boss',
+        'new@boss.com'
+      );
+
+      // 3. Verify asset updated
+      const asset = await assetDb.getById(assetResult.id);
+      expect(asset.manager_first_name).toBe('New');
+      expect(asset.manager_last_name).toBe('Boss');
+      expect(asset.manager_email).toBe('new@boss.com');
+      expect(asset.owner_id).toBeTruthy(); // Should also be linked
+
+      // Cleanup
+      await assetDb.delete(asset.id);
+      await userDb.delete(userResult.id);
+    });
+
+    it('should update asset manager info when admin updates user manager details', async () => {
+      // 1. Create employee with initial manager
+      const userResult = await userDb.create({
+        email: 'admin-update-test@test.com',
+        password_hash: 'hash_admin_update',
+        name: 'Admin Update Test',
+        role: 'employee',
+        first_name: 'Admin',
+        last_name: 'Update',
+        manager_first_name: 'Initial',
+        manager_last_name: 'Manager',
+        manager_email: 'initial@manager.com'
+      });
+
+      const user = await userDb.getByEmail('admin-update-test@test.com');
+
+      // 2. Create asset linked to this user
+      const assetResult = await assetDb.create({
+        employee_first_name: 'Admin',
+        employee_last_name: 'Update',
+        employee_email: 'admin-update-test@test.com',
+        manager_first_name: 'Initial',
+        manager_last_name: 'Manager',
+        manager_email: 'initial@manager.com',
+        company_name: testCompany.name,
+        asset_type: 'laptop',
+        serial_number: 'SN-ADMIN-001',
+        asset_tag: 'TAG-ADMIN-001',
+        status: 'active'
+      });
+
+      // 3. Simulate Admin Update (change manager)
+      // The route /users/:id calls updateManagerForEmployee when manager info changes
+      await assetDb.updateManagerForEmployee(
+        user.email,
+        'Updated',
+        'Director',
+        'updated@director.com'
+      );
+
+      // 4. Verify asset reflects new manager
+      const updatedAsset = await assetDb.getById(assetResult.id);
+      expect(updatedAsset.manager_first_name).toBe('Updated');
+      expect(updatedAsset.manager_last_name).toBe('Director');
+      expect(updatedAsset.manager_email).toBe('updated@director.com');
+
+      // Cleanup
+      await assetDb.delete(updatedAsset.id);
+      await userDb.delete(user.id);
     });
   });
 });

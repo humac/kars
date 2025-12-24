@@ -123,6 +123,35 @@ import {
 } from './database.js';
 ```
 
+### Database Method Index
+
+**⚠️ CRITICAL: Verify method names before using. Update this index when modifying database.js.**
+
+| Database Object | Methods |
+|-----------------|---------|
+| `assetDb` | `init`, `create`, `getAll`, `getById`, `search`, `updateStatus`, `update`, `delete`, `getByEmployeeEmail`, `getByManagerEmail`, `getRegisteredOwnersByCompanyIds`, `linkAssetsToUser`, `updateManagerForEmployee`, `updateManagerIdForOwner`, `getByIds`, `bulkUpdateStatus`, `bulkDelete`, `bulkUpdateManager`, `getEmployeeEmailsByManager`, `getScopedForUser`, `getUnregisteredOwners`, `getUnregisteredOwnersByCompanyIds` |
+| `userDb` | `create`, `getByEmail`, `getById`, `getAll`, `getByManagerEmail`, `updateRole`, `updateLastLogin`, `delete`, `updateProfile`, `updatePassword`, `getByOIDCSub`, `createFromOIDC`, `linkOIDC`, `enableMFA`, `disableMFA`, `getMFAStatus`, `completeProfile`, `useBackupCode`, `getByEmails`, `getByRole` |
+| `companyDb` | `create`, `createWithHubSpotId`, `getAll`, `getById`, `getByName`, `getByHubSpotId`, `update`, `updateByHubSpotId`, `setHubSpotId`, `delete`, `hasAssets`, `getAssetCount` |
+| `auditDb` | `log`, `getAll`, `getByEntity`, `getRecent`, `getStats` |
+| `passkeyDb` | `listByUser`, `getByCredentialId`, `getById`, `create`, `delete`, `updateCounter` |
+| `passwordResetTokenDb` | `create(userId, token, expiresAt)`, `findByToken`, `markAsUsed`, `deleteExpired`, `deleteByUserId` |
+| `oidcSettingsDb` | `get`, `update` |
+| `brandingSettingsDb` | `get`, `update`, `delete` |
+| `passkeySettingsDb` | `get`, `update` |
+| `hubspotSettingsDb` | `get`, `getAccessToken`, `update`, `updateSyncStatus` |
+| `hubspotSyncLogDb` | `log`, `getHistory` |
+| `smtpSettingsDb` | `get`, `getPassword`, `update` |
+| `systemSettingsDb` | `get`, `update`, `clear` |
+| `assetTypeDb` | `getAll`, `getActive`, `getById`, `getByName`, `create`, `update`, `delete`, `getUsageCount`, `reorder` |
+| `emailTemplateDb` | `getAll`, `getByKey`, `update`, `reset` |
+| `attestationCampaignDb` | `create`, `getAll`, `getById`, `update`, `delete` |
+| `attestationRecordDb` | `create`, `getByCampaignId`, `getById`, `getByUserAndCampaign`, `getByUserId`, `update` |
+| `attestationAssetDb` | `create`, `getByRecordId`, `update` |
+| `attestationNewAssetDb` | `create`, `getByRecordId` |
+| `attestationPendingInviteDb` | `create`, `getById`, `getByToken`, `getByEmail`, `getByCampaignId`, `getActiveByEmail`, `update`, `delete` |
+
+**When modifying database.js:** Update this index AND CLAUDE.md's Database Method Index.
+
 ## CI/CD & Validation
 
 ### GitHub Workflows
@@ -159,6 +188,32 @@ app.get('/api/my-endpoint',
     res.json({ success: true, data });
   }
 );
+```
+
+**⚠️ CRITICAL: API Response Contract Requirements**
+
+When creating or modifying API endpoints:
+
+1. **Check frontend first**: Search for existing fetch calls to the endpoint
+2. **Match property names exactly**: Frontend expects specific property names
+3. **Document in CLAUDE.md**: Update the "API Response Contracts" table
+4. **Use consistent naming**:
+   - JSON responses: `camelCase` (`requiresMFA`, `mfaSessionId`)
+   - Database columns: `snake_case` (`employee_email`)
+
+**Known critical response properties:**
+| Endpoint | Property | Frontend expects |
+|----------|----------|------------------|
+| `POST /api/auth/login` | `requiresMFA` | NOT `mfaRequired` |
+| `GET /api/auth/verify-reset-token/:token` | `valid` | NOT `success` |
+| `GET /api/auth/validate-invite/:token` | `valid` | NOT `success` |
+
+```javascript
+// ✅ Correct - matches frontend
+res.json({ requiresMFA: true, mfaSessionId: '...' });
+
+// ❌ Wrong - frontend checks for requiresMFA, not mfaRequired
+res.json({ mfaRequired: true, mfaSessionId: '...' });
 ```
 
 **New Component:**
@@ -232,3 +287,7 @@ if (user.role === 'employee') {
 6. **Read CLAUDE.md** - Comprehensive guide with all details
 7. **Audit everything** - All data mutations need audit logs
 8. **Never skip auth** - Always use authenticate/authorize middleware
+9. **Verify API contracts** - Check frontend expects the exact property names you return
+10. **Document API changes** - Update CLAUDE.md "API Response Contracts" table when adding/modifying endpoints
+11. **Verify database methods** - Check the Database Method Index before calling db methods to avoid "is not a function" errors
+12. **Update method indexes** - When adding/removing database methods, update both CLAUDE.md and copilot-instructions.md

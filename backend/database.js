@@ -1,3 +1,8 @@
+/**
+ * @file Database abstraction layer supporting SQLite and PostgreSQL
+ * @see ./types/database.d.ts for TypeScript type definitions
+ */
+
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve, isAbsolute } from 'path';
@@ -896,6 +901,32 @@ const initDb = async () => {
     )
   `;
 
+  const systemSettingsTable = isPostgres ? `
+    CREATE TABLE IF NOT EXISTS system_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      trust_proxy INTEGER,
+      proxy_type TEXT,
+      proxy_trust_level INTEGER,
+      rate_limit_enabled INTEGER,
+      rate_limit_window_ms INTEGER,
+      rate_limit_max_requests INTEGER,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_by TEXT
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS system_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      trust_proxy INTEGER,
+      proxy_type TEXT,
+      proxy_trust_level INTEGER,
+      rate_limit_enabled INTEGER,
+      rate_limit_window_ms INTEGER,
+      rate_limit_max_requests INTEGER,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_by TEXT
+    )
+  `;
+
   const passwordResetTokensTable = isPostgres ? `
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
       id SERIAL PRIMARY KEY,
@@ -1142,14 +1173,15 @@ const initDb = async () => {
   await dbRun(hubspotSettingsTable); // 9. Create HubSpot settings table
   await dbRun(hubspotSyncLogTable);  // 10. Create HubSpot sync log table
   await dbRun(smtpSettingsTable);    // 11. Create SMTP settings table
-  await dbRun(passwordResetTokensTable); // 12. Create password reset tokens table (depends on users)
-  await dbRun(attestationCampaignsTable); // 13. Create attestation campaigns table (depends on users)
-  await dbRun(attestationRecordsTable); // 14. Create attestation records table (depends on campaigns and users)
-  await dbRun(attestationAssetsTable); // 15. Create attestation assets table (depends on attestation_records and assets)
-  await dbRun(attestationNewAssetsTable); // 16. Create attestation new assets table (depends on attestation_records)
-  await dbRun(attestationPendingInvitesTable); // 17. Create attestation pending invites table (depends on campaigns and records)
-  await dbRun(assetTypesTable);      // 18. Create asset types table (no dependencies)
-  await dbRun(emailTemplatesTable);  // 19. Create email templates table (no dependencies)
+  await dbRun(systemSettingsTable);  // 12. Create system settings table
+  await dbRun(passwordResetTokensTable); // 13. Create password reset tokens table (depends on users)
+  await dbRun(attestationCampaignsTable); // 14. Create attestation campaigns table (depends on users)
+  await dbRun(attestationRecordsTable); // 15. Create attestation records table (depends on campaigns and users)
+  await dbRun(attestationAssetsTable); // 16. Create attestation assets table (depends on attestation_records and assets)
+  await dbRun(attestationNewAssetsTable); // 17. Create attestation new assets table (depends on attestation_records)
+  await dbRun(attestationPendingInvitesTable); // 18. Create attestation pending invites table (depends on campaigns and records)
+  await dbRun(assetTypesTable);      // 19. Create asset types table (no dependencies)
+  await dbRun(emailTemplatesTable);  // 20. Create email templates table (no dependencies)
 
   // === Migration: company_name -> company_id ===
   // Check if assets table has old schema (company_name) instead of new schema (company_id)
@@ -2134,13 +2166,14 @@ export const assetDb = {
       WHERE employee_email = ?
     `, [managerFirstName || '', managerLastName || '', managerEmail || '', managerId, now, employeeEmail]);
   },
-  updateManagerForEmployee: async (employeeEmail, managerName, managerEmail) => {
+  updateManagerForEmployee: async (employeeEmail, managerFirstName, managerLastName, managerEmail) => {
     const now = new Date().toISOString();
     
     // Debug logging to catch data corruption
     console.log('updateManagerForEmployee called:', {
       employeeEmail,
-      managerName,
+      managerFirstName,
+      managerLastName,
       managerEmail
     });
     
@@ -2151,20 +2184,6 @@ export const assetDb = {
       managerId = manager?.id || null;
     }
 
-    // Split manager name into first and last name
-    // Store denormalized fields for unregistered managers
-    // JOINs will override these values when user records exist
-    const trimmedName = (managerName || '').trim();
-    const nameParts = trimmedName ? trimmedName.split(/\s+/) : [];
-    const managerFirstName = nameParts[0] || '';
-    const managerLastName = nameParts.slice(1).join(' ') || '';
-    
-    console.log('Split manager name:', {
-      managerFirstName,
-      managerLastName,
-      managerId
-    });
-    
     // Get the owner_id for this employee to update by both email AND ID
     const employee = await dbGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [employeeEmail]);
     const employeeId = employee?.id || null;
@@ -3181,6 +3200,107 @@ export const smtpSettingsDb = {
       SET ${updates.join(', ')}
       WHERE id = 1
     `, params);
+  }
+};
+
+/**
+ * System Settings Database Operations
+ * Manages system-level configuration including proxy and rate limiting settings
+ */
+export const systemSettingsDb = {
+  get: async () => {
+    let settings = await dbGet('SELECT * FROM system_settings WHERE id = 1');
+
+    // If no settings exist, return null (will use environment defaults)
+    if (!settings) {
+      return null;
+    }
+
+    return {
+      ...settings,
+      updated_at: normalizeDates(settings.updated_at)
+    };
+  },
+  update: async (settings, userEmail) => {
+    const now = new Date().toISOString();
+
+    // Check if settings row exists
+    const existing = await dbGet('SELECT id FROM system_settings WHERE id = 1');
+
+    if (!existing) {
+      // Create the row
+      await dbRun(`
+        INSERT INTO system_settings (id, trust_proxy, proxy_type, proxy_trust_level, rate_limit_enabled, rate_limit_window_ms, rate_limit_max_requests, updated_at, updated_by)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        settings.trust_proxy !== undefined ? (settings.trust_proxy ? 1 : 0) : null,
+        settings.proxy_type || null,
+        settings.proxy_trust_level !== undefined ? settings.proxy_trust_level : null,
+        settings.rate_limit_enabled !== undefined ? (settings.rate_limit_enabled ? 1 : 0) : null,
+        settings.rate_limit_window_ms !== undefined ? settings.rate_limit_window_ms : null,
+        settings.rate_limit_max_requests !== undefined ? settings.rate_limit_max_requests : null,
+        now,
+        userEmail
+      ]);
+    } else {
+      // Update the row
+      const updates = [];
+      const params = [];
+
+      if (settings.trust_proxy !== undefined) {
+        updates.push('trust_proxy = ?');
+        params.push(settings.trust_proxy !== null ? (settings.trust_proxy ? 1 : 0) : null);
+      }
+      if (settings.proxy_type !== undefined) {
+        updates.push('proxy_type = ?');
+        params.push(settings.proxy_type || null);
+      }
+      if (settings.proxy_trust_level !== undefined) {
+        updates.push('proxy_trust_level = ?');
+        params.push(settings.proxy_trust_level !== null ? settings.proxy_trust_level : null);
+      }
+      if (settings.rate_limit_enabled !== undefined) {
+        updates.push('rate_limit_enabled = ?');
+        params.push(settings.rate_limit_enabled !== null ? (settings.rate_limit_enabled ? 1 : 0) : null);
+      }
+      if (settings.rate_limit_window_ms !== undefined) {
+        updates.push('rate_limit_window_ms = ?');
+        params.push(settings.rate_limit_window_ms !== null ? settings.rate_limit_window_ms : null);
+      }
+      if (settings.rate_limit_max_requests !== undefined) {
+        updates.push('rate_limit_max_requests = ?');
+        params.push(settings.rate_limit_max_requests !== null ? settings.rate_limit_max_requests : null);
+      }
+
+      updates.push('updated_at = ?');
+      params.push(now);
+      updates.push('updated_by = ?');
+      params.push(userEmail);
+
+      if (updates.length > 2) {
+        // More than just updated_at and updated_by
+        await dbRun(`
+          UPDATE system_settings
+          SET ${updates.join(', ')}
+          WHERE id = 1
+        `, params);
+      }
+    }
+  },
+  clear: async (field, userEmail) => {
+    // Clear a specific field (set to null to use environment default)
+    const now = new Date().toISOString();
+    const validFields = ['trust_proxy', 'proxy_type', 'proxy_trust_level', 'rate_limit_enabled', 'rate_limit_window_ms', 'rate_limit_max_requests'];
+    
+    if (!validFields.includes(field)) {
+      throw new Error(`Invalid field: ${field}`);
+    }
+
+    await dbRun(`
+      UPDATE system_settings
+      SET ${field} = NULL, updated_at = ?, updated_by = ?
+      WHERE id = 1
+    `, [now, userEmail]);
   }
 };
 

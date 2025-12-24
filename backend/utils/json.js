@@ -1,3 +1,7 @@
+import { createChildLogger } from './logger.js';
+
+const logger = createChildLogger({ module: 'json' });
+
 /**
  * Safely parse JSON with error handling
  * @param {string} value - JSON string to parse
@@ -12,7 +16,7 @@ export const safeJsonParse = (value, defaultValue = null) => {
   try {
     return JSON.parse(value);
   } catch (error) {
-    console.error('JSON parse error:', error.message);
+    logger.error({ err: error }, 'JSON parse error');
     return defaultValue;
   }
 };
