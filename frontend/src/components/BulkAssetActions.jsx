@@ -29,6 +29,7 @@ import { Download, Sparkles, Loader2 } from 'lucide-react';
 export default function BulkAssetActions({
   selectedIds,
   filteredAssets,
+  allAssets,
   hasActiveFilters,
   onClearSelection,
   onBulkDelete,
@@ -126,6 +127,10 @@ export default function BulkAssetActions({
     exportAssetsToCSV(filteredAssets, 'filtered');
   };
 
+  const handleExportAll = () => {
+    exportAssetsToCSV(allAssets || filteredAssets, 'all');
+  };
+
   return (
     <>
       {/* Results Count and Bulk Actions Bar */}
@@ -134,6 +139,17 @@ export default function BulkAssetActions({
           <div className="text-sm text-muted-foreground">
             Showing {filteredAssets.length} assets
           </div>
+          {allAssets && allAssets.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportAll}
+              className="h-7"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Export All ({allAssets.length})
+            </Button>
+          )}
           {filteredAssets.length > 0 && hasActiveFilters && (
             <Button
               variant="outline"

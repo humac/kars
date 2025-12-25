@@ -359,6 +359,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
           <BulkAssetActions
             selectedIds={selectedIds}
             filteredAssets={filteredAssets}
+            allAssets={assetsWithManagerData}
             hasActiveFilters={hasActiveFilters()}
             onClearSelection={clearSelection}
             onBulkDelete={handleBulkDelete}
