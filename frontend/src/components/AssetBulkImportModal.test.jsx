@@ -72,7 +72,7 @@ describe('AssetBulkImportModal', () => {
       expect(screen.getByText('manager_email')).toBeInTheDocument();
       expect(screen.getByText('make')).toBeInTheDocument();
       expect(screen.getByText('model')).toBeInTheDocument();
-      expect(screen.getByText(/status/)).toBeInTheDocument();
+      expect(screen.getByText(/^status \(active/)).toBeInTheDocument();
       expect(screen.getByText('notes')).toBeInTheDocument();
     });
 
