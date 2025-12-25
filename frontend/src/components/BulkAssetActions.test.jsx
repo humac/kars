@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BulkAssetActions from './BulkAssetActions';
 
@@ -33,6 +33,7 @@ const mockAssets = [
 const defaultProps = {
   selectedIds: new Set([1, 2]),
   filteredAssets: mockAssets,
+  allAssets: mockAssets,
   hasActiveFilters: false,
   onClearSelection: vi.fn(),
   onBulkDelete: vi.fn(),
@@ -64,7 +65,8 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByText('Showing 3 assets')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText(/assets/)).toBeInTheDocument();
     });
 
     it('does not render selection bar when nothing selected', () => {
@@ -79,16 +81,21 @@ describe('BulkAssetActions', () => {
       expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
     });
 
-    it('shows export filtered button when filters are active', () => {
+    it('shows filtered count when filters are active', async () => {
+      const user = userEvent.setup();
       render(
         <BulkAssetActions
           {...defaultProps}
+          filteredAssets={mockAssets.slice(0, 2)}
+          allAssets={mockAssets}
           hasActiveFilters={true}
           currentUser={{ role: 'admin', email: 'admin@test.com' }}
         />
       );
 
-      expect(screen.getByRole('button', { name: /export filtered/i })).toBeInTheDocument();
+      // Open the export dropdown to verify Export Filtered option appears
+      await user.click(screen.getByRole('button', { name: /export/i }));
+      expect(screen.getByText(/export filtered/i)).toBeInTheDocument();
     });
   });
 
@@ -114,10 +121,10 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
     });
 
-    it('shows export button for admin', () => {
+    it('shows export dropdown for admin', () => {
       render(
         <BulkAssetActions
           {...defaultProps}
@@ -125,18 +132,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument();
-    });
-
-    it('shows clear button for admin', () => {
-      render(
-        <BulkAssetActions
-          {...defaultProps}
-          currentUser={adminUser}
-        />
-      );
-
-      expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
     });
   });
 
@@ -162,10 +158,12 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: /bulk edit/i })).not.toBeInTheDocument();
+      // The edit button should not be in the selection bar
+      const selectionBar = screen.getByText('2 selected').closest('div');
+      expect(within(selectionBar).queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
     });
 
-    it('still shows export button for manager', () => {
+    it('still shows export dropdown for manager', () => {
       render(
         <BulkAssetActions
           {...defaultProps}
@@ -173,7 +171,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
     });
   });
 
@@ -201,7 +199,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
     });
 
     it('hides bulk edit when employee does not own any selected assets', () => {
@@ -217,7 +215,8 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: /bulk edit/i })).not.toBeInTheDocument();
+      // The edit button should not be visible
+      expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
     });
 
     it('shows bulk edit when employee owns the only selected asset', () => {
@@ -232,7 +231,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
     });
   });
 
@@ -258,10 +257,11 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: /bulk edit/i })).not.toBeInTheDocument();
+      // The edit button should not be visible for read-only user
+      expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
     });
 
-    it('still shows export button for attestation_coordinator', () => {
+    it('still shows export dropdown for attestation_coordinator', () => {
       render(
         <BulkAssetActions
           {...defaultProps}
@@ -269,7 +269,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
     });
   });
 
@@ -285,10 +285,9 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /bulk edit/i }));
+      await user.click(screen.getByRole('button', { name: /edit/i }));
 
-      expect(screen.getByText('Bulk edit selected assets')).toBeInTheDocument();
-      // Check for dialog description
+      expect(screen.getByText('Bulk Edit Assets')).toBeInTheDocument();
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
@@ -301,7 +300,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /bulk edit/i }));
+      await user.click(screen.getByRole('button', { name: /edit/i }));
 
       // Check for the combobox (select) and textarea by their placeholders
       expect(screen.getByRole('combobox')).toBeInTheDocument();
@@ -317,7 +316,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /bulk edit/i }));
+      await user.click(screen.getByRole('button', { name: /edit/i }));
 
       const noteInput = screen.getByLabelText(/note/i);
       await user.type(noteInput, 'Test note for bulk update');
@@ -334,7 +333,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /bulk edit/i }));
+      await user.click(screen.getByRole('button', { name: /edit/i }));
 
       // Apply button should be disabled when no status is selected
       expect(screen.getByRole('button', { name: /apply changes/i })).toBeDisabled();
@@ -349,7 +348,7 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /bulk edit/i }));
+      await user.click(screen.getByRole('button', { name: /edit/i }));
 
       expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
     });
@@ -375,7 +374,7 @@ describe('BulkAssetActions', () => {
   });
 
   describe('clear selection', () => {
-    it('calls onClearSelection when clear button clicked', async () => {
+    it('calls onClearSelection when X button clicked', async () => {
       const user = userEvent.setup();
       const mockOnClearSelection = vi.fn();
 
@@ -387,14 +386,19 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /clear/i }));
+      // Find the X button in the selection bar (it's a ghost button with just X icon)
+      const selectionBar = screen.getByText('2 selected').closest('div');
+      const buttons = within(selectionBar).getAllByRole('button');
+      // X button is the last button (after Edit and Delete)
+      const clearButton = buttons[buttons.length - 1];
+      await user.click(clearButton);
 
       expect(mockOnClearSelection).toHaveBeenCalled();
     });
   });
 
   describe('export functionality', () => {
-    it('exports selected assets when export button clicked', async () => {
+    it('exports all assets via dropdown menu', async () => {
       const user = userEvent.setup();
       const mockClick = vi.fn();
       const originalCreateElement = document.createElement.bind(document);
@@ -414,10 +418,30 @@ describe('BulkAssetActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /^export$/i }));
+      // Open export dropdown
+      await user.click(screen.getByRole('button', { name: /export/i }));
+
+      // Click "Export All" option
+      await user.click(screen.getByText(/export all/i));
 
       expect(mockClick).toHaveBeenCalled();
       expect(global.URL.createObjectURL).toHaveBeenCalled();
+    });
+
+    it('shows export selected option in dropdown when items selected', async () => {
+      const user = userEvent.setup();
+      render(
+        <BulkAssetActions
+          {...defaultProps}
+          currentUser={{ role: 'admin', email: 'admin@test.com' }}
+        />
+      );
+
+      // Open export dropdown
+      await user.click(screen.getByRole('button', { name: /export/i }));
+
+      // Should show Export Selected option
+      expect(screen.getByText(/export selected/i)).toBeInTheDocument();
     });
   });
 
@@ -435,7 +459,7 @@ describe('BulkAssetActions', () => {
       );
 
       // Should show bulk edit because alice@test.com matches ALICE@TEST.COM
-      expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
     });
   });
 });

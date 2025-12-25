@@ -74,7 +74,7 @@ const AssetTableRow = memo(function AssetTableRow({
           {asset.status || 'unknown'}
         </Badge>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-right pr-4">
         <div className="flex justify-end gap-1">
           <Button
             variant="ghost"

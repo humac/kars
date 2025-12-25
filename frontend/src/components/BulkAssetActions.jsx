@@ -19,12 +19,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Download, Sparkles, Loader2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Download, Loader2, Edit, Trash2, X, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
- * Bulk actions toolbar and dialog for selected assets.
- * Displays selection count and provides bulk edit, export, and delete functionality.
- * Role-aware: delete only shown to admins, bulk edit shown to admins and asset owners.
+ * Consolidated bulk actions toolbar for assets.
+ * Features: results count, unified export menu, and selection actions.
  */
 export default function BulkAssetActions({
   selectedIds,
@@ -45,6 +52,8 @@ export default function BulkAssetActions({
 
   const selectedCount = selectedIds.size;
   const isAdmin = currentUser?.role === 'admin';
+  const totalCount = allAssets?.length || 0;
+  const filteredCount = filteredAssets?.length || 0;
 
   // Check if user can edit any of the selected assets (admin or owns them)
   const canBulkEdit = isAdmin || (currentUser?.email &&
@@ -116,6 +125,12 @@ export default function BulkAssetActions({
     link.href = URL.createObjectURL(blob);
     link.download = `assets_${exportType}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${assetsToExport.length} asset${assetsToExport.length === 1 ? '' : 's'} to CSV`,
+      variant: "success"
+    });
   };
 
   const handleExportSelected = () => {
@@ -133,60 +148,103 @@ export default function BulkAssetActions({
 
   return (
     <>
-      {/* Results Count and Bulk Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredAssets.length} assets
-          </div>
-          {allAssets && allAssets.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportAll}
-              className="h-7"
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Export All ({allAssets.length})
-            </Button>
-          )}
-          {filteredAssets.length > 0 && hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportFiltered}
-              className="h-7"
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Export Filtered ({filteredAssets.length})
-            </Button>
+      {/* Results Count and Actions Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
+        {/* Left side: Results count */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            {hasActiveFilters ? (
+              <>
+                <span className="font-medium text-foreground">{filteredCount}</span>
+                {' '}of {totalCount} assets
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-foreground">{totalCount}</span>
+                {' '}asset{totalCount === 1 ? '' : 's'}
+              </>
+            )}
+          </span>
+
+          {/* Export Dropdown */}
+          {totalCount > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5">
+                  <Download className="h-3.5 w-3.5" />
+                  Export
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={handleExportAll}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All ({totalCount})
+                </DropdownMenuItem>
+                {hasActiveFilters && filteredCount !== totalCount && (
+                  <DropdownMenuItem onClick={handleExportFiltered}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Filtered ({filteredCount})
+                  </DropdownMenuItem>
+                )}
+                {selectedCount > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleExportSelected}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Selected ({selectedCount})
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
+
+        {/* Right side: Selection actions */}
         {selectedCount > 0 && (
-          <div className="flex items-center gap-2 sm:gap-3 rounded-lg border px-3 py-1.5 bg-muted/50">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium whitespace-nowrap">{selectedCount} selected</span>
-            </div>
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-lg border px-3 py-1.5",
+              "bg-primary/5 border-primary/30"
+            )}
+          >
+            <span className="text-sm font-medium">
+              {selectedCount} selected
+            </span>
+            <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-1">
               {canBulkEdit && (
-                <Button variant="ghost" size="sm" onClick={() => setBulkDialogOpen(true)}>Bulk edit</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 gap-1.5"
+                  onClick={() => setBulkDialogOpen(true)}
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Edit</span>
+                </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={handleExportSelected}>
-                <Download className="h-4 w-4 mr-1" />Export
-              </Button>
               {isAdmin && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-destructive hover:text-destructive"
+                  className="h-7 px-2 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleBulkDelete}
                   disabled={formLoading}
                 >
-                  Delete
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               )}
-              <Button size="sm" variant="ghost" onClick={onClearSelection}>Clear</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
+                onClick={onClearSelection}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         )}
@@ -194,14 +252,16 @@ export default function BulkAssetActions({
 
       {/* Bulk Edit Dialog */}
       <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Bulk edit selected assets</DialogTitle>
-            <DialogDescription>Update status for {selectedCount} asset{selectedCount === 1 ? '' : 's'}.</DialogDescription>
+            <DialogTitle>Bulk Edit Assets</DialogTitle>
+            <DialogDescription>
+              Update status for {selectedCount} selected asset{selectedCount === 1 ? '' : 's'}.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="bulk-status">Status</Label>
+              <Label htmlFor="bulk-status">New Status</Label>
               <Select value={bulkStatus} onValueChange={setBulkStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status..." />
@@ -222,16 +282,22 @@ export default function BulkAssetActions({
                 placeholder="Add a note for this bulk update..."
                 value={bulkNote}
                 onChange={(e) => setBulkNote(e.target.value)}
+                rows={3}
               />
-              <p className="text-xs text-muted-foreground">This will update status for {selectedCount} asset{selectedCount === 1 ? '' : 's'}.</p>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setBulkDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleBulkStatusUpdate} disabled={formLoading || !bulkStatus.trim()}>
-                {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Apply changes
-              </Button>
-            </DialogFooter>
           </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setBulkDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkStatusUpdate}
+              disabled={formLoading || !bulkStatus.trim()}
+            >
+              {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Apply Changes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

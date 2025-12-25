@@ -333,40 +333,39 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
 
   return (
     <>
-      <div className="space-y-6">
-        {/* Advanced Filters Section */}
-        <div className="space-y-4">
-          <AssetTableFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            assetTypeFilter={assetTypeFilter}
-            setAssetTypeFilter={setAssetTypeFilter}
-            companyFilter={companyFilter}
-            setCompanyFilter={setCompanyFilter}
-            employeeFilter={employeeFilter}
-            setEmployeeFilter={setEmployeeFilter}
-            managerFilter={managerFilter}
-            setManagerFilter={setManagerFilter}
-            companies={companies}
-            assetTypes={assetTypes}
-            uniqueEmployees={uniqueEmployees}
-            uniqueManagers={uniqueManagers}
-            onClearFilters={clearFilters}
-          />
+      <div className="space-y-4">
+        {/* Filters */}
+        <AssetTableFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          assetTypeFilter={assetTypeFilter}
+          setAssetTypeFilter={setAssetTypeFilter}
+          companyFilter={companyFilter}
+          setCompanyFilter={setCompanyFilter}
+          employeeFilter={employeeFilter}
+          setEmployeeFilter={setEmployeeFilter}
+          managerFilter={managerFilter}
+          setManagerFilter={setManagerFilter}
+          companies={companies}
+          assetTypes={assetTypes}
+          uniqueEmployees={uniqueEmployees}
+          uniqueManagers={uniqueManagers}
+          onClearFilters={clearFilters}
+        />
 
-          <BulkAssetActions
-            selectedIds={selectedIds}
-            filteredAssets={filteredAssets}
-            allAssets={assetsWithManagerData}
-            hasActiveFilters={hasActiveFilters()}
-            onClearSelection={clearSelection}
-            onBulkDelete={handleBulkDelete}
-            onRefresh={onRefresh}
-            currentUser={currentUser}
-          />
-        </div>
+        {/* Results count, export, and bulk actions */}
+        <BulkAssetActions
+          selectedIds={selectedIds}
+          filteredAssets={filteredAssets}
+          allAssets={assetsWithManagerData}
+          hasActiveFilters={hasActiveFilters()}
+          onClearSelection={clearSelection}
+          onBulkDelete={handleBulkDelete}
+          onRefresh={onRefresh}
+          currentUser={currentUser}
+        />
 
         {/* Table */}
         {filteredAssets.length === 0 ? (
@@ -408,7 +407,7 @@ export default function AssetTable({ assets = [], onEdit, onDelete, currentUser,
                   <TableHead className="hidden 2xl:table-cell">Asset Tag</TableHead>
                   <TableHead>Serial Number</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right pr-4 min-w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -293,7 +293,7 @@ describe('AssetTable Component', () => {
     );
 
     // Type manager name in search
-    const searchInput = screen.getByPlaceholderText(/search assets/i);
+    const searchInput = screen.getByPlaceholderText(/search by name/i);
     await user.type(searchInput, 'Bob Manager');
 
     // Only John Doe should be visible (managed by Bob)
@@ -317,7 +317,7 @@ describe('AssetTable Component', () => {
     );
 
     // Type manager email in search
-    const searchInput = screen.getByPlaceholderText(/search assets/i);
+    const searchInput = screen.getByPlaceholderText(/search by name/i);
     await user.type(searchInput, 'alice@example.com');
 
     // Only Jane Smith should be visible (managed by Alice)
@@ -445,7 +445,7 @@ describe('AssetTable Component', () => {
     );
 
     // Search for manager resolved from context
-    const searchInput = screen.getByPlaceholderText(/search assets/i);
+    const searchInput = screen.getByPlaceholderText(/search by name/i);
     await user.type(searchInput, 'Manager From Context');
 
     // Only the first employee should be visible
