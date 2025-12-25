@@ -505,201 +505,203 @@ export default function MyAttestationsPage() {
                     </p>
                   </div>
                 ) : (
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Make/Model</TableHead>
-                          <TableHead>Serial Number</TableHead>
-                          <TableHead>Current Status</TableHead>
-                          <TableHead>Update Status</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {attestationDetails.assets?.map((asset) => {
-                          const isCertified = certifiedAssetIds.has(asset.id);
-                          const selectedStatus = selectedStatuses[asset.id] || asset.status;
-                          const showReturnedDate = selectedStatus === 'returned' && !isCertified;
-                          return (
-                            <TableRow key={asset.id} className={isCertified ? 'bg-green-50 dark:bg-green-950' : ''}>
-                              <TableCell className="font-medium">{asset.asset_type}</TableCell>
-                              <TableCell>
-                                {asset.make} {asset.model}
-                              </TableCell>
-                              <TableCell>{asset.serial_number}</TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">{asset.status}</Badge>
-                              </TableCell>
-                              <TableCell>
-                                {isCertified ? (
-                                  <div className="space-y-1">
-                                    <Badge variant="outline">{selectedStatus}</Badge>
-                                    {asset.returned_date && (
-                                      <div className="text-xs text-muted-foreground">
-                                        Returned: {new Date(asset.returned_date).toLocaleDateString()}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    <Select
-                                      value={selectedStatus}
-                                      onValueChange={(value) => handleStatusChange(asset.id, value)}
-                                    >
-                                      <SelectTrigger className="w-[180px]">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {ASSET_STATUS_OPTIONS.map((option) => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    {showReturnedDate && (
-                                      <div className="space-y-1">
-                                        <Label htmlFor={`returned-date-${asset.id}`} className="text-xs text-muted-foreground">
-                                          Returned Date *
-                                        </Label>
-                                        <Input
-                                          id={`returned-date-${asset.id}`}
-                                          type="date"
-                                          value={returnedDates[asset.id] || ''}
-                                          onChange={(e) => handleReturnedDateChange(asset.id, e.target.value)}
-                                          className="w-[180px]"
-                                          required
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {isCertified ? (
-                                  <div className="flex items-center justify-end gap-2 text-green-600">
-                                    <CheckCircle2 className="h-5 w-5" />
-                                    <span className="text-sm font-medium">Certified</span>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    size="icon"
-                                    variant="default"
-                                    onClick={() => handleCertifyAsset(asset)}
-                                    disabled={selectedStatus === 'returned' && !returnedDates[asset.id]}
-                                    title="Certify this asset"
-                                  >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-4">
-                    {attestationDetails.assets?.map((asset) => {
-                      const isCertified = certifiedAssetIds.has(asset.id);
-                      const selectedStatus = selectedStatuses[asset.id] || asset.status;
-                      const showReturnedDate = selectedStatus === 'returned' && !isCertified;
-                      return (
-                        <Card key={asset.id} className={isCertified ? 'border-green-500 bg-green-50 dark:bg-green-950' : ''}>
-                          <CardContent className="p-4 space-y-3">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <div className="font-semibold">{asset.asset_type}</div>
-                                <div className="text-sm text-muted-foreground">
+                  <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Make/Model</TableHead>
+                            <TableHead>Serial Number</TableHead>
+                            <TableHead>Current Status</TableHead>
+                            <TableHead>Update Status</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {attestationDetails.assets?.map((asset) => {
+                            const isCertified = certifiedAssetIds.has(asset.id);
+                            const selectedStatus = selectedStatuses[asset.id] || asset.status;
+                            const showReturnedDate = selectedStatus === 'returned' && !isCertified;
+                            return (
+                              <TableRow key={asset.id} className={isCertified ? 'bg-green-50 dark:bg-green-950' : ''}>
+                                <TableCell className="font-medium">{asset.asset_type}</TableCell>
+                                <TableCell>
                                   {asset.make} {asset.model}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  SN: {asset.serial_number}
-                                </div>
-                              </div>
-                              {isCertified && (
-                                <div className="flex items-center gap-1 text-green-600">
-                                  <CheckCircle2 className="h-5 w-5" />
-                                  <span className="text-xs font-medium">Certified</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Current Status</Label>
-                                <div className="mt-1">
+                                </TableCell>
+                                <TableCell>{asset.serial_number}</TableCell>
+                                <TableCell>
                                   <Badge variant="secondary">{asset.status}</Badge>
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Update Status</Label>
-                                {isCertified ? (
-                                  <div className="mt-1 space-y-1">
-                                    <Badge variant="outline">{selectedStatus}</Badge>
-                                    {asset.returned_date && (
-                                      <div className="text-xs text-muted-foreground">
-                                        Returned: {new Date(asset.returned_date).toLocaleDateString()}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="mt-1 space-y-2">
-                                    <Select
-                                      value={selectedStatus}
-                                      onValueChange={(value) => handleStatusChange(asset.id, value)}
+                                </TableCell>
+                                <TableCell>
+                                  {isCertified ? (
+                                    <div className="space-y-1">
+                                      <Badge variant="outline">{selectedStatus}</Badge>
+                                      {asset.returned_date && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Returned: {new Date(asset.returned_date).toLocaleDateString()}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <Select
+                                        value={selectedStatus}
+                                        onValueChange={(value) => handleStatusChange(asset.id, value)}
+                                      >
+                                        <SelectTrigger className="w-[180px]">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {ASSET_STATUS_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {showReturnedDate && (
+                                        <div className="space-y-1">
+                                          <Label htmlFor={`returned-date-${asset.id}`} className="text-xs text-muted-foreground">
+                                            Returned Date *
+                                          </Label>
+                                          <Input
+                                            id={`returned-date-${asset.id}`}
+                                            type="date"
+                                            value={returnedDates[asset.id] || ''}
+                                            onChange={(e) => handleReturnedDateChange(asset.id, e.target.value)}
+                                            className="w-[180px]"
+                                            required
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {isCertified ? (
+                                    <div className="flex items-center justify-end gap-2 text-green-600">
+                                      <CheckCircle2 className="h-5 w-5" />
+                                      <span className="text-sm font-medium">Certified</span>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="icon"
+                                      variant="default"
+                                      onClick={() => handleCertifyAsset(asset)}
+                                      disabled={selectedStatus === 'returned' && !returnedDates[asset.id]}
+                                      title="Certify this asset"
                                     >
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {ASSET_STATUS_OPTIONS.map((option) => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    {showReturnedDate && (
-                                      <div className="space-y-1">
-                                        <Label htmlFor={`returned-date-mobile-${asset.id}`} className="text-xs text-muted-foreground">
-                                          Returned Date *
-                                        </Label>
-                                        <Input
-                                          id={`returned-date-mobile-${asset.id}`}
-                                          type="date"
-                                          value={returnedDates[asset.id] || ''}
-                                          onChange={(e) => handleReturnedDateChange(asset.id, e.target.value)}
-                                          required
-                                        />
-                                      </div>
-                                    )}
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {attestationDetails.assets?.map((asset) => {
+                        const isCertified = certifiedAssetIds.has(asset.id);
+                        const selectedStatus = selectedStatuses[asset.id] || asset.status;
+                        const showReturnedDate = selectedStatus === 'returned' && !isCertified;
+                        return (
+                          <Card key={asset.id} className={isCertified ? 'border-green-500 bg-green-50 dark:bg-green-950' : ''}>
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="font-semibold">{asset.asset_type}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {asset.make} {asset.model}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    SN: {asset.serial_number}
+                                  </div>
+                                </div>
+                                {isCertified && (
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <CheckCircle2 className="h-5 w-5" />
+                                    <span className="text-xs font-medium">Certified</span>
                                   </div>
                                 )}
                               </div>
-                            </div>
 
-                            {!isCertified && (
-                              <Button
-                                className="w-full"
-                                onClick={() => handleCertifyAsset(asset)}
-                                disabled={selectedStatus === 'returned' && !returnedDates[asset.id]}
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Certify Asset
-                              </Button>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                              <div className="space-y-2">
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">Current Status</Label>
+                                  <div className="mt-1">
+                                    <Badge variant="secondary">{asset.status}</Badge>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">Update Status</Label>
+                                  {isCertified ? (
+                                    <div className="mt-1 space-y-1">
+                                      <Badge variant="outline">{selectedStatus}</Badge>
+                                      {asset.returned_date && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Returned: {new Date(asset.returned_date).toLocaleDateString()}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="mt-1 space-y-2">
+                                      <Select
+                                        value={selectedStatus}
+                                        onValueChange={(value) => handleStatusChange(asset.id, value)}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {ASSET_STATUS_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {showReturnedDate && (
+                                        <div className="space-y-1">
+                                          <Label htmlFor={`returned-date-mobile-${asset.id}`} className="text-xs text-muted-foreground">
+                                            Returned Date *
+                                          </Label>
+                                          <Input
+                                            id={`returned-date-mobile-${asset.id}`}
+                                            type="date"
+                                            value={returnedDates[asset.id] || ''}
+                                            onChange={(e) => handleReturnedDateChange(asset.id, e.target.value)}
+                                            required
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {!isCertified && (
+                                <Button
+                                  className="w-full"
+                                  onClick={() => handleCertifyAsset(asset)}
+                                  disabled={selectedStatus === 'returned' && !returnedDates[asset.id]}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Certify Asset
+                                </Button>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
 
