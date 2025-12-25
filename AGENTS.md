@@ -107,9 +107,9 @@ import {
 // Read
 const assets = await assetDb.getAll();
 const asset = await assetDb.getById(id);
-const userAssets = await assetDb.getByEmployee(email);
+const userAssets = await assetDb.getByEmployeeEmail(email);
 
-// Create
+// Create (includes optional issued_date/returned_date fields)
 const newAsset = await assetDb.create({ ...data });
 
 // Update

@@ -126,7 +126,7 @@ Web application that supports organizational SOC2 compliance by tracking client 
 
 **Core Entities:**
 - **Users**: Authentication, roles, MFA settings, passkeys
-- **Assets**: Multi-type support (laptop, mobile phone), ownership tracking
+- **Assets**: Multi-type support (laptop, mobile phone), ownership tracking, issued/returned date tracking
 - **Companies**: Client organizations
 - **Audit Logs**: Immutable action history
 - **Settings**: OIDC, Passkeys, Branding, HubSpot
@@ -275,8 +275,8 @@ export const calculateTotal = (items) => {
 };
 
 // Async for I/O operations
-export const fetchUserAssets = async (userId) => {
-  const assets = await assetDb.getByEmployee(userId);
+export const fetchUserAssets = async (email) => {
+  const assets = await assetDb.getByEmployeeEmail(email);
   return assets;
 };
 ```
@@ -353,8 +353,8 @@ import {
 ```javascript
 // Get all (with optional filtering)
 const assets = await assetDb.getAll();
-const userAssets = await assetDb.getByEmployee(email);
-const teamAssets = await assetDb.getByManager(managerEmail);
+const userAssets = await assetDb.getByEmployeeEmail(email);
+const teamAssets = await assetDb.getByManagerEmail(managerEmail);
 
 // Get by ID
 const asset = await assetDb.getById(assetId);
@@ -380,6 +380,7 @@ const newAsset = await assetDb.create({
   serial_number: 'ABC123',
   asset_tag: 'ASSET-001',
   status: 'active',
+  issued_date: '2025-01-15',  // Optional: when asset was issued
   notes: 'Optional notes'
 });
 
@@ -398,7 +399,8 @@ await auditDb.create({
 // Update asset
 const updated = await assetDb.update(assetId, {
   status: 'returned',
-  notes: 'Returned on 2025-01-15'
+  returned_date: '2025-03-15',  // Optional: when asset was returned
+  notes: 'Returned on 2025-03-15'
 });
 
 // Log the update
@@ -530,7 +532,7 @@ app.get('/api/users',
 ```javascript
 // employees: only their own assets
 if (user.role === 'employee') {
-  assets = await assetDb.getByEmployee(user.email);
+  assets = await assetDb.getByEmployeeEmail(user.email);
 }
 
 // managers: all assets (same as admins and attestation_coordinator)
@@ -1759,6 +1761,6 @@ When in doubt, **read existing code** for patterns and follow them consistently.
 
 ---
 
-**Last Updated**: 2025-12-19
+**Last Updated**: 2025-12-25
 **Repository**: https://github.com/humac/kars
 **Live Demo**: https://kars.jvhlabs.com

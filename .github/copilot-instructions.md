@@ -247,10 +247,10 @@ export default function MyComponent() {
 ```javascript
 // Role-based data filtering
 if (user.role === 'employee') {
-  assets = await assetDb.getByEmployee(user.email);
+  assets = await assetDb.getByEmployeeEmail(user.email);
 } else if (user.role === 'manager') {
-  const own = await assetDb.getByEmployee(user.email);
-  const team = await assetDb.getByManager(user.email);
+  const own = await assetDb.getByEmployeeEmail(user.email);
+  const team = await assetDb.getByManagerEmail(user.email);
   assets = [...own, ...team];
 } else if (user.role === 'admin') {
   assets = await assetDb.getAll();
