@@ -66,8 +66,11 @@ export default function MyAttestationsPage() {
     manager_first_name: '',
     manager_last_name: '',
     manager_email: '',
-    company_id: null
+    company_id: null,
+    issued_date: '',
+    returned_date: ''
   });
+  const [returnedDates, setReturnedDates] = useState({});
   const [assetTypes, setAssetTypes] = useState([]);
   const [loadingAssetTypes, setLoadingAssetTypes] = useState(false);
   const [companies, setCompanies] = useState([]);
@@ -221,12 +224,24 @@ export default function MyAttestationsPage() {
     try {
       // Get the selected status for this asset (or use current status if not changed)
       const status = selectedStatuses[asset.id] || asset.status;
-      
+      const returnedDate = returnedDates[asset.id] || '';
+
+      // Validate returned_date is required when status is 'returned'
+      if (status === 'returned' && !returnedDate) {
+        toast({
+          title: 'Validation Error',
+          description: 'Returned date is required when status is Returned',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const res = await fetch(`/api/attestation/records/${selectedAttestation.id}/assets/${asset.id}`, {
         method: 'PUT',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           attested_status: status,
+          returned_date: status === 'returned' ? returnedDate : null,
           notes: ''
         })
       });
@@ -258,6 +273,21 @@ export default function MyAttestationsPage() {
     setSelectedStatuses(prev => ({
       ...prev,
       [assetId]: newStatus
+    }));
+    // Clear returned_date if status is not 'returned'
+    if (newStatus !== 'returned') {
+      setReturnedDates(prev => {
+        const updated = { ...prev };
+        delete updated[assetId];
+        return updated;
+      });
+    }
+  };
+
+  const handleReturnedDateChange = (assetId, date) => {
+    setReturnedDates(prev => ({
+      ...prev,
+      [assetId]: date
     }));
   };
 
@@ -302,7 +332,9 @@ export default function MyAttestationsPage() {
         manager_first_name: '',
         manager_last_name: '',
         manager_email: '',
-        company_id: null
+        company_id: null,
+        issued_date: '',
+        returned_date: ''
       });
 
       // Reload details to show the new asset
@@ -482,6 +514,7 @@ export default function MyAttestationsPage() {
                           <TableHead>Serial Number</TableHead>
                           <TableHead>Current Status</TableHead>
                           <TableHead>Update Status</TableHead>
+                          <TableHead>Returned Date</TableHead>
                           <TableHead className="text-right">Certification</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -489,6 +522,7 @@ export default function MyAttestationsPage() {
                         {attestationDetails.assets?.map((asset) => {
                           const isCertified = certifiedAssetIds.has(asset.id);
                           const selectedStatus = selectedStatuses[asset.id] || asset.status;
+                          const showReturnedDate = selectedStatus === 'returned' && !isCertified;
                           return (
                             <TableRow key={asset.id} className={isCertified ? 'bg-green-50 dark:bg-green-950' : ''}>
                               <TableCell className="font-medium">{asset.asset_type}</TableCell>
@@ -520,6 +554,21 @@ export default function MyAttestationsPage() {
                                   </Select>
                                 )}
                               </TableCell>
+                              <TableCell>
+                                {showReturnedDate ? (
+                                  <Input
+                                    type="date"
+                                    value={returnedDates[asset.id] || ''}
+                                    onChange={(e) => handleReturnedDateChange(asset.id, e.target.value)}
+                                    className="w-[150px]"
+                                    required
+                                  />
+                                ) : isCertified && asset.returned_date ? (
+                                  <span className="text-sm">{new Date(asset.returned_date).toLocaleDateString()}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right">
                                 {isCertified ? (
                                   <div className="flex items-center justify-end gap-2 text-green-600">
@@ -530,6 +579,7 @@ export default function MyAttestationsPage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleCertifyAsset(asset)}
+                                    disabled={selectedStatus === 'returned' && !returnedDates[asset.id]}
                                   >
                                     Certify
                                   </Button>
@@ -689,6 +739,15 @@ export default function MyAttestationsPage() {
                 value={newAssetForm.asset_tag}
                 onChange={(e) => setNewAssetForm({ ...newAssetForm, asset_tag: e.target.value })}
                 placeholder="Enter asset tag"
+              />
+            </div>
+            <div>
+              <Label htmlFor="issued_date">Issued Date</Label>
+              <Input
+                id="issued_date"
+                type="date"
+                value={newAssetForm.issued_date}
+                onChange={(e) => setNewAssetForm({ ...newAssetForm, issued_date: e.target.value })}
               />
             </div>
 

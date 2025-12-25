@@ -42,7 +42,7 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
   
   // Initialize form with required fields
   // For employees, prepopulate their information and manager information
-  const [form, setForm] = useState({ 
+  const [form, setForm] = useState({
     employee_first_name: isEmployee ? (user.first_name || '') : '',
     employee_last_name: isEmployee ? (user.last_name || '') : '',
     employee_email: isEmployee ? user.email : '',
@@ -56,6 +56,8 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
     serial_number: '',
     asset_tag: '',
     status: 'active',
+    issued_date: '',
+    returned_date: '',
     notes: '',
   });
   
@@ -161,11 +163,21 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
     }
 
     // Validate required fields
-    if (!form.employee_first_name || !form.employee_last_name || !form.employee_email || !form.company_name || 
+    if (!form.employee_first_name || !form.employee_last_name || !form.employee_email || !form.company_name ||
         !form.asset_type || !form.serial_number || !form.asset_tag) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate returned_date is required when status is 'returned'
+    if (form.status === 'returned' && !form.returned_date) {
+      toast({
+        title: "Validation Error",
+        description: "Returned date is required when status is 'Returned'",
         variant: "destructive",
       });
       return;
@@ -187,6 +199,8 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
         serial_number: form.serial_number,
         asset_tag: form.asset_tag,
         status: form.status,
+        issued_date: form.issued_date || null,
+        returned_date: form.status === 'returned' ? form.returned_date : null,
         notes: form.notes,
       };
       
@@ -485,9 +499,9 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select 
-                value={form.status} 
-                onValueChange={(value) => setForm(prev => ({ ...prev, status: value }))}
+              <Select
+                value={form.status}
+                onValueChange={(value) => setForm(prev => ({ ...prev, status: value, returned_date: value !== 'returned' ? '' : prev.returned_date }))}
               >
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Select status" />
@@ -500,6 +514,35 @@ export default function AssetRegisterModal({ onClose, onRegistered }) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="issued_date">Issued Date</Label>
+                <Input
+                  id="issued_date"
+                  name="issued_date"
+                  type="date"
+                  value={form.issued_date}
+                  onChange={onChange}
+                  className="text-base"
+                />
+              </div>
+
+              {form.status === 'returned' && (
+                <div className="space-y-2">
+                  <Label htmlFor="returned_date">Returned Date *</Label>
+                  <Input
+                    id="returned_date"
+                    name="returned_date"
+                    type="date"
+                    value={form.returned_date}
+                    onChange={onChange}
+                    required
+                    className="text-base"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

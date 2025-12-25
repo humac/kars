@@ -561,11 +561,16 @@ export default function createAttestationRouter(deps) {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      const { attested_status, notes } = req.body;
+      const { attested_status, notes, returned_date } = req.body;
       const asset = await assetDb.getById(req.params.assetId);
 
       if (!asset) {
         return res.status(404).json({ error: 'Asset not found' });
+      }
+
+      // Validate returned_date is provided when status is 'returned'
+      if (attested_status === 'returned' && !returned_date) {
+        return res.status(400).json({ error: 'Returned date is required when status is returned' });
       }
 
       await attestationAssetDb.create({
@@ -587,7 +592,9 @@ export default function createAttestationRouter(deps) {
 
       // If attested_status changed, update the asset
       if (attested_status && attested_status !== asset.status) {
-        await assetDb.updateStatus(asset.id, attested_status, notes);
+        // Pass returned_date if status is 'returned'
+        const returnedDateValue = attested_status === 'returned' ? returned_date : null;
+        await assetDb.updateStatus(asset.id, attested_status, notes, returnedDateValue);
 
         await auditDb.log(
           'update',
@@ -706,6 +713,8 @@ export default function createAttestationRouter(deps) {
             serial_number: newAsset.serial_number,
             asset_tag: newAsset.asset_tag,
             status: 'active',
+            issued_date: newAsset.issued_date || null,
+            returned_date: newAsset.returned_date || null,
             notes: newAsset.notes || ''
           });
 

@@ -574,6 +574,8 @@ const initDb = async () => {
       serial_number TEXT NOT NULL UNIQUE,
       asset_tag TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT 'active',
+      issued_date TIMESTAMP,
+      returned_date TIMESTAMP,
       registration_date TIMESTAMP NOT NULL,
       last_updated TIMESTAMP NOT NULL,
       notes TEXT
@@ -596,6 +598,8 @@ const initDb = async () => {
       serial_number TEXT NOT NULL UNIQUE,
       asset_tag TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT 'active',
+      issued_date TEXT,
+      returned_date TEXT,
       registration_date TEXT NOT NULL,
       last_updated TEXT NOT NULL,
       notes TEXT
@@ -1054,6 +1058,8 @@ const initDb = async () => {
       asset_tag TEXT NOT NULL,
       company_id INTEGER REFERENCES companies(id),
       notes TEXT,
+      issued_date TIMESTAMP,
+      returned_date TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   ` : `
@@ -1067,6 +1073,8 @@ const initDb = async () => {
       asset_tag TEXT NOT NULL,
       company_id INTEGER,
       notes TEXT,
+      issued_date TEXT,
+      returned_date TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(attestation_record_id) REFERENCES attestation_records(id) ON DELETE CASCADE,
       FOREIGN KEY(company_id) REFERENCES companies(id)
@@ -1451,6 +1459,50 @@ const initDb = async () => {
     }
   } catch (err) {
     console.error('Migration error (attestation_new_assets employee/manager fields):', err.message);
+    // Don't fail initialization
+  }
+
+  // Migration: Add issued_date and returned_date columns to assets table
+  try {
+    const assetCols = isPostgres
+      ? await dbAll(`
+          SELECT column_name as name
+          FROM information_schema.columns
+          WHERE table_name = 'assets'
+        `)
+      : await dbAll("PRAGMA table_info(assets)");
+
+    const hasIssuedDate = assetCols.some(col => col.name === 'issued_date');
+    if (!hasIssuedDate) {
+      console.log('Migrating assets table: adding issued_date and returned_date columns...');
+      await dbRun("ALTER TABLE assets ADD COLUMN issued_date " + (isPostgres ? "TIMESTAMP" : "TEXT"));
+      await dbRun("ALTER TABLE assets ADD COLUMN returned_date " + (isPostgres ? "TIMESTAMP" : "TEXT"));
+      console.log('Migration complete: Added issued_date and returned_date columns to assets');
+    }
+  } catch (err) {
+    console.error('Migration error (assets issued_date/returned_date columns):', err.message);
+    // Don't fail initialization
+  }
+
+  // Migration: Add issued_date and returned_date columns to attestation_new_assets table
+  try {
+    const newAssetCols = isPostgres
+      ? await dbAll(`
+          SELECT column_name as name
+          FROM information_schema.columns
+          WHERE table_name = 'attestation_new_assets'
+        `)
+      : await dbAll("PRAGMA table_info(attestation_new_assets)");
+
+    const hasIssuedDate = newAssetCols.some(col => col.name === 'issued_date');
+    if (!hasIssuedDate) {
+      console.log('Migrating attestation_new_assets table: adding issued_date and returned_date columns...');
+      await dbRun("ALTER TABLE attestation_new_assets ADD COLUMN issued_date " + (isPostgres ? "TIMESTAMP" : "TEXT"));
+      await dbRun("ALTER TABLE attestation_new_assets ADD COLUMN returned_date " + (isPostgres ? "TIMESTAMP" : "TEXT"));
+      console.log('Migration complete: Added issued_date and returned_date columns to attestation_new_assets');
+    }
+  } catch (err) {
+    console.error('Migration error (attestation_new_assets issued_date/returned_date columns):', err.message);
     // Don't fail initialization
   }
 
@@ -1877,8 +1929,8 @@ export const assetDb = {
         employee_first_name, employee_last_name, employee_email, owner_id,
         manager_first_name, manager_last_name, manager_email, manager_id,
         company_id, asset_type, make, model, serial_number, asset_tag,
-        status, registration_date, last_updated, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, issued_date, returned_date, registration_date, last_updated, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ${isPostgres ? 'RETURNING id' : ''}
     `;
 
@@ -1900,6 +1952,8 @@ export const assetDb = {
       asset.serial_number,
       asset.asset_tag,
       asset.status || 'active',
+      asset.issued_date || null,
+      asset.returned_date || null,
       now,
       now,
       asset.notes || ''
@@ -1928,6 +1982,8 @@ export const assetDb = {
     const rows = await dbAll(query);
     return rows.map((row) => ({
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -1953,6 +2009,8 @@ export const assetDb = {
     if (!row) return null;
     return {
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     };
@@ -2002,17 +2060,19 @@ export const assetDb = {
     const rows = await dbAll(query, params);
     return rows.map((row) => ({
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
   },
-  updateStatus: async (id, status, notes) => {
+  updateStatus: async (id, status, notes, returnedDate = null) => {
     const now = new Date().toISOString();
     return dbRun(`
       UPDATE assets
-      SET status = ?, last_updated = ?, notes = ?
+      SET status = ?, last_updated = ?, notes = ?, returned_date = ?
       WHERE id = ?
-    `, [status, now, notes || '', id]);
+    `, [status, now, notes || '', returnedDate, id]);
   },
   update: async (id, asset) => {
     const now = new Date().toISOString();
@@ -2051,7 +2111,7 @@ export const assetDb = {
       SET employee_first_name = ?, employee_last_name = ?, employee_email = ?, owner_id = ?,
           manager_first_name = ?, manager_last_name = ?, manager_email = ?, manager_id = ?,
           company_id = ?, asset_type = ?, make = ?, model = ?, serial_number = ?, asset_tag = ?,
-          status = ?, last_updated = ?, notes = ?
+          status = ?, issued_date = ?, returned_date = ?, last_updated = ?, notes = ?
       WHERE id = ?
     `, [
       asset.employee_first_name || '', // stored for unregistered users
@@ -2069,6 +2129,8 @@ export const assetDb = {
       asset.serial_number,
       asset.asset_tag,
       asset.status,
+      asset.issued_date || null,
+      asset.returned_date || null,
       now,
       asset.notes || '',
       id
@@ -2095,6 +2157,8 @@ export const assetDb = {
     const rows = await dbAll(query, [email]);
     return rows.map((row) => ({
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2119,6 +2183,8 @@ export const assetDb = {
     const rows = await dbAll(query, [email]);
     return rows.map((row) => ({
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2224,6 +2290,8 @@ export const assetDb = {
     const rows = await dbAll(query, ids);
     return rows.map((row) => ({
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2305,6 +2373,8 @@ export const assetDb = {
     const rows = await dbAll(baseQuery, params);
     return rows.map((row) => ({
       ...row,
+      issued_date: normalizeDates(row.issued_date),
+      returned_date: normalizeDates(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -3829,20 +3899,22 @@ export const attestationNewAssetDb = {
     const now = new Date().toISOString();
     if (isPostgres) {
       const result = await dbRun(
-        `INSERT INTO attestation_new_assets (attestation_record_id, asset_type, make, model, serial_number, asset_tag, company_id, notes, 
-         employee_first_name, employee_last_name, employee_email, manager_first_name, manager_last_name, manager_email, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+        `INSERT INTO attestation_new_assets (attestation_record_id, asset_type, make, model, serial_number, asset_tag, company_id, notes,
+         employee_first_name, employee_last_name, employee_email, manager_first_name, manager_last_name, manager_email, issued_date, returned_date, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`,
         [asset.attestation_record_id, asset.asset_type, asset.make, asset.model, asset.serial_number, asset.asset_tag, asset.company_id, asset.notes,
-         asset.employee_first_name, asset.employee_last_name, asset.employee_email, asset.manager_first_name, asset.manager_last_name, asset.manager_email, now]
+         asset.employee_first_name, asset.employee_last_name, asset.employee_email, asset.manager_first_name, asset.manager_last_name, asset.manager_email,
+         asset.issued_date || null, asset.returned_date || null, now]
       );
       return { id: result.rows[0].id };
     } else {
       const result = await dbRun(
         `INSERT INTO attestation_new_assets (attestation_record_id, asset_type, make, model, serial_number, asset_tag, company_id, notes,
-         employee_first_name, employee_last_name, employee_email, manager_first_name, manager_last_name, manager_email, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         employee_first_name, employee_last_name, employee_email, manager_first_name, manager_last_name, manager_email, issued_date, returned_date, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [asset.attestation_record_id, asset.asset_type, asset.make, asset.model, asset.serial_number, asset.asset_tag, asset.company_id, asset.notes,
-         asset.employee_first_name, asset.employee_last_name, asset.employee_email, asset.manager_first_name, asset.manager_last_name, asset.manager_email, now]
+         asset.employee_first_name, asset.employee_last_name, asset.employee_email, asset.manager_first_name, asset.manager_last_name, asset.manager_email,
+         asset.issued_date || null, asset.returned_date || null, now]
       );
       return { id: result.lastInsertRowid };
     }
@@ -3852,6 +3924,8 @@ export const attestationNewAssetDb = {
     const assets = await dbAll('SELECT * FROM attestation_new_assets WHERE attestation_record_id = ?', [recordId]);
     return assets.map(a => ({
       ...a,
+      issued_date: normalizeDates(a.issued_date),
+      returned_date: normalizeDates(a.returned_date),
       created_at: normalizeDates(a.created_at)
     }));
   }

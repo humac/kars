@@ -40,13 +40,23 @@ const AssetViewModal = ({ asset, open = true, onClose }) => {
 
           <div className="space-y-1">
             <div className="text-muted-foreground text-xs">Asset Tag</div>
-            <div className="font-mono">{asset.laptop_asset_tag || '-'}</div>
+            <div className="font-mono">{asset.asset_tag || asset.laptop_asset_tag || '-'}</div>
 
             <div className="text-muted-foreground text-xs mt-2">Serial</div>
-            <div className="font-mono">{asset.laptop_serial_number || '-'}</div>
+            <div className="font-mono">{asset.serial_number || asset.laptop_serial_number || '-'}</div>
 
             <div className="text-muted-foreground text-xs mt-2">Manager</div>
             <div className="text-sm">{asset.manager_first_name && asset.manager_last_name ? `${asset.manager_first_name} ${asset.manager_last_name}` : '-'}</div>
+
+            <div className="text-muted-foreground text-xs mt-2">Issued Date</div>
+            <div className="text-sm">{asset.issued_date ? new Date(asset.issued_date).toLocaleDateString() : '-'}</div>
+
+            {asset.returned_date && (
+              <>
+                <div className="text-muted-foreground text-xs mt-2">Returned Date</div>
+                <div className="text-sm">{new Date(asset.returned_date).toLocaleDateString()}</div>
+              </>
+            )}
           </div>
 
           <div className="sm:col-span-2 mt-1">

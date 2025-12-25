@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -27,15 +28,27 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
 
   // Only status can be changed after asset is registered
   const [status, setStatus] = useState(asset.status || 'active');
+  const [returnedDate, setReturnedDate] = useState(asset.returned_date || '');
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    // Validate returned_date is required when status is 'returned'
+    if (status === 'returned' && !returnedDate) {
+      toast({
+        title: "Validation Error",
+        description: "Returned date is required when status is 'Returned'",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       // Merge status with existing asset data to satisfy backend validation
       const payload = {
         ...asset, // Include all existing fields
         status: status,
+        returned_date: status === 'returned' ? returnedDate : null,
       };
 
       const res = await fetch(`/api/assets/${asset.id}`, {
@@ -152,6 +165,18 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
                 <div>{formatDate(asset.last_updated)}</div>
               </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
+              <div>
+                <span className="font-medium text-muted-foreground">Issued Date:</span>
+                <div>{formatDate(asset.issued_date)}</div>
+              </div>
+              {asset.returned_date && (
+                <div>
+                  <span className="font-medium text-muted-foreground">Returned Date:</span>
+                  <div>{formatDate(asset.returned_date)}</div>
+                </div>
+              )}
+            </div>
             {asset.notes && (
               <div>
                 <span className="font-medium text-muted-foreground">Notes:</span>
@@ -160,12 +185,17 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
             )}
           </div>
 
-          {/* Editable Field - Status Only */}
+          {/* Editable Fields */}
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
               value={status}
-              onValueChange={setStatus}
+              onValueChange={(value) => {
+                setStatus(value);
+                if (value !== 'returned') {
+                  setReturnedDate('');
+                }
+              }}
             >
               <SelectTrigger id="status">
                 <SelectValue placeholder="Select status" />
@@ -179,6 +209,19 @@ export default function AssetEditModal({ asset, currentUser, onClose, onSaved })
               </SelectContent>
             </Select>
           </div>
+
+          {status === 'returned' && (
+            <div className="space-y-2">
+              <Label htmlFor="returned_date">Returned Date *</Label>
+              <Input
+                id="returned_date"
+                type="date"
+                value={returnedDate}
+                onChange={(e) => setReturnedDate(e.target.value)}
+                required
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2">

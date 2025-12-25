@@ -896,6 +896,8 @@ GET /api/assets
     "laptop_serial_number": "SN123456",
     "laptop_asset_tag": "ASSET-001",
     "status": "active",
+    "issued_date": "2024-01-01",
+    "returned_date": null,
     "registration_date": "2024-01-01T00:00:00.000Z",
     "last_updated": "2024-01-01T00:00:00.000Z",
     "notes": "Primary development laptop"
@@ -930,6 +932,7 @@ POST /api/assets
   "laptop_serial_number": "SN123456",
   "laptop_asset_tag": "ASSET-001",
   "status": "active",
+  "issued_date": "2024-01-01",
   "notes": "Primary development laptop"
 }
 ```
@@ -949,7 +952,11 @@ POST /api/assets
 - `laptop_make` - Laptop manufacturer (Dell, Apple, Lenovo, etc.)
 - `laptop_model` - Laptop model
 - `status` - Asset status (defaults to 'active')
+- `issued_date` - Date asset was issued to employee (YYYY-MM-DD format)
 - `notes` - Additional notes
+
+**Conditional Fields:**
+- `returned_date` - Required when status is 'returned' (YYYY-MM-DD format)
 
 **Response:** `201 Created`
 ```json
@@ -969,6 +976,8 @@ POST /api/assets
     "laptop_serial_number": "SN123456",
     "laptop_asset_tag": "ASSET-001",
     "status": "active",
+    "issued_date": "2024-01-01",
+    "returned_date": null,
     "registration_date": "2024-01-01T00:00:00.000Z",
     "last_updated": "2024-01-01T00:00:00.000Z",
     "notes": "Primary development laptop"
@@ -978,6 +987,7 @@ POST /api/assets
 
 **Errors:**
 - `400` - Missing required fields (employee_first_name, employee_last_name, employee_email, company_name, laptop_serial_number, laptop_asset_tag)
+- `400` - Missing returned_date when status is 'returned'
 - `409` - Duplicate serial number or asset tag
 
 ---
@@ -1010,13 +1020,15 @@ Optional columns:
 - `laptop_make`
 - `laptop_model`
 - `status` (active, returned, lost, damaged, retired)
+- `issued_date` (YYYY-MM-DD format)
+- `returned_date` (YYYY-MM-DD format, should be provided when status is 'returned')
 - `notes`
 
 **Example CSV:**
 ```csv
-employee_first_name,employee_last_name,employee_email,manager_first_name,manager_last_name,manager_email,company_name,laptop_make,laptop_model,laptop_serial_number,laptop_asset_tag,status,notes
-Jane,Doe,jane.doe@example.com,John,Manager,john.manager@example.com,Acme Corp,Lenovo,ThinkPad T14,ABC12345,AT-1001,active,Primary laptop issued Q1
-Sam,Smith,sam.smith@example.com,John,Manager,john.manager@example.com,Globex Inc,Apple,MacBook Pro,XYZ98765,AT-1002,returned,Returned after project completion
+employee_first_name,employee_last_name,employee_email,manager_first_name,manager_last_name,manager_email,company_name,laptop_make,laptop_model,laptop_serial_number,laptop_asset_tag,status,issued_date,returned_date,notes
+Jane,Doe,jane.doe@example.com,John,Manager,john.manager@example.com,Acme Corp,Lenovo,ThinkPad T14,ABC12345,AT-1001,active,2024-01-15,,Primary laptop issued Q1
+Sam,Smith,sam.smith@example.com,John,Manager,john.manager@example.com,Globex Inc,Apple,MacBook Pro,XYZ98765,AT-1002,returned,2023-06-01,2024-01-10,Returned after project completion
 ```
 
 **Response:** `200 OK`
@@ -1059,9 +1071,15 @@ PATCH /api/assets/:id/status
 ```json
 {
   "status": "returned",
+  "returned_date": "2024-01-15",
   "notes": "Returned to IT department"
 }
 ```
+
+**Fields:**
+- `status` - New status (active, returned, lost, damaged, retired)
+- `returned_date` - Required when status is 'returned' (YYYY-MM-DD format)
+- `notes` - Optional notes about the status change
 
 **Response:** `200 OK`
 ```json
@@ -1070,6 +1088,7 @@ PATCH /api/assets/:id/status
   "asset": {
     "id": 1,
     "status": "returned",
+    "returned_date": "2024-01-15",
     "last_updated": "2024-01-15T10:00:00.000Z",
     "notes": "Returned to IT department"
   }
@@ -1079,6 +1098,7 @@ PATCH /api/assets/:id/status
 **Errors:**
 - `404` - Asset not found
 - `400` - Invalid status
+- `400` - Missing returned_date when status is 'returned'
 
 ---
 
@@ -1704,6 +1724,20 @@ PUT /api/attestation/records/:id/assets/:assetId
 }
 ```
 
+**Request Body (when status is 'returned'):**
+```json
+{
+  "status": "returned",
+  "returned_date": "2024-01-15",
+  "notes": "Returned to IT department"
+}
+```
+
+**Fields:**
+- `status` - Asset status (active, returned, lost, damaged)
+- `returned_date` - Required when status is 'returned' (YYYY-MM-DD format)
+- `notes` - Optional notes
+
 **Response:** `200 OK`
 ```json
 {
@@ -1712,6 +1746,7 @@ PUT /api/attestation/records/:id/assets/:assetId
 ```
 
 **Errors:**
+- `400` - Missing returned_date when status is 'returned'
 - `403` - Not your attestation record
 - `404` - Record or asset not found
 
@@ -1733,9 +1768,19 @@ POST /api/attestation/records/:id/assets/new
   "laptop_model": "Latitude 5420",
   "laptop_serial_number": "SN789012",
   "laptop_asset_tag": "ASSET-999",
+  "issued_date": "2024-01-01",
   "notes": "Found this device that wasn't in the system"
 }
 ```
+
+**Fields:**
+- `asset_type` - Type of asset (laptop, mobile phone)
+- `laptop_make` - Manufacturer
+- `laptop_model` - Model name
+- `laptop_serial_number` - Serial number
+- `laptop_asset_tag` - Asset tag
+- `issued_date` - Optional date asset was issued (YYYY-MM-DD format)
+- `notes` - Optional notes
 
 **Response:** `201 Created`
 ```json

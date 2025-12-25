@@ -16,7 +16,10 @@ Complete feature overview of the Asset Compliance System (ACS).
   - Manager first name, last name, email
   - Laptop make, model
   - Status (defaults to 'active')
+  - Issued Date (when asset was assigned to employee)
   - Notes
+- Conditional fields:
+  - Returned Date (required when status is set to 'returned')
 - **Role-based prepopulation**:
   - **Employees**: First/last name and email prepopulated from profile and set to readonly. Manager information also prepopulated from profile and readonly. Employees can only register assets for themselves.
   - **Managers & Admins**: All fields editable, can register assets for anyone
@@ -37,7 +40,7 @@ Complete feature overview of the Asset Compliance System (ACS).
 - **Bulk Import** (Admin & Manager Only)
   - CSV import with validation feedback for admins and managers
   - Required CSV fields: employee_first_name, employee_last_name, employee_email, company_name, laptop_serial_number, laptop_asset_tag
-  - Optional CSV fields: manager_first_name, manager_last_name, manager_email, laptop_make, laptop_model, status, notes
+  - Optional CSV fields: manager_first_name, manager_last_name, manager_email, laptop_make, laptop_model, status, issued_date, returned_date, notes
   - Displays per-row success/errors after upload
   - Refreshes asset table after import completes
   - Download example CSV template with proper field names
@@ -45,6 +48,9 @@ Complete feature overview of the Asset Compliance System (ACS).
 **Asset Status Management**
 - Update asset status: Active, Returned, Lost, Damaged, Retired
 - Add notes when updating status
+- **Date tracking:**
+  - Issued Date: When the asset was assigned to the employee
+  - Returned Date: Required when status is set to "Returned"
 - Status change tracking in audit logs
 - Visual status badges with color coding
 - History of all status changes
@@ -173,6 +179,7 @@ The Attestation Workflow system enables administrators to create periodic campai
 - For each asset:
   - Confirm current status
   - Update status if changed (active, returned, lost, damaged)
+  - If status is "Returned", must provide the returned date before certifying
   - Add notes about asset condition
 - Report new/unregistered assets discovered during review:
   - Full asset details (type, make, model, serial number, asset tag)

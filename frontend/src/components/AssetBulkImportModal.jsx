@@ -144,6 +144,8 @@ export default function AssetBulkImportModal({ onClose, onImported }) {
                   <li>make</li>
                   <li>model</li>
                   <li>status (active, returned, lost, damaged, retired)</li>
+                  <li>issued_date (YYYY-MM-DD format)</li>
+                  <li>returned_date (YYYY-MM-DD format, required if status is returned)</li>
                   <li>notes</li>
                 </ul>
               </div>

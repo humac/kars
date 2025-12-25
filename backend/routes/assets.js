@@ -130,6 +130,8 @@ export default function createAssetsRouter(deps) {
           serial_number: normalizedRow.serial_number,
           asset_tag: normalizedRow.asset_tag,
           status: status,
+          issued_date: normalizedRow.issued_date || null,
+          returned_date: normalizedRow.returned_date || null,
           notes: normalizedRow.notes || ''
         };
 

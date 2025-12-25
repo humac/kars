@@ -133,6 +133,9 @@ ACS helps consulting organizations maintain accountability for client-owned asse
 - **Multi-Type Asset Support** - Track laptops, mobile phones, and other assets
   - Asset type selector (laptop, mobile phone)
   - Generic fields: make, model, serial number, asset tag
+- **Date Tracking** - Track asset lifecycle with date fields
+  - Issued Date: When the asset was assigned to the employee
+  - Returned Date: Required when status is set to "Returned"
 - **Self-Service Registration** - Consultants register client assets with separated name fields for better data quality
   - Employee first/last name, email (prepopulated and readonly for employees)
   - Manager first/last name, email (prepopulated from employee profile for employees)
@@ -145,7 +148,7 @@ ACS helps consulting organizations maintain accountability for client-owned asse
   - Managers: View all assets (same as admins); cannot edit employee assets
   - Admins: View and edit all assets
 - **Automatic Manager Sync** - When an employee's manager changes, all their assets are automatically updated with the new manager reference
-- **Bulk Import/Export** - CSV importers for assets (with separated name fields) and companies plus CSV audit export
+- **Bulk Import/Export** - CSV importers for assets (with separated name fields and date fields) and companies plus CSV audit export
 
 ### 🏢 Company Management (Admin Only)
 - Create, edit, and delete client companies
