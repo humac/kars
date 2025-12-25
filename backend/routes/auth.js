@@ -21,6 +21,9 @@ export default function createAuthRouter(deps) {
     userDb,
     auditDb,
     passwordResetTokenDb,
+    attestationCampaignDb,
+    attestationRecordDb,
+    attestationPendingInviteDb,
     // Auth
     authenticate,
     hashPassword,
@@ -163,6 +166,39 @@ export default function createAuthRouter(deps) {
         finalUser.email
       );
 
+      // Check for pending attestation invites and convert them
+      let hasActiveAttestation = false;
+      try {
+        if (attestationPendingInviteDb && attestationCampaignDb && attestationRecordDb) {
+          const pendingInvites = await attestationPendingInviteDb.getActiveByEmail(finalUser.email);
+          for (const invite of pendingInvites) {
+            // Only convert if campaign is still active
+            const campaign = await attestationCampaignDb.getById(invite.campaign_id);
+            if (campaign && campaign.status === 'active') {
+              // Create attestation record
+              const record = await attestationRecordDb.create({
+                campaign_id: invite.campaign_id,
+                user_id: finalUser.id,
+                status: 'pending'
+              });
+
+              // Update invite
+              await attestationPendingInviteDb.update(invite.id, {
+                registered_at: new Date().toISOString(),
+                converted_record_id: record.id
+              });
+
+              hasActiveAttestation = true;
+
+              logger.info({ email: finalUser.email, campaignName: campaign.name }, 'Converted pending invite to attestation record during registration');
+            }
+          }
+        }
+      } catch (inviteError) {
+        logger.error({ err: inviteError }, 'Error converting pending attestation invites during registration');
+        // Don't fail registration if invite conversion fails
+      }
+
       res.status(201).json({
         message: 'User registered successfully',
         token,
@@ -175,7 +211,8 @@ export default function createAuthRouter(deps) {
           manager_first_name: finalUser.manager_first_name,
           manager_last_name: finalUser.manager_last_name,
           manager_email: finalUser.manager_email
-        }
+        },
+        redirectToAttestations: hasActiveAttestation
       });
     } catch (error) {
       logger.error({ err: error }, 'Registration error');

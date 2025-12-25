@@ -176,6 +176,9 @@ export function mountRoutes(app, deps) {
     auditDb: deps.auditDb,
     assetDb: deps.assetDb,
     passwordResetTokenDb: deps.passwordResetTokenDb,
+    attestationCampaignDb: deps.attestationCampaignDb,
+    attestationRecordDb: deps.attestationRecordDb,
+    attestationPendingInviteDb: deps.attestationPendingInviteDb,
     // Auth
     authenticate: deps.authenticate,
     hashPassword: deps.hashPassword,
