@@ -338,11 +338,11 @@ const AuditReportingNew = () => {
                       description={`${summaryEnhanced.byStatus?.lost || 0} lost, ${summaryEnhanced.byStatus?.damaged || 0} damaged`}
                     />
                     <KPICard
-                      title="Compliance Score"
+                      title="Active Rate"
                       value={`${summaryEnhanced.complianceScore}%`}
-                      icon={Shield}
+                      icon={Activity}
                       variant={summaryEnhanced.complianceScore >= 80 ? 'success' : summaryEnhanced.complianceScore >= 60 ? 'warning' : 'danger'}
-                      description="Asset management compliance"
+                      description="Percentage of active assets"
                     />
                   </div>
 

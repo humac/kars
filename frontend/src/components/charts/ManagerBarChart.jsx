@@ -44,7 +44,8 @@ export default function ManagerBarChart({ data, title = 'Assets by Manager' }) {
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '6px'
                 }}
-                formatter={(value) => [value, 'Assets']}
+                labelFormatter={(label) => label}
+                formatter={(value, name, props) => [`${value} assets`, props.payload.name]}
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (

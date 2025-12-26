@@ -47,7 +47,8 @@ export default function CompanyBarChart({ data, title = 'Assets by Company', top
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '6px'
                 }}
-                formatter={(value) => [value, 'Assets']}
+                labelFormatter={(label) => label}
+                formatter={(value, name, props) => [`${value} assets`, props.payload.name]}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry, index) => (
