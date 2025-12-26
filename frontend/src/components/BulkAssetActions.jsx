@@ -94,6 +94,22 @@ export default function BulkAssetActions({
     }
   };
 
+  // Format date to YYYY-MM-DD, stripping any time component
+  const formatDateForCSV = (dateValue) => {
+    if (!dateValue) return '';
+    try {
+      // If already in YYYY-MM-DD format, return as-is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        return dateValue;
+      }
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
+
   const exportAssetsToCSV = (assetsToExport, exportType = 'export') => {
     const headers = [
       'employee_first_name',
@@ -109,14 +125,23 @@ export default function BulkAssetActions({
       'serial_number',
       'asset_tag',
       'status',
-      'registration_date',
+      'issued_date',
+      'returned_date',
       'notes',
     ];
+
+    // Date fields that need formatting
+    const dateFields = ['issued_date', 'returned_date'];
 
     const csvContent = [
       headers.join(','),
       ...assetsToExport.map(asset =>
-        headers.map(h => `"${(asset[h] || '').toString().replace(/"/g, '""')}"`).join(',')
+        headers.map(h => {
+          const value = asset[h] || '';
+          // Format date fields to YYYY-MM-DD
+          const formattedValue = dateFields.includes(h) ? formatDateForCSV(value) : value.toString();
+          return `"${formattedValue.replace(/"/g, '""')}"`;
+        }).join(',')
       ),
     ].join('\n');
 

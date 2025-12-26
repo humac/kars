@@ -194,7 +194,7 @@ const AssetTableRow = memo(function AssetTableRow({
         </TableCell>
 
         {/* Serial Number */}
-        <TableCell className="font-mono text-sm">
+        <TableCell>
           {asset.serial_number || '-'}
         </TableCell>
 

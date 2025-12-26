@@ -1820,11 +1820,74 @@ const initDb = async () => {
     const deleteQuery = isPostgres
       ? 'DELETE FROM email_templates WHERE template_key = $1'
       : 'DELETE FROM email_templates WHERE template_key = ?';
-    
+
     await dbRun(deleteQuery, ['attestation_ready']);
     console.log('Removed obsolete attestation_ready template');
   } catch (err) {
     console.error('Error removing attestation_ready template:', err);
+  }
+
+  // Migration: Convert date columns from ISO timestamp to YYYY-MM-DD format
+  // This migration normalizes all date fields to date-only format without time components
+  console.log('Checking for date columns that need YYYY-MM-DD format conversion...');
+  try {
+    // Helper to extract YYYY-MM-DD from ISO timestamp
+    const extractDateSQL = isPostgres
+      ? (col) => `CASE WHEN ${col} IS NOT NULL AND ${col} LIKE '%T%' THEN SUBSTRING(${col} FROM 1 FOR 10) ELSE ${col} END`
+      : (col) => `CASE WHEN ${col} IS NOT NULL AND ${col} LIKE '%T%' THEN SUBSTR(${col}, 1, 10) ELSE ${col} END`;
+
+    // Check if migration is needed by looking for ISO timestamps in assets table
+    const sampleAsset = await dbGet(
+      "SELECT issued_date, returned_date FROM assets WHERE issued_date LIKE '%T%' OR returned_date LIKE '%T%' LIMIT 1"
+    );
+
+    if (sampleAsset) {
+      console.log('Migrating assets table: converting dates to YYYY-MM-DD format...');
+      await dbRun(`
+        UPDATE assets
+        SET issued_date = ${extractDateSQL('issued_date')},
+            returned_date = ${extractDateSQL('returned_date')}
+        WHERE issued_date LIKE '%T%' OR returned_date LIKE '%T%'
+      `);
+      console.log('Migration complete: Converted asset dates to YYYY-MM-DD format');
+    }
+
+    // Check attestation_new_assets table
+    const sampleNewAsset = await dbGet(
+      "SELECT issued_date, returned_date FROM attestation_new_assets WHERE issued_date LIKE '%T%' OR returned_date LIKE '%T%' LIMIT 1"
+    );
+
+    if (sampleNewAsset) {
+      console.log('Migrating attestation_new_assets table: converting dates to YYYY-MM-DD format...');
+      await dbRun(`
+        UPDATE attestation_new_assets
+        SET issued_date = ${extractDateSQL('issued_date')},
+            returned_date = ${extractDateSQL('returned_date')}
+        WHERE issued_date LIKE '%T%' OR returned_date LIKE '%T%'
+      `);
+      console.log('Migration complete: Converted attestation_new_assets dates to YYYY-MM-DD format');
+    }
+
+    // Check attestation_campaigns table
+    const sampleCampaign = await dbGet(
+      "SELECT start_date, end_date FROM attestation_campaigns WHERE start_date LIKE '%T%' OR end_date LIKE '%T%' LIMIT 1"
+    );
+
+    if (sampleCampaign) {
+      console.log('Migrating attestation_campaigns table: converting dates to YYYY-MM-DD format...');
+      await dbRun(`
+        UPDATE attestation_campaigns
+        SET start_date = ${extractDateSQL('start_date')},
+            end_date = ${extractDateSQL('end_date')}
+        WHERE start_date LIKE '%T%' OR end_date LIKE '%T%'
+      `);
+      console.log('Migration complete: Converted attestation_campaigns dates to YYYY-MM-DD format');
+    }
+
+    console.log('Date format migration check complete');
+  } catch (err) {
+    console.error('Date format migration error:', err.message);
+    // Don't fail initialization
   }
 
   // Indexes
@@ -1871,19 +1934,18 @@ const initDb = async () => {
 };
 
 /**
- * Normalize dates to ensure consistent UTC handling across SQLite and PostgreSQL
- * 
+ * Normalize timestamps to ISO 8601 UTC format for consistent storage and retrieval.
+ *
  * Both SQLite (which stores dates as TEXT) and PostgreSQL (which returns Date objects)
- * are normalized to ISO 8601 UTC strings to ensure timezone consistency in multi-region
- * deployments and when transforming between database engines.
- * 
- * @param {string|Date|null} date - The date to normalize
+ * are normalized to ISO 8601 UTC strings for timezone consistency.
+ *
+ * @param {string|Date|null} date - The date/timestamp to normalize
  * @returns {string|null} ISO 8601 UTC string (e.g., '2024-01-15T10:30:00.000Z') or null
  */
 const normalizeDates = (date = null) => {
   if (!date) return null;
-  
-  // If date is already a string in ISO format, validate and ensure it's UTC
+
+  // If date is already a string, parse it
   if (typeof date === 'string') {
     const parsed = new Date(date);
     if (isNaN(parsed.getTime())) {
@@ -1891,7 +1953,7 @@ const normalizeDates = (date = null) => {
     }
     return parsed.toISOString();
   }
-  
+
   // If date is a Date object (from PostgreSQL), convert to ISO string
   if (date instanceof Date) {
     if (isNaN(date.getTime())) {
@@ -1899,7 +1961,45 @@ const normalizeDates = (date = null) => {
     }
     return date.toISOString();
   }
-  
+
+  // Unexpected type
+  throw new Error(`Unexpected date type: ${typeof date}`);
+};
+
+/**
+ * Normalize dates to YYYY-MM-DD format for date-only fields (no time component).
+ *
+ * Use this for fields like issued_date, returned_date, start_date, end_date
+ * where only the date matters, not the time.
+ *
+ * @param {string|Date|null} date - The date to normalize
+ * @returns {string|null} Date string in YYYY-MM-DD format (e.g., '2024-01-15') or null
+ */
+const normalizeDateOnly = (date = null) => {
+  if (!date) return null;
+
+  // If date is already a string, parse it
+  if (typeof date === 'string') {
+    // If already in YYYY-MM-DD format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) {
+      throw new Error(`Invalid date string: ${date}`);
+    }
+    // Return as YYYY-MM-DD using UTC to avoid timezone issues
+    return parsed.toISOString().split('T')[0];
+  }
+
+  // If date is a Date object (from PostgreSQL), convert to YYYY-MM-DD string
+  if (date instanceof Date) {
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid Date object');
+    }
+    return date.toISOString().split('T')[0];
+  }
+
   // Unexpected type
   throw new Error(`Unexpected date type: ${typeof date}`);
 };
@@ -2005,8 +2105,8 @@ export const assetDb = {
     const rows = await dbAll(query);
     return rows.map((row) => ({
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2032,8 +2132,8 @@ export const assetDb = {
     if (!row) return null;
     return {
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     };
@@ -2083,8 +2183,8 @@ export const assetDb = {
     const rows = await dbAll(query, params);
     return rows.map((row) => ({
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2180,8 +2280,8 @@ export const assetDb = {
     const rows = await dbAll(query, [email]);
     return rows.map((row) => ({
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2206,8 +2306,8 @@ export const assetDb = {
     const rows = await dbAll(query, [email]);
     return rows.map((row) => ({
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2313,8 +2413,8 @@ export const assetDb = {
     const rows = await dbAll(query, ids);
     return rows.map((row) => ({
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -2396,8 +2496,8 @@ export const assetDb = {
     const rows = await dbAll(baseQuery, params);
     return rows.map((row) => ({
       ...row,
-      issued_date: normalizeDates(row.issued_date),
-      returned_date: normalizeDates(row.returned_date),
+      issued_date: normalizeDateOnly(row.issued_date),
+      returned_date: normalizeDateOnly(row.returned_date),
       registration_date: normalizeDates(row.registration_date),
       last_updated: normalizeDates(row.last_updated)
     }));
@@ -3656,8 +3756,8 @@ export const attestationCampaignDb = {
     const campaigns = await dbAll('SELECT * FROM attestation_campaigns ORDER BY created_at DESC');
     return campaigns.map(c => ({
       ...c,
-      start_date: normalizeDates(c.start_date),
-      end_date: normalizeDates(c.end_date),
+      start_date: normalizeDateOnly(c.start_date),
+      end_date: normalizeDateOnly(c.end_date),
       created_at: normalizeDates(c.created_at),
       updated_at: normalizeDates(c.updated_at)
     }));
@@ -3668,8 +3768,8 @@ export const attestationCampaignDb = {
     if (campaign) {
       return {
         ...campaign,
-        start_date: normalizeDates(campaign.start_date),
-        end_date: normalizeDates(campaign.end_date),
+        start_date: normalizeDateOnly(campaign.start_date),
+        end_date: normalizeDateOnly(campaign.end_date),
         created_at: normalizeDates(campaign.created_at),
         updated_at: normalizeDates(campaign.updated_at)
       };
@@ -3947,8 +4047,8 @@ export const attestationNewAssetDb = {
     const assets = await dbAll('SELECT * FROM attestation_new_assets WHERE attestation_record_id = ?', [recordId]);
     return assets.map(a => ({
       ...a,
-      issued_date: normalizeDates(a.issued_date),
-      returned_date: normalizeDates(a.returned_date),
+      issued_date: normalizeDateOnly(a.issued_date),
+      returned_date: normalizeDateOnly(a.returned_date),
       created_at: normalizeDates(a.created_at)
     }));
   }

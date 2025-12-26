@@ -254,7 +254,7 @@ const AssetCard = memo(function AssetCard({
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Serial Number</p>
-              <p className="font-mono text-xs">{asset.serial_number || '-'}</p>
+              <p>{asset.serial_number || '-'}</p>
             </div>
           </div>
 
