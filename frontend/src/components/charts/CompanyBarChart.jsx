@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f97316', '#14b8a6', '#a855f7'];
@@ -48,12 +48,13 @@ export default function CompanyBarChart({ data, title = 'Assets by Company', top
                   borderRadius: '6px'
                 }}
                 labelFormatter={(label) => label}
-                formatter={(value, name, props) => [`${value} assets`, props.payload.name]}
+                formatter={(value) => [`${value} assets`]}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
+                <LabelList dataKey="count" position="right" fill="hsl(var(--foreground))" fontSize={12} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
