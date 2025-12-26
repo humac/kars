@@ -603,7 +603,7 @@ export default function MyAttestationsPage() {
                                   ) : (
                                     <Button
                                       size="icon"
-                                      variant="default"
+                                      variant="ghost"
                                       onClick={() => handleCertifyAsset(asset)}
                                       disabled={selectedStatus === 'returned' && !returnedDates[asset.id]}
                                       title="Certify this asset"

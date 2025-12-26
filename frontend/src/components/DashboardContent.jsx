@@ -777,33 +777,29 @@ export function DashboardContent({ campaign, compact = false, onClose = null }) 
                     </TableCell>
                     <TableCell>
                       {record.completed_at
-                        ? new Date(record.completed_at).toLocaleString()
+                        ? new Date(record.completed_at).toLocaleDateString()
                         : '-'}
                     </TableCell>
                     <TableCell>
                       {record.invite_sent_at
-                        ? new Date(record.invite_sent_at).toLocaleString()
+                        ? new Date(record.invite_sent_at).toLocaleDateString()
                         : '-'}
                     </TableCell>
                     <TableCell>
-                      {record.reminder_sent_at ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        '-'
-                      )}
+                      {record.reminder_sent_at
+                        ? new Date(record.reminder_sent_at).toLocaleDateString()
+                        : '-'}
                     </TableCell>
                     <TableCell>
-                      {record.escalation_sent_at ? (
-                        <AlertCircle className="h-4 w-4 text-orange-600" />
-                      ) : (
-                        '-'
-                      )}
+                      {record.escalation_sent_at
+                        ? new Date(record.escalation_sent_at).toLocaleDateString()
+                        : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       {record.is_pending_invite ? (
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size="icon"
+                          variant="ghost"
                           onClick={() => handleResendInvite(record.invite_id)}
                           disabled={resendingInvite.has(record.invite_id)}
                           title="Resend registration invite"
@@ -816,8 +812,8 @@ export function DashboardContent({ campaign, compact = false, onClose = null }) 
                         </Button>
                       ) : record.status !== 'completed' ? (
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size="icon"
+                          variant="ghost"
                           onClick={() => handleSendReminder(record.id)}
                           disabled={sendingReminder.has(record.id)}
                           title="Send reminder email"
